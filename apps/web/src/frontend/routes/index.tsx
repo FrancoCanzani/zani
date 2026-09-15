@@ -11,9 +11,10 @@ export const Route = createFileRoute("/")({
       return
     }
 
-    const { workspaces } = await context.queryClient.ensureQueryData(
-      workspacesQueryOptions()
-    )
+    const { workspaces } = await context.queryClient.query({
+      ...workspacesQueryOptions(),
+      staleTime: "static",
+    })
 
     if (workspaces.length === 0) {
       throw redirect({ to: "/onboarding" })

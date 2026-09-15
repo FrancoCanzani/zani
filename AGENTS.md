@@ -64,7 +64,7 @@ Do not create product tables (`campaigns`, `domains`, …) unless the task asks 
 
 Do not implement URL shortening, public `/:code` redirects, or click ingest unless the current task asks for them.
 
-Workspace is the tenant. Keep it in the URL as `/w/$slug`. Load session, workspace lists, and membership through TanStack Router `beforeLoad` / `loader` plus `ensureQueryData` — do not fetch with `useEffect`.
+Workspace is the tenant. Keep it in the URL as `/w/$slug`. Load session, workspace lists, and membership through TanStack Router `beforeLoad` / `loader` plus `queryClient.query({ ...options, staleTime: "static" })` — do not fetch with `useEffect`.
 
 Do not seed, insert, or copy data — real or fake — unless asked.
 

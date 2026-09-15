@@ -15,15 +15,15 @@ const queryClient = new QueryClient({
 
 const router = createRouter({
   routeTree,
-  defaultPreload: "intent",
-  scrollRestoration: true,
   context: {
     queryClient,
     session: null,
   },
-  Wrap: ({ children }) => (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
-  ),
+  defaultPreload: "intent",
+  defaultPreloadStaleTime: 0,
+  defaultPendingMs: 200,
+  defaultPendingMinMs: 0,
+  scrollRestoration: true,
 })
 
 declare module "@tanstack/react-router" {
@@ -36,6 +36,8 @@ const rootEl = document.getElementById("root")!
 
 createRoot(rootEl).render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <QueryClientProvider client={queryClient}>
+      <RouterProvider router={router} />
+    </QueryClientProvider>
   </StrictMode>
 )

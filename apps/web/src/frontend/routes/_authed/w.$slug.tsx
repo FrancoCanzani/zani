@@ -48,11 +48,18 @@ export const Route = createFileRoute("/_authed/w/$slug")({
   loader: async ({ context, params }) => {
     writeLastWorkspaceSlug(params.slug)
     await Promise.all([
-      context.queryClient.ensureQueryData(workspaceQueryOptions(params.slug)),
-      context.queryClient.ensureQueryData(
-        workspaceMembersQueryOptions(params.slug)
-      ),
-      context.queryClient.ensureQueryData(workspacesQueryOptions()),
+      context.queryClient.query({
+        ...workspaceQueryOptions(params.slug),
+        staleTime: "static",
+      }),
+      context.queryClient.query({
+        ...workspaceMembersQueryOptions(params.slug),
+        staleTime: "static",
+      }),
+      context.queryClient.query({
+        ...workspacesQueryOptions(),
+        staleTime: "static",
+      }),
     ])
   },
   component: WorkspacePage,

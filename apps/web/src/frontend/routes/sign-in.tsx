@@ -1,5 +1,5 @@
 import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
-import { type FormEvent, useState } from "react"
+import { type SubmitEvent, useState } from "react"
 import { z } from "zod"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
@@ -52,7 +52,7 @@ function SignInPage() {
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
 
-  async function sendCode(event: FormEvent<HTMLFormElement>) {
+  async function sendCode(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setError(null)
     setPending(true)
@@ -147,7 +147,7 @@ function renderStep(input: {
   pending: boolean
   onEmailChange: (value: string) => void
   onOtpChange: (value: string) => void
-  onSendCode: (event: FormEvent<HTMLFormElement>) => void
+  onSendCode: (event: SubmitEvent<HTMLFormElement>) => void
   onVerifyCode: (code: string) => void
   onResend: () => void
   onChangeEmail: () => void
