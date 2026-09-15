@@ -1,0 +1,50 @@
+{
+  "name": "web",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "imports": {
+    "#/*": "./src/*"
+  },
+  "scripts": {
+    "dev": "vite --port 43123 --host 127.0.0.1",
+    "build": "tsc -b && vite build",
+    "lint": "eslint .",
+    "format": "prettier --write \"**/*.{ts,tsx}\"",
+    "check-types": "tsc -b",
+    "cf-typegen": "wrangler types --include-runtime=false --strict-vars=false",
+    "preview": "bun run build && vite preview --port 43123 --host 127.0.0.1",
+    "deploy": "bun run build && wrangler deploy"
+  },
+  "dependencies": {
+    "@tanstack/react-devtools": "latest",
+    "@tanstack/react-router": "latest",
+    "@tanstack/react-router-devtools": "latest",
+    "@workspace/db": "workspace:*",
+    "@workspace/ui": "workspace:*",
+    "hono": "^4.13.8",
+    "lucide-react": "^1.46.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
+  },
+  "devDependencies": {
+    "@cloudflare/vite-plugin": "^1.52.1",
+    "@eslint/js": "^10",
+    "@tailwindcss/vite": "^4",
+    "@tanstack/devtools-vite": "latest",
+    "@tanstack/router-cli": "^1.132.0",
+    "@tanstack/router-plugin": "latest",
+    "@types/node": "^24",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6",
+    "eslint": "^10",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.6",
+    "globals": "^17",
+    "typescript": "~6",
+    "typescript-eslint": "^8",
+    "vite": "^8",
+    "wrangler": "^4.131.2"
+  }
+}
