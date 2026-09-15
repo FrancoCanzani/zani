@@ -1,11 +1,11 @@
 import { drizzleAdapter } from "@better-auth/drizzle-adapter"
-import { drizzle } from "@workspace/db"
 import * as schema from "@workspace/db/schema"
 import { betterAuth } from "better-auth"
 import { emailOTP } from "better-auth/plugins"
 
 import { AUTH_BASE_PATH } from "@shared/api"
 
+import { createDb } from "./db"
 import { deliverOtp } from "./otp"
 
 type WaitUntilCtx = {
@@ -13,7 +13,7 @@ type WaitUntilCtx = {
 }
 
 export function createAuth(env: Env, ctx?: WaitUntilCtx) {
-  const db = drizzle(env.DB, { schema })
+  const db = createDb(env)
 
   return betterAuth({
     baseURL: env.BETTER_AUTH_URL,

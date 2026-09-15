@@ -1,40 +1,22 @@
-export type OtpType =
-  "sign-in" | "email-verification" | "forget-password" | "change-email"
+import { sendAppEmail } from "./mail"
 
-type WaitUntilCtx = {
-  waitUntil: (promise: Promise<unknown>) => void
-}
+export type OtpType =
+  | "sign-in"
+  | "email-verification"
+  | "forget-password"
+  | "change-email"
 
 export async function deliverOtp(
   env: Env,
-  ctx: WaitUntilCtx | undefined,
+  ctx: Parameters<typeof sendAppEmail>[1],
   input: { email: string; otp: string; type: OtpType }
 ) {
-  if (env.ENVIRONMENT !== "production") {
-    console.log(`[otp] ${input.type} ${input.email} ${input.otp}`)
-    return
-  }
-
-  const sending = sendOtpEmail(env, input)
-
-  if (ctx) {
-    ctx.waitUntil(sending)
-    return
-  }
-
-  await sending
-}
-
-async function sendOtpEmail(
-  env: Env,
-  input: { email: string; otp: string; type: OtpType }
-) {
-  await env.EMAIL.send({
-    from: env.EMAIL_FROM,
+  await sendAppEmail(env, ctx, {
     to: input.email,
     subject: otpSubject(input.type),
     text: `Your code is ${input.otp}. It expires in 5 minutes.`,
     html: `<p>Your code is <strong>${input.otp}</strong>. It expires in 5 minutes.</p>`,
+    devLine: `[otp] ${input.type} ${input.email} ${input.otp}`,
   })
 }
 

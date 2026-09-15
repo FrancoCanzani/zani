@@ -1,12 +1,22 @@
-import { Outlet, createRootRoute } from "@tanstack/react-router"
+import { Outlet, createRootRouteWithContext } from "@tanstack/react-router"
 import { TanStackDevtools } from "@tanstack/react-devtools"
 import { TanStackRouterDevtoolsPanel } from "@tanstack/react-router-devtools"
 
+import { NotFoundScreen } from "@components/not-found-screen"
+import { PendingScreen } from "@components/pending-screen"
 import { ThemeProvider } from "@components/theme-provider"
+import { authClient } from "@lib/auth-client"
+import type { RouterContext } from "@lib/router-context"
 
 import "@workspace/ui/globals.css"
 
-export const Route = createRootRoute({
+export const Route = createRootRouteWithContext<RouterContext>()({
+  beforeLoad: async () => {
+    const { data: session } = await authClient.getSession()
+    return { session }
+  },
+  pendingComponent: () => <PendingScreen label="Loading…" />,
+  notFoundComponent: NotFoundScreen,
   component: RootComponent,
 })
 
