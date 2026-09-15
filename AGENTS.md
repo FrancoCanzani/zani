@@ -42,7 +42,9 @@ Route files should export `component: ThePage` (plus `validateSearch` if needed)
 
 ## Database
 
-Never run DB commands (`db:generate`, `db:migrate`, `wrangler d1 …`, drizzle-kit apply/push, etc.) unless the user explicitly asks.
+Never run remote DB commands (`wrangler d1 … --remote`, drizzle-kit migrate/push against Cloudflare) unless the user explicitly asks.
+
+`bun run dev` applies pending D1 migrations to the local Wrangler database only.
 
 Do not create product tables (`links`, `campaigns`, `clicks`, `domains`, …) unless the task asks for them. Auth tables (`user`, `session`, `account`, `verification`) already exist.
 
