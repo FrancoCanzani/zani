@@ -1,27 +1,6 @@
 import { queryOptions } from "@tanstack/react-query"
-import { notFound, redirect } from "@tanstack/react-router"
 
-import { api } from "./api"
-
-async function requireJson<T extends Record<string, unknown>>(
-  response: { ok: boolean; status: number; json: () => Promise<unknown> },
-  key: keyof T & string
-): Promise<T> {
-  if (response.status === 401) {
-    throw redirect({ to: "/sign-in" })
-  }
-  if (response.status === 404) {
-    throw notFound()
-  }
-  if (!response.ok) {
-    throw new Error("Request failed")
-  }
-  const body = await response.json()
-  if (!body || typeof body !== "object" || !(key in body)) {
-    throw new Error("Request failed")
-  }
-  return body as T
-}
+import { api, requireJson } from "@lib/api"
 
 export function workspacesQueryOptions() {
   return queryOptions({

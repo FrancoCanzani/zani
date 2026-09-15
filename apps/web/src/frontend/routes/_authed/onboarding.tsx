@@ -23,8 +23,8 @@ import { Input } from "@workspace/ui/components/input"
 import { Textarea } from "@workspace/ui/components/textarea"
 
 import { api } from "@lib/api"
-import { fieldErrors } from "@lib/form-errors"
-import { writeLastWorkspaceSlug } from "@lib/last-workspace"
+import { fieldErrors } from "@lib/utils"
+import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
 import { slugify, workspaceSlugSchema } from "@shared/workspace"
 
 const onboardingFormSchema = z.object({

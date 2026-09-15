@@ -4,7 +4,7 @@ import { PendingScreen } from "@components/pending-screen"
 import { Button } from "@workspace/ui/components/button"
 
 import { api } from "@lib/api"
-import { writeLastWorkspaceSlug } from "@lib/last-workspace"
+import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
 
 type InviteLoaderResult =
   | { status: "email_mismatch" }

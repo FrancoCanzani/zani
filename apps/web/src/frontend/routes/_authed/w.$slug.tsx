@@ -28,14 +28,14 @@ import {
 import { Input } from "@workspace/ui/components/input"
 
 import { api } from "@lib/api"
-import { authClient } from "@lib/auth-client"
-import { fieldErrors } from "@lib/form-errors"
-import { writeLastWorkspaceSlug } from "@lib/last-workspace"
+import { authClient } from "@lib/auth/client"
+import { fieldErrors } from "@lib/utils"
 import {
   workspaceMembersQueryOptions,
   workspaceQueryOptions,
   workspacesQueryOptions,
-} from "@lib/queries"
+} from "@features/workspaces/api"
+import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
 import { parseWorkspaceRole } from "@shared/workspace"
 
 const inviteFormSchema = z.object({
