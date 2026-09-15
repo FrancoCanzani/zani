@@ -124,3 +124,73 @@ export const workspaceInvite = sqliteTable(
     index("workspace_invite_email_idx").on(table.email),
   ]
 )
+
+export const clickDevice = ["phone", "tablet", "desktop"] as const
+export const clickBrowser = [
+  "chrome",
+  "safari",
+  "firefox",
+  "edge",
+  "other",
+] as const
+export const clickOs = [
+  "ios",
+  "android",
+  "macos",
+  "windows",
+  "linux",
+  "other",
+] as const
+
+export type ClickDevice = (typeof clickDevice)[number]
+export type ClickBrowser = (typeof clickBrowser)[number]
+export type ClickOs = (typeof clickOs)[number]
+
+export const link = sqliteTable(
+  "link",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    code: text("code").notNull().unique(),
+    destinationUrl: text("destination_url").notNull(),
+    name: text("name"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    disabledAt: integer("disabled_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("link_workspaceId_idx").on(table.workspaceId)]
+)
+
+export const click = sqliteTable(
+  "click",
+  {
+    id: text("id").primaryKey(),
+    linkId: text("link_id")
+      .notNull()
+      .references(() => link.id, { onDelete: "cascade" }),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    occurredAt: integer("occurred_at").notNull(),
+    country: text("country"),
+    city: text("city"),
+    region: text("region"),
+    referrerHost: text("referrer_host").notNull(),
+    device: text("device").$type<ClickDevice>().notNull(),
+    browser: text("browser").$type<ClickBrowser>().notNull(),
+    os: text("os").$type<ClickOs>().notNull(),
+    bot: integer("bot", { mode: "boolean" }).notNull(),
+  },
+  (table) => [
+    index("click_link_occurred_idx").on(table.linkId, table.occurredAt),
+    index("click_workspace_occurred_idx").on(
+      table.workspaceId,
+      table.occurredAt
+    ),
+  ]
+)
