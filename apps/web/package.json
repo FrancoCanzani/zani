@@ -4,7 +4,7 @@
   "type": "module",
   "private": true,
   "scripts": {
-    "dev": "vite --port 43123 --host 127.0.0.1",
+    "dev": "CI=true wrangler d1 migrations apply app --local && vite --port 43123 --host 127.0.0.1",
     "build": "vite build",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",

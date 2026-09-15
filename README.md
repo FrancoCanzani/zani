@@ -39,7 +39,7 @@ Smoke checks:
 - Sign in: [http://127.0.0.1:43123/sign-in](http://127.0.0.1:43123/sign-in)
 - Health: [http://127.0.0.1:43123/api/v1/health](http://127.0.0.1:43123/api/v1/health)
 
-D1 (`DB`), KV (`KV`), and Email (`EMAIL`) are local Wrangler bindings. Wrangler applies D1 migrations from `packages/db/migrations` for local dev. No remote Cloudflare resources are required for `bun run dev`.
+D1 (`DB`), KV (`KV`), and Email (`EMAIL`) are local Wrangler bindings. `bun run dev` applies pending migrations from `packages/db/migrations` to the local D1 database. No remote Cloudflare resources are required.
 
 ## Checks
 
