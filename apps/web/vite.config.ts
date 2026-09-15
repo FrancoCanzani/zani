@@ -28,6 +28,7 @@ export default defineConfig({
       "@backend": path.resolve(import.meta.dirname, "./src/backend"),
       "@frontend": path.resolve(import.meta.dirname, "./src/frontend"),
       "@lib": path.resolve(import.meta.dirname, "./src/frontend/lib"),
+      "@features": path.resolve(import.meta.dirname, "./src/frontend/features"),
       "@routes": path.resolve(import.meta.dirname, "./src/frontend/routes"),
       "@components": path.resolve(
         import.meta.dirname,

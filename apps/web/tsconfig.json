@@ -8,6 +8,7 @@
       "@backend/*": ["./src/backend/*"],
       "@frontend/*": ["./src/frontend/*"],
       "@lib/*": ["./src/frontend/lib/*"],
+      "@features/*": ["./src/frontend/features/*"],
       "@routes/*": ["./src/frontend/routes/*"],
       "@components/*": ["./src/frontend/components/*"],
       "@shared/*": ["./src/shared/*"],

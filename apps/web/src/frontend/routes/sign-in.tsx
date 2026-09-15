@@ -24,8 +24,14 @@ import {
   InputOTPSlot,
 } from "@workspace/ui/components/input-otp"
 
-import { authClient } from "@lib/auth-client"
-import { safeInternalPath } from "@lib/safe-path"
+import { authClient } from "@lib/auth/client"
+
+function safeInternalPath(path: string | undefined) {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) {
+    return "/"
+  }
+  return path
+}
 
 const signInSearchSchema = z.object({
   redirect: z.string().optional(),

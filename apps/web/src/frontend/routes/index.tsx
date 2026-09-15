@@ -2,8 +2,8 @@ import { Link, createFileRoute, redirect } from "@tanstack/react-router"
 
 import { Button } from "@workspace/ui/components/button"
 
-import { readLastWorkspaceSlug } from "@lib/last-workspace"
-import { workspacesQueryOptions } from "@lib/queries"
+import { readLastWorkspaceSlug } from "@features/workspaces/last-workspace"
+import { workspacesQueryOptions } from "@features/workspaces/api"
 
 export const Route = createFileRoute("/")({
   beforeLoad: async ({ context }) => {
