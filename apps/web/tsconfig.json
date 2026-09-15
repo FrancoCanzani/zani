@@ -1,17 +1,17 @@
 {
-  "files": [],
-  "references": [
-    { "path": "./tsconfig.app.json" },
-    { "path": "./tsconfig.node.json" },
-    { "path": "./tsconfig.worker.json" }
-  ],
+  "extends": "../../tsconfig.json",
   "compilerOptions": {
+    "types": ["vite/client"],
+    "noEmit": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "#/*": ["./src/*"],
-      "@workspace/ui/*": ["../../packages/ui/src/*"],
-      "@workspace/db": ["../../packages/db/src/index.ts"],
-      "@workspace/db/*": ["../../packages/db/src/*"]
+      "@/*": ["./src/frontend/*"],
+      "@frontend/*": ["./src/frontend/*"],
+      "@lib/*": ["./src/frontend/lib/*"],
+      "@routes/*": ["./src/frontend/routes/*"],
+      "@components/*": ["./src/frontend/components/*"],
+      "@shared/*": ["./src/shared/*"],
+      "@workspace/ui/*": ["../../packages/ui/src/*"]
     }
-  }
+  },
+  "include": ["src/frontend", "src/shared"]
 }

@@ -15,7 +15,7 @@ This repository is structure and infrastructure only. It does not implement shor
 
 ## Apps and packages
 
-- `apps/web` — TanStack Router SPA, Hono Worker, Wrangler config
+- `apps/web` — TanStack Router SPA (`src/frontend`) and Hono Worker (`src/backend`)
 - `packages/ui` — shared shadcn/ui components
 - `packages/db` — Drizzle + D1 entry points
 

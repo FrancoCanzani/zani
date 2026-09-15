@@ -1,7 +1,7 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "web",
-  "main": "./src/worker/index.ts",
+  "main": "src/backend/index.ts",
   "compatibility_date": "2026-09-15",
   "compatibility_flags": ["nodejs_compat"],
   "observability": {
@@ -9,7 +9,8 @@
   },
   "upload_source_maps": true,
   "assets": {
-    "directory": "./dist/client",
+    "directory": "dist/client",
+    "binding": "ASSETS",
     "not_found_handling": "single-page-application",
     "run_worker_first": ["/api/*"]
   },

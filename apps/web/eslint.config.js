@@ -6,7 +6,11 @@ import tseslint from "typescript-eslint"
 import { defineConfig, globalIgnores } from "eslint/config"
 
 export default defineConfig([
-  globalIgnores(["dist", "src/routeTree.gen.ts", "worker-configuration.d.ts"]),
+  globalIgnores([
+    "dist",
+    "src/frontend/route-tree.gen.ts",
+    "worker-configuration.d.ts",
+  ]),
   {
     files: ["**/*.{ts,tsx}"],
     extends: [

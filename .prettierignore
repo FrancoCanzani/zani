@@ -4,5 +4,5 @@ node_modules/
 coverage/
 pnpm-lock.yaml
 .pnpm-store/
-apps/web/src/routeTree.gen.ts
+apps/web/src/frontend/route-tree.gen.ts
 apps/web/worker-configuration.d.ts
