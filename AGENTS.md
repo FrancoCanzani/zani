@@ -60,7 +60,9 @@ Never run remote DB commands (`wrangler d1 … --remote`, drizzle-kit migrate/pu
 
 `bun run dev` applies pending D1 migrations to the local Wrangler database only.
 
-Do not create product tables (`links`, `campaigns`, `clicks`, `domains`, …) unless the task asks for them. Auth tables (`user`, `session`, `account`, `verification`) and workspace tables (`workspace`, `workspace_member`, `workspace_invite`) already exist.
+Do not create product tables (`campaigns`, `domains`, …) unless the task asks for them. Auth tables, workspace tables, `link`, and `click` already exist.
+
+Do not implement URL shortening, public `/:code` redirects, or click ingest unless the current task asks for them.
 
 Workspace is the tenant. Keep it in the URL as `/w/$slug`. Load session, workspace lists, and membership through TanStack Router `beforeLoad` / `loader` plus `ensureQueryData` — do not fetch with `useEffect`.
 
