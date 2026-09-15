@@ -1,7 +1,9 @@
-import { factory } from "../factory"
-import { createAuth } from "../lib/auth"
+import type { MiddlewareHandler } from "hono"
 
-export const requireSession = factory.createMiddleware(async (c, next) => {
+import { createAuth } from "../lib/auth"
+import type { AppEnv } from "../types"
+
+export const requireSession: MiddlewareHandler<AppEnv> = async (c, next) => {
   const payload = await createAuth(c.env, c.executionCtx).api.getSession({
     headers: c.req.raw.headers,
   })
@@ -13,4 +15,4 @@ export const requireSession = factory.createMiddleware(async (c, next) => {
   c.set("user", payload.user)
   c.set("session", payload.session)
   await next()
-})
+}
