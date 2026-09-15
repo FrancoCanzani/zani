@@ -28,6 +28,20 @@ The only legal comment is a short `//` that explains a non-obvious **why**: a pl
 
 HTTP API routes live under `/api/v1`. Keep `run_worker_first` on `/api/*`. Create Better Auth with `createAuth(env)` per request — do not use a module-level singleton.
 
+## Backend
+
+Hono on the Worker is native — no HTTP adapter. Keep three trees:
+
+- `/api/v1/auth/*` — Better Auth `handler`, mounted on the Worker entry, not on the typed API
+- `/api/v1/*` — chained Hono app exported as `AppType` / `V1Api` for `hc`
+- future `/:code` redirects — Worker entry, not the API router, not behind auth
+
+Each resource exports a chained `new Hono<AppEnv>().get(...)` (or `.post`, …) and is mounted with `.route()`. Do not mutate routers with `registerX(app)` helpers — that drops RPC inference.
+
+Validate `json` / `query` / `param` with `@hono/zod-validator`. Zod lives on `apps/web`, not `packages/ui`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, later redirects) must not use it.
+
+The SPA talks to the versioned API through `hc<V1Api>` in `frontend/lib/api.ts`. Auth cookies still go through the Better Auth client.
+
 ## Routing
 
 Never hand-edit `apps/web/src/frontend/route-tree.gen.ts`. The TanStack Router Vite plugin regenerates it from `apps/web/src/frontend/routes/` during `bun run dev` / build. Add or change route files only.

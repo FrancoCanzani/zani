@@ -1,7 +1,9 @@
 import { Link, createFileRoute } from "@tanstack/react-router"
+import { useEffect, useState } from "react"
 
 import { Button } from "@workspace/ui/components/button"
 
+import { api } from "@lib/api"
 import { authClient } from "@lib/auth-client"
 
 export const Route = createFileRoute("/")({ component: Home })
@@ -13,6 +15,7 @@ function Home() {
     <main className="flex min-h-svh flex-col items-start gap-4 p-6">
       <div className="flex w-full max-w-md min-w-0 flex-col gap-3 text-sm leading-loose">
         <h1 className="font-medium">SaaS foundation</h1>
+        <ApiStatus />
         <SessionStatus
           isPending={isPending}
           error={error?.message ?? null}
@@ -21,6 +24,44 @@ function Home() {
       </div>
     </main>
   )
+}
+
+function ApiStatus() {
+  const [state, setState] = useState<"loading" | "ok" | "error">("loading")
+
+  useEffect(() => {
+    let cancelled = false
+
+    void api.health
+      .$get()
+      .then((response) => {
+        if (!cancelled) {
+          setState(response.ok ? "ok" : "error")
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setState("error")
+        }
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  switch (state) {
+    case "loading":
+      return <p className="text-muted-foreground">Checking API…</p>
+    case "ok":
+      return <p className="text-muted-foreground">API v1 is up.</p>
+    case "error":
+      return <p className="text-destructive">Could not reach the API.</p>
+    default: {
+      const exhaustive: never = state
+      return exhaustive
+    }
+  }
 }
 
 function SessionStatus({
