@@ -8,6 +8,8 @@ import { defineConfig, globalIgnores } from "eslint/config"
 export default defineConfig([
   globalIgnores([
     "dist",
+    "node_modules",
+    ".wrangler",
     "src/frontend/route-tree.gen.ts",
     "worker-configuration.d.ts",
   ]),
@@ -23,11 +25,20 @@ export default defineConfig([
       globals: globals.browser,
     },
     rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          caughtErrors: "none",
+        },
+      ],
       "react-refresh/only-export-components": [
         "warn",
         { allowConstantExport: true },
       ],
-      "react-hooks/set-state-in-effect": "off",
+      "react-hooks/set-state-in-effect": "warn",
+      "react-hooks/refs": "warn",
     },
   },
 ])
