@@ -4,7 +4,9 @@
 
 This repository is a development foundation for a URL-shortening SaaS. Do not implement product features unless the current task asks for them.
 
-Do not add URL shortening, redirects, analytics, campaigns, authentication, billing, or dashboards unless explicitly requested.
+Do not add URL shortening, redirects, analytics, campaigns, billing, or dashboards unless explicitly requested.
+
+Authentication is Better Auth email OTP on `/api/v1/auth`. Do not add passwords, OAuth, or extra auth providers unless asked.
 
 ## Comments
 
@@ -20,8 +22,11 @@ The only legal comment is a short `//` that explains a non-obvious **why**: a pl
 - UI: shadcn/ui in `packages/ui`.
 - Database: Drizzle + Cloudflare D1 in `packages/db`.
 - Cache: Cloudflare KV binding `KV`.
+- Email: Cloudflare Email binding `EMAIL`. In `ENVIRONMENT=development`, OTPs are logged to the console and mail is not sent.
 
 `bun run check-types` is the typecheck to run.
+
+HTTP API routes live under `/api/v1`. Keep `run_worker_first` on `/api/*`. Create Better Auth with `createAuth(env)` per request — do not use a module-level singleton.
 
 ## Routing
 
@@ -39,7 +44,7 @@ Route files should export `component: ThePage` (plus `validateSearch` if needed)
 
 Never run DB commands (`db:generate`, `db:migrate`, `wrangler d1 …`, drizzle-kit apply/push, etc.) unless the user explicitly asks.
 
-Do not create product tables (`users`, `links`, `campaigns`, `clicks`, `domains`, …) unless the task asks for them.
+Do not create product tables (`links`, `campaigns`, `clicks`, `domains`, …) unless the task asks for them. Auth tables (`user`, `session`, `account`, `verification`) already exist.
 
 Do not seed, insert, or copy data — real or fake — unless asked.
 
@@ -47,9 +52,11 @@ Do not seed, insert, or copy data — real or fake — unless asked.
 
 Resource identifiers live in Wrangler configuration. Do not hardcode Cloudflare IDs throughout application code.
 
-Use bindings (`env.DB`, `env.KV`) rather than the Cloudflare REST API.
+Use bindings (`env.DB`, `env.KV`, `env.EMAIL`) rather than the Cloudflare REST API.
 
 Do not provision R2, Queues, Analytics Engine, or Durable Objects unless the current task requires them.
+
+Do not set `send_email.remote` to `true` in local Wrangler config.
 
 ## Fetch
 

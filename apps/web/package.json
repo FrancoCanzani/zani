@@ -14,11 +14,13 @@
     "deploy": "bun run build && wrangler deploy"
   },
   "dependencies": {
+    "@better-auth/drizzle-adapter": "^1.7.5",
     "@tanstack/react-devtools": "latest",
     "@tanstack/react-router": "latest",
     "@tanstack/react-router-devtools": "latest",
     "@workspace/db": "workspace:*",
     "@workspace/ui": "workspace:*",
+    "better-auth": "^1.7.5",
     "hono": "^4.13.8",
     "lucide-react": "^1.46.0",
     "react": "^19.2.8",
