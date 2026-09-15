@@ -2,7 +2,9 @@
 
 Development foundation for a URL-shortening, link analytics, and campaigns product.
 
-The first product slice is versioned HTTP APIs plus email OTP sign-in. Shortening, redirects, analytics, campaigns, and a dashboard are not implemented yet.
+The first product slice is versioned HTTP APIs, email OTP sign-in, and workspace onboarding. Shortening, redirects, analytics, campaigns, and a dashboard are not implemented yet.
+
+Signed-in users land on `/w/$slug`. Accounts without a workspace go through `/onboarding` to create one and optionally invite members. Invite links are `/invites/$token`.
 
 ## Stack
 
@@ -31,12 +33,13 @@ bun run dev
 
 The Vite + Cloudflare dev server listens on [http://127.0.0.1:43123](http://127.0.0.1:43123).
 
-In development, OTP codes are printed to the Worker console. Cloudflare Email is not called unless `ENVIRONMENT` is `production`.
+In development, OTP codes and invite accept URLs are printed to the Worker console. Cloudflare Email is not called unless `ENVIRONMENT` is `production`. The last opened workspace slug is stored in `localStorage` under `workspace-slug`.
 
 Smoke checks:
 
 - App: [http://127.0.0.1:43123](http://127.0.0.1:43123)
 - Sign in: [http://127.0.0.1:43123/sign-in](http://127.0.0.1:43123/sign-in)
+- Onboarding: [http://127.0.0.1:43123/onboarding](http://127.0.0.1:43123/onboarding)
 - Health: [http://127.0.0.1:43123/api/v1/health](http://127.0.0.1:43123/api/v1/health)
 
 D1 (`DB`), KV (`KV`), and Email (`EMAIL`) are local Wrangler bindings. `bun run dev` applies pending migrations from `packages/db/migrations` to the local D1 database. No remote Cloudflare resources are required.

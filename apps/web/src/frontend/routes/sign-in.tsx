@@ -1,5 +1,6 @@
-import { Link, createFileRoute } from "@tanstack/react-router"
+import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
 import { type FormEvent, useState } from "react"
+import { z } from "zod"
 
 import { Alert, AlertDescription } from "@workspace/ui/components/alert"
 import { Button } from "@workspace/ui/components/button"
@@ -7,7 +8,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@workspace/ui/components/card"
@@ -25,45 +25,32 @@ import {
 } from "@workspace/ui/components/input-otp"
 
 import { authClient } from "@lib/auth-client"
+import { safeInternalPath } from "@lib/safe-path"
 
-export const Route = createFileRoute("/sign-in")({ component: SignInPage })
+const signInSearchSchema = z.object({
+  redirect: z.string().optional(),
+})
+
+export const Route = createFileRoute("/sign-in")({
+  validateSearch: signInSearchSchema,
+  beforeLoad: ({ context, search }) => {
+    if (context.session) {
+      throw redirect({ href: safeInternalPath(search.redirect) })
+    }
+  },
+  component: SignInPage,
+})
 
 type Step = "email" | "otp"
 
 function SignInPage() {
-  const navigate = Route.useNavigate()
-  const { data: session, isPending: sessionPending } = authClient.useSession()
+  const router = useRouter()
+  const { redirect: redirectTo } = Route.useSearch()
   const [step, setStep] = useState<Step>("email")
   const [email, setEmail] = useState("")
   const [otp, setOtp] = useState("")
   const [error, setError] = useState<string | null>(null)
   const [pending, setPending] = useState(false)
-
-  if (sessionPending) {
-    return (
-      <main className="flex min-h-svh items-center justify-center p-6">
-        <p className="text-sm text-muted-foreground">Checking session…</p>
-      </main>
-    )
-  }
-
-  if (session) {
-    return (
-      <main className="flex min-h-svh items-center justify-center p-6">
-        <Card className="w-full max-w-sm">
-          <CardHeader>
-            <CardTitle>You are signed in</CardTitle>
-            <CardDescription>{session.user.email}</CardDescription>
-          </CardHeader>
-          <CardFooter className="gap-2">
-            <Button asChild>
-              <Link to="/">Continue</Link>
-            </Button>
-          </CardFooter>
-        </Card>
-      </main>
-    )
-  }
 
   async function sendCode(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -97,7 +84,8 @@ function SignInPage() {
       setError(verifyError.message ?? "That code is invalid or expired.")
       return
     }
-    await navigate({ to: "/" })
+    await router.invalidate()
+    await router.navigate({ href: safeInternalPath(redirectTo) })
   }
 
   async function resendCode() {
