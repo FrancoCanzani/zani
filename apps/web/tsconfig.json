@@ -5,6 +5,7 @@
     "noEmit": true,
     "paths": {
       "@/*": ["./src/frontend/*"],
+      "@backend/*": ["./src/backend/*"],
       "@frontend/*": ["./src/frontend/*"],
       "@lib/*": ["./src/frontend/lib/*"],
       "@routes/*": ["./src/frontend/routes/*"],
@@ -13,5 +14,5 @@
       "@workspace/ui/*": ["../../packages/ui/src/*"]
     }
   },
-  "include": ["src/frontend", "src/shared"]
+  "include": ["src/frontend", "src/shared", "worker-configuration.d.ts"]
 }

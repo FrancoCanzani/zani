@@ -9,14 +9,14 @@ The first product slice is versioned HTTP APIs plus email OTP sign-in. Shortenin
 - Bun + Turborepo
 - TanStack Router (file-based) + React
 - Tailwind CSS + shadcn/ui
-- Hono on Cloudflare Workers
+- Hono on Cloudflare Workers (Zod validation + RPC client)
 - Cloudflare D1 + KV + Email
 - Drizzle
 - Better Auth (email OTP)
 
 ## Apps and packages
 
-- `apps/web` — TanStack Router SPA (`src/frontend`) and Hono Worker (`src/backend`)
+- `apps/web` — TanStack Router SPA (`src/frontend`) and Hono Worker (`src/backend`). Typed API lives in `src/backend/api.ts`; Better Auth is mounted on the Worker entry beside it.
 - `packages/ui` — shared shadcn/ui components
 - `packages/db` — Drizzle schema and D1 migrations
 
