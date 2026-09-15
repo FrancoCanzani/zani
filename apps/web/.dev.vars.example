@@ -1,1 +1,4 @@
-# Local Worker secrets. Copy to .dev.vars — never commit the copy.
+# Local Worker secrets. Copy to `.dev.vars` — never commit the copy.
+# Generate with: openssl rand -base64 32
+
+BETTER_AUTH_SECRET=
