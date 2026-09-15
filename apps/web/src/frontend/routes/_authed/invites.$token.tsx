@@ -18,15 +18,6 @@ export const Route = createFileRoute("/_authed/invites/$token")({
       param: { token: params.token },
     })
 
-    if (response.status === 401) {
-      throw redirect({
-        to: "/sign-in",
-        search: {
-          redirect: `/invites/${params.token}`,
-        },
-      })
-    }
-
     if (response.status === 404) {
       throw notFound()
     }
