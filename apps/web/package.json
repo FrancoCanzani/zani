@@ -3,15 +3,12 @@
   "version": "0.0.1",
   "type": "module",
   "private": true,
-  "imports": {
-    "#/*": "./src/*"
-  },
   "scripts": {
     "dev": "vite --port 43123 --host 127.0.0.1",
-    "build": "tsc -b && vite build",
+    "build": "vite build",
     "lint": "eslint .",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "check-types": "tsc -b",
+    "check-types": "bun run cf-typegen && tsc --noEmit && tsc --noEmit -p tsconfig.backend.json && tsc --noEmit -p tsconfig.node.json",
     "cf-typegen": "wrangler types --include-runtime=false --strict-vars=false",
     "preview": "bun run build && vite preview --port 43123 --host 127.0.0.1",
     "deploy": "bun run build && wrangler deploy"

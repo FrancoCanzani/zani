@@ -25,7 +25,13 @@ The only legal comment is a short `//` that explains a non-obvious **why**: a pl
 
 ## Routing
 
-Never hand-edit `apps/web/src/routeTree.gen.ts`. The TanStack Router Vite plugin regenerates it from `apps/web/src/routes/` during `bun run dev` / build. Add or change route files only.
+Never hand-edit `apps/web/src/frontend/route-tree.gen.ts`. The TanStack Router Vite plugin regenerates it from `apps/web/src/frontend/routes/` during `bun run dev` / build. Add or change route files only.
+
+Keep the Pwor-style split in `apps/web/src`:
+
+- `frontend/` — TanStack Router app
+- `backend/` — Hono Worker
+- `shared/` — types used by both
 
 Route files should export `component: ThePage` (plus `validateSearch` if needed). Do not add a route component that only unpacks `useParams` / `useSearch` and forwards them as props.
 

@@ -2,7 +2,6 @@ import path from "node:path"
 
 import { cloudflare } from "@cloudflare/vite-plugin"
 import tailwindcss from "@tailwindcss/vite"
-import { devtools } from "@tanstack/devtools-vite"
 import { tanstackRouter } from "@tanstack/router-plugin/vite"
 import react from "@vitejs/plugin-react"
 import { defineConfig } from "vite"
@@ -13,16 +12,28 @@ export default defineConfig({
     port: 43123,
   },
   plugins: [
-    devtools(),
-    tanstackRouter({ target: "react", autoCodeSplitting: true }),
+    tanstackRouter({
+      target: "react",
+      autoCodeSplitting: true,
+      routesDirectory: "./src/frontend/routes",
+      generatedRouteTree: "./src/frontend/route-tree.gen.ts",
+    }),
     react(),
     cloudflare(),
     tailwindcss(),
   ],
   resolve: {
-    tsconfigPaths: true,
     alias: {
-      "@": path.resolve(import.meta.dirname, "./src"),
+      "@": path.resolve(import.meta.dirname, "./src/frontend"),
+      "@backend": path.resolve(import.meta.dirname, "./src/backend"),
+      "@frontend": path.resolve(import.meta.dirname, "./src/frontend"),
+      "@lib": path.resolve(import.meta.dirname, "./src/frontend/lib"),
+      "@routes": path.resolve(import.meta.dirname, "./src/frontend/routes"),
+      "@components": path.resolve(
+        import.meta.dirname,
+        "./src/frontend/components"
+      ),
+      "@shared": path.resolve(import.meta.dirname, "./src/shared"),
     },
   },
 })
