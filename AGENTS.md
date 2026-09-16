@@ -58,7 +58,7 @@ Route files should export `component: ThePage` (plus `validateSearch` if needed)
 
 Never run remote DB commands (`wrangler d1 … --remote`, drizzle-kit migrate/push against Cloudflare) unless the user explicitly asks.
 
-`bun run dev` applies pending D1 migrations to the local Wrangler database only.
+Use `bun run db` from the repo root or `apps/web` (generate + local migrate; interactive Wrangler confirm). Or `bun run db:migrate:dev` in `apps/web`. Do not apply remote migrations unless asked.
 
 Do not create product tables (`campaigns`, `domains`, …) unless the task asks for them. Auth tables, workspace tables, `link`, and `click` already exist.
 

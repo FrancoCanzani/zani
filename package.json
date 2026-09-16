@@ -9,7 +9,10 @@
     "format": "turbo run format",
     "check-types": "turbo run check-types",
     "typecheck": "turbo run check-types",
-    "cf-typegen": "turbo run cf-typegen"
+    "cf-typegen": "turbo run cf-typegen",
+    "db:generate": "turbo run db:generate",
+    "db:migrate:dev": "bun run --filter web db:migrate:dev",
+    "db": "bun run --filter web db"
   },
   "devDependencies": {
     "prettier": "^3.9.6",

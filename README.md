@@ -31,18 +31,18 @@ cp apps/web/.dev.vars.example apps/web/.dev.vars
 bun run dev
 ```
 
-The Vite + Cloudflare dev server listens on [http://127.0.0.1:43123](http://127.0.0.1:43123).
+The Vite + Cloudflare dev server listens on [http://localhost:5173](http://localhost:5173).
 
 In development, OTP codes and invite accept URLs are printed to the Worker console. Cloudflare Email is not called unless `ENVIRONMENT` is `production`. The last opened workspace slug is stored in `localStorage` under `workspace-slug`.
 
 Smoke checks:
 
-- App: [http://127.0.0.1:43123](http://127.0.0.1:43123)
-- Sign in: [http://127.0.0.1:43123/sign-in](http://127.0.0.1:43123/sign-in)
-- Onboarding: [http://127.0.0.1:43123/onboarding](http://127.0.0.1:43123/onboarding)
-- Health: [http://127.0.0.1:43123/api/v1/health](http://127.0.0.1:43123/api/v1/health)
+- App: [http://localhost:5173](http://localhost:5173)
+- Sign in: [http://localhost:5173/sign-in](http://localhost:5173/sign-in)
+- Onboarding: [http://localhost:5173/onboarding](http://localhost:5173/onboarding)
+- Health: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health)
 
-D1 (`DB`), KV (`KV`), and Email (`EMAIL`) are local Wrangler bindings. `bun run dev` applies pending migrations from `packages/db/migrations` to the local D1 database. No remote Cloudflare resources are required.
+D1 (`DB`), KV (`KV`), and Email (`EMAIL`) are local Wrangler bindings. Generate and apply local migrations with `bun run db` (from the repo root or `apps/web`). No remote Cloudflare resources are required.
 
 ## Checks
 
@@ -59,7 +59,7 @@ Worker secrets belong in `apps/web/.dev.vars` (see `.dev.vars.example`). Do not 
 Wrangler vars in `apps/web/wrangler.jsonc`:
 
 - `ENVIRONMENT` — `development` locally. Set to `production` before deploying so OTP mail goes through Cloudflare Email instead of the console.
-- `BETTER_AUTH_URL` — origin of the app (`http://127.0.0.1:43123` locally).
+- `BETTER_AUTH_URL` — origin of the app (`http://localhost:5173` locally).
 - `EMAIL_FROM` — verified sender address. `noreply@localhost` is fine locally; production needs a domain onboarded on Cloudflare Email.
 
 Copy `.env.example` only if you need remote Drizzle Kit access to D1.
