@@ -16,7 +16,7 @@
   },
   "vars": {
     "ENVIRONMENT": "development",
-    "BETTER_AUTH_URL": "http://127.0.0.1:43123",
+    "BETTER_AUTH_URL": "http://localhost:5173",
     "EMAIL_FROM": "noreply@localhost"
   },
   "d1_databases": [
