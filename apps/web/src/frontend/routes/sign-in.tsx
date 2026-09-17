@@ -1,22 +1,13 @@
-import { createFileRoute, redirect, useRouter } from "@tanstack/react-router"
+import {
+  Link,
+  createFileRoute,
+  redirect,
+  useRouter,
+} from "@tanstack/react-router"
 import { type SubmitEvent, useState } from "react"
 import { z } from "zod"
 
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
-import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@workspace/ui/components/field"
+import { AppShell } from "@components/app-shell"
 import { Input } from "@workspace/ui/components/input"
 import {
   InputOTP,
@@ -108,22 +99,31 @@ function SignInPage() {
   }
 
   return (
-    <main className="flex min-h-svh items-center justify-center p-6">
-      <Card className="w-full max-w-sm">
-        <CardHeader>
-          <CardTitle>Sign in</CardTitle>
-          <CardDescription>
-            {step === "email"
-              ? "Enter your email and we will send a one-time code."
-              : `Enter the 6-digit code sent to ${email}. In development the code is printed in the Worker console.`}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          {error ? (
-            <Alert variant="destructive" className="mb-4">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          ) : null}
+    <AppShell
+      nav={
+        <Link to="/" className="transition-colors hover:text-foreground">
+          Back
+        </Link>
+      }
+    >
+      <main className="flex max-w-sm flex-col py-16">
+        <p className="text-sm text-muted-foreground italic">Welcome back</p>
+        <h1 className="mt-4 text-2xl font-normal tracking-tight sm:text-3xl">
+          Sign in
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          {step === "email"
+            ? "We’ll email you a one-time code."
+            : `Code sent to ${email}.`}
+        </p>
+
+        {error ? (
+          <p className="mt-6 text-sm text-destructive" role="alert">
+            {error}
+          </p>
+        ) : null}
+
+        <div className={error ? "mt-4" : "mt-8"}>
           {renderStep({
             step,
             email,
@@ -140,9 +140,9 @@ function SignInPage() {
               setError(null)
             },
           })}
-        </CardContent>
-      </Card>
-    </main>
+        </div>
+      </main>
+    </AppShell>
   )
 }
 
@@ -161,25 +161,27 @@ function renderStep(input: {
   switch (input.step) {
     case "email":
       return (
-        <form onSubmit={input.onSendCode}>
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="email">Email</FieldLabel>
-              <Input
-                id="email"
-                type="email"
-                name="email"
-                autoComplete="email"
-                required
-                value={input.email}
-                onChange={(event) => input.onEmailChange(event.target.value)}
-                placeholder="you@example.com"
-              />
-            </Field>
-            <Button type="submit" disabled={input.pending}>
-              {input.pending ? "Sending code…" : "Send code"}
-            </Button>
-          </FieldGroup>
+        <form onSubmit={input.onSendCode} className="flex flex-col gap-4">
+          <label className="flex flex-col gap-2">
+            <span className="text-sm text-muted-foreground">Email</span>
+            <Input
+              id="email"
+              type="email"
+              name="email"
+              autoComplete="email"
+              required
+              value={input.email}
+              onChange={(event) => input.onEmailChange(event.target.value)}
+              placeholder="you@example.com"
+            />
+          </label>
+          <button
+            type="submit"
+            disabled={input.pending}
+            className="group flex cursor-pointer items-center justify-center gap-2 rounded-md border border-neutral-900 bg-neutral-800 px-4 py-1 text-base text-white shadow-sm transition-all duration-300 disabled:opacity-50"
+          >
+            {input.pending ? "Sending…" : "Continue"}
+          </button>
         </form>
       )
     case "otp":
@@ -189,59 +191,56 @@ function renderStep(input: {
             event.preventDefault()
             void input.onVerifyCode(input.otp)
           }}
+          className="flex flex-col gap-4"
         >
-          <FieldGroup>
-            <Field>
-              <FieldLabel htmlFor="otp">One-time code</FieldLabel>
-              <InputOTP
-                id="otp"
-                maxLength={6}
-                value={input.otp}
-                onChange={input.onOtpChange}
-                onComplete={(value) => {
-                  void input.onVerifyCode(value)
-                }}
-                disabled={input.pending}
-                autoFocus
-              >
-                <InputOTPGroup>
-                  <InputOTPSlot index={0} />
-                  <InputOTPSlot index={1} />
-                  <InputOTPSlot index={2} />
-                  <InputOTPSlot index={3} />
-                  <InputOTPSlot index={4} />
-                  <InputOTPSlot index={5} />
-                </InputOTPGroup>
-              </InputOTP>
-              <FieldDescription>
-                The code expires in 5 minutes.
-              </FieldDescription>
-            </Field>
-            <Button
-              type="submit"
-              disabled={input.pending || input.otp.length !== 6}
+          <label className="flex flex-col gap-2">
+            <span className="text-sm text-muted-foreground">Code</span>
+            <InputOTP
+              id="otp"
+              maxLength={6}
+              value={input.otp}
+              onChange={input.onOtpChange}
+              onComplete={(value) => {
+                void input.onVerifyCode(value)
+              }}
+              disabled={input.pending}
+              autoFocus
             >
-              {input.pending ? "Signing in…" : "Sign in"}
-            </Button>
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <Button
-                type="button"
-                variant="outline"
-                disabled={input.pending}
-                onClick={input.onResend}
-              >
-                Resend code
-              </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                disabled={input.pending}
-                onClick={input.onChangeEmail}
-              >
-                Use a different email
-              </Button>
-            </div>
-          </FieldGroup>
+              <InputOTPGroup>
+                <InputOTPSlot index={0} />
+                <InputOTPSlot index={1} />
+                <InputOTPSlot index={2} />
+                <InputOTPSlot index={3} />
+                <InputOTPSlot index={4} />
+                <InputOTPSlot index={5} />
+              </InputOTPGroup>
+            </InputOTP>
+          </label>
+          <button
+            type="submit"
+            disabled={input.pending || input.otp.length !== 6}
+            className="group flex cursor-pointer items-center justify-center gap-2 rounded-md border border-neutral-900 bg-neutral-800 px-4 py-1 text-base text-white shadow-sm transition-all duration-300 disabled:opacity-50"
+          >
+            {input.pending ? "Signing in…" : "Sign in"}
+          </button>
+          <div className="flex gap-4 text-sm text-muted-foreground">
+            <button
+              type="button"
+              disabled={input.pending}
+              onClick={input.onResend}
+              className="transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              Resend
+            </button>
+            <button
+              type="button"
+              disabled={input.pending}
+              onClick={input.onChangeEmail}
+              className="transition-colors hover:text-foreground disabled:opacity-50"
+            >
+              Different email
+            </button>
+          </div>
         </form>
       )
     default: {

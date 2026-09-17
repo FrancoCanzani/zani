@@ -7,17 +7,9 @@ import {
 import { Link, createFileRoute, useRouter } from "@tanstack/react-router"
 import { z } from "zod"
 
+import { AppShell } from "@components/app-shell"
 import { NotFoundScreen } from "@components/not-found-screen"
 import { PendingScreen } from "@components/pending-screen"
-import { Alert, AlertDescription } from "@workspace/ui/components/alert"
-import { Button } from "@workspace/ui/components/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@workspace/ui/components/card"
 import {
   Field,
   FieldDescription,
@@ -118,22 +110,18 @@ function WorkspacePage() {
   })
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-xl flex-col gap-6 p-6">
-      <header className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-        <div className="flex min-w-0 flex-col gap-1">
-          <p className="text-sm text-muted-foreground">
-            /w/{workspace.workspace.slug}
-          </p>
-          <h1 className="font-medium">{workspace.workspace.name}</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild variant="outline" size="sm">
-            <Link to="/onboarding">New workspace</Link>
-          </Button>
-          <Button
+    <AppShell
+      nav={
+        <>
+          <Link
+            to="/onboarding"
+            className="transition-colors hover:text-foreground"
+          >
+            New workspace
+          </Link>
+          <button
             type="button"
-            variant="ghost"
-            size="sm"
+            className="transition-colors hover:text-foreground"
             onClick={() => {
               void authClient.signOut({
                 fetchOptions: {
@@ -147,64 +135,71 @@ function WorkspacePage() {
             }}
           >
             Sign out
-          </Button>
-        </div>
-      </header>
+          </button>
+        </>
+      }
+    >
+      <main className="space-y-12 pb-32 pt-8">
+        <section className="space-y-2">
+          <p className="font-mono text-sm text-muted-foreground">
+            /w/{workspace.workspace.slug}
+          </p>
+          <h1 className="text-2xl font-normal tracking-tight sm:text-3xl">
+            {workspace.workspace.name}
+          </h1>
+          {workspaces.workspaces.length > 1 ? (
+            <nav className="flex flex-wrap gap-4 pt-2 text-sm text-muted-foreground">
+              {workspaces.workspaces.map((item) => (
+                <Link
+                  key={item.id}
+                  to="/w/$slug"
+                  params={{ slug: item.slug }}
+                  className={
+                    item.slug === slug
+                      ? "text-foreground"
+                      : "transition-colors hover:text-foreground"
+                  }
+                >
+                  {item.name}
+                </Link>
+              ))}
+            </nav>
+          ) : null}
+        </section>
 
-      {workspaces.workspaces.length > 1 ? (
-        <nav className="flex flex-wrap gap-2 text-sm">
-          {workspaces.workspaces.map((item) => (
-            <Link
-              key={item.id}
-              to="/w/$slug"
-              params={{ slug: item.slug }}
-              className={
-                item.slug === slug
-                  ? "font-medium"
-                  : "text-muted-foreground underline-offset-4 hover:underline"
-              }
-            >
-              {item.name}
-            </Link>
-          ))}
-        </nav>
-      ) : null}
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Members</CardTitle>
-          <CardDescription>
+        <section className="space-y-4">
+          <h2 className="text-xl font-normal text-muted-foreground">Members</h2>
+          <p className="max-w-xl text-sm leading-relaxed text-muted-foreground">
             Signed in as {session.user.email}. Invites are emailed; in
             development the link is printed in the Worker console.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
-          <ul className="flex flex-col gap-2 text-sm">
+          </p>
+          <ul className="max-w-xl space-y-3 leading-relaxed">
             {members.members.map((member) => (
               <li
                 key={member.id}
                 className="flex items-baseline justify-between gap-3"
               >
                 <span className="min-w-0 truncate">{member.email}</span>
-                <span className="text-muted-foreground">
+                <span className="text-sm text-muted-foreground">
                   {roleLabel(member.role)}
                 </span>
               </li>
             ))}
           </ul>
+
           {invite.error ? (
-            <Alert variant="destructive">
-              <AlertDescription>{invite.error.message}</AlertDescription>
-            </Alert>
+            <p className="text-sm text-destructive" role="alert">
+              {invite.error.message}
+            </p>
           ) : null}
           {invite.isSuccess ? (
-            <Alert>
-              <AlertDescription>
-                Invite sent to {invite.data}.
-              </AlertDescription>
-            </Alert>
+            <p className="text-sm text-muted-foreground">
+              Invite sent to {invite.data}.
+            </p>
           ) : null}
+
           <form
+            className="max-w-md pt-2"
             onSubmit={(event) => {
               event.preventDefault()
               event.stopPropagation()
@@ -237,16 +232,20 @@ function WorkspacePage() {
               </inviteForm.Field>
               <inviteForm.Subscribe selector={(state) => state.isSubmitting}>
                 {(isSubmitting) => (
-                  <Button type="submit" disabled={isSubmitting}>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="group flex w-fit cursor-pointer items-center justify-center gap-2 rounded-md border border-neutral-900 bg-neutral-800 px-4 py-1 text-base text-white shadow-sm transition-all duration-300 disabled:opacity-50"
+                  >
                     {isSubmitting ? "Sending…" : "Send invite"}
-                  </Button>
+                  </button>
                 )}
               </inviteForm.Subscribe>
             </FieldGroup>
           </form>
-        </CardContent>
-      </Card>
-    </main>
+        </section>
+      </main>
+    </AppShell>
   )
 }
 

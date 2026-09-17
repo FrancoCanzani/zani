@@ -1,7 +1,7 @@
 import { Link, createFileRoute, notFound, redirect } from "@tanstack/react-router"
 
+import { AppShell } from "@components/app-shell"
 import { PendingScreen } from "@components/pending-screen"
-import { Button } from "@workspace/ui/components/button"
 
 import { api } from "@lib/api"
 import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
@@ -78,12 +78,21 @@ function InviteResultPage() {
 
 function InviteMessage({ title, body }: { title: string; body: string }) {
   return (
-    <main className="flex min-h-svh flex-col items-center justify-center gap-3 p-6 text-center">
-      <h1 className="font-medium">{title}</h1>
-      <p className="max-w-sm text-sm text-muted-foreground">{body}</p>
-      <Button asChild>
-        <Link to="/">Back home</Link>
-      </Button>
-    </main>
+    <AppShell>
+      <main className="max-w-md py-16">
+        <h1 className="text-2xl font-normal tracking-tight sm:text-3xl">
+          {title}
+        </h1>
+        <p className="mt-3 max-w-sm leading-relaxed text-muted-foreground">
+          {body}
+        </p>
+        <Link
+          to="/"
+          className="mt-8 inline-flex items-center rounded-md border bg-white px-4 py-1 text-base shadow-sm transition-all duration-300"
+        >
+          Back home
+        </Link>
+      </main>
+    </AppShell>
   )
 }
