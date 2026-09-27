@@ -16,6 +16,19 @@
     "resolveJsonModule": true,
     "isolatedModules": true,
     "allowJs": false,
-    "jsx": "react-jsx"
-  }
+    "jsx": "react-jsx",
+    "types": ["vite/client"],
+    "noEmit": true,
+    "paths": {
+      "@/*": ["./src/frontend/*"],
+      "@backend/*": ["./src/backend/*"],
+      "@frontend/*": ["./src/frontend/*"],
+      "@lib/*": ["./src/frontend/lib/*"],
+      "@features/*": ["./src/frontend/features/*"],
+      "@routes/*": ["./src/frontend/routes/*"],
+      "@components/*": ["./src/frontend/components/*"],
+      "@shared/*": ["./src/shared/*"]
+    }
+  },
+  "include": ["src/frontend", "src/shared", "worker-configuration.d.ts"]
 }

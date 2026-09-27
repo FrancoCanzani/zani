@@ -1,8 +1,5 @@
 dist/
 node_modules/
-.turbo/
 coverage/
-pnpm-lock.yaml
-.pnpm-store/
-apps/web/src/frontend/route-tree.gen.ts
-apps/web/worker-configuration.d.ts
+src/frontend/route-tree.gen.ts
+worker-configuration.d.ts
