@@ -13,8 +13,11 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboarding'
-import { Route as AuthedInvitesTokenRouteImport } from './routes/_authed/invites.$token'
-import { Route as AuthedWSlugRouteImport } from './routes/_authed/w.$slug'
+import { Route as AuthedInvitesTokenRouteImport } from './routes/_authed/invites/$token'
+import { Route as AuthedWSlugRouteRouteImport } from './routes/_authed/w/$slug/route'
+import { Route as AuthedWSlugIndexRouteImport } from './routes/_authed/w/$slug/index'
+import { Route as AuthedWSlugSettingsRouteImport } from './routes/_authed/w/$slug/settings'
+import { Route as AuthedWSlugLinksCodeRouteImport } from './routes/_authed/w/$slug/links/$code'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -40,25 +43,45 @@ const AuthedInvitesTokenRoute = AuthedInvitesTokenRouteImport.update({
   path: '/invites/$token',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedWSlugRoute = AuthedWSlugRouteImport.update({
+const AuthedWSlugRouteRoute = AuthedWSlugRouteRouteImport.update({
   id: '/w/$slug',
   path: '/w/$slug',
   getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedWSlugIndexRoute = AuthedWSlugIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AuthedWSlugRouteRoute,
+} as any)
+const AuthedWSlugSettingsRoute = AuthedWSlugSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AuthedWSlugRouteRoute,
+} as any)
+const AuthedWSlugLinksCodeRoute = AuthedWSlugLinksCodeRouteImport.update({
+  id: '/links/$code',
+  path: '/links/$code',
+  getParentRoute: () => AuthedWSlugRouteRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/onboarding': typeof AuthedOnboardingRoute
+  '/w/$slug': typeof AuthedWSlugRouteRouteWithChildren
   '/invites/$token': typeof AuthedInvitesTokenRoute
-  '/w/$slug': typeof AuthedWSlugRoute
+  '/w/$slug/settings': typeof AuthedWSlugSettingsRoute
+  '/w/$slug/': typeof AuthedWSlugIndexRoute
+  '/w/$slug/links/$code': typeof AuthedWSlugLinksCodeRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/onboarding': typeof AuthedOnboardingRoute
   '/invites/$token': typeof AuthedInvitesTokenRoute
-  '/w/$slug': typeof AuthedWSlugRoute
+  '/w/$slug/settings': typeof AuthedWSlugSettingsRoute
+  '/w/$slug': typeof AuthedWSlugIndexRoute
+  '/w/$slug/links/$code': typeof AuthedWSlugLinksCodeRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -66,22 +89,43 @@ export interface FileRoutesById {
   '/_authed': typeof AuthedRouteWithChildren
   '/sign-in': typeof SignInRoute
   '/_authed/onboarding': typeof AuthedOnboardingRoute
+  '/_authed/w/$slug': typeof AuthedWSlugRouteRouteWithChildren
   '/_authed/invites/$token': typeof AuthedInvitesTokenRoute
-  '/_authed/w/$slug': typeof AuthedWSlugRoute
+  '/_authed/w/$slug/settings': typeof AuthedWSlugSettingsRoute
+  '/_authed/w/$slug/': typeof AuthedWSlugIndexRoute
+  '/_authed/w/$slug/links/$code': typeof AuthedWSlugLinksCodeRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/sign-in' | '/onboarding' | '/invites/$token' | '/w/$slug'
+  fullPaths:
+    | '/'
+    | '/sign-in'
+    | '/onboarding'
+    | '/w/$slug'
+    | '/invites/$token'
+    | '/w/$slug/settings'
+    | '/w/$slug/'
+    | '/w/$slug/links/$code'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/sign-in' | '/onboarding' | '/invites/$token' | '/w/$slug'
+  to:
+    | '/'
+    | '/sign-in'
+    | '/onboarding'
+    | '/invites/$token'
+    | '/w/$slug/settings'
+    | '/w/$slug'
+    | '/w/$slug/links/$code'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/sign-in'
     | '/_authed/onboarding'
-    | '/_authed/invites/$token'
     | '/_authed/w/$slug'
+    | '/_authed/invites/$token'
+    | '/_authed/w/$slug/settings'
+    | '/_authed/w/$slug/'
+    | '/_authed/w/$slug/links/$code'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -131,22 +175,58 @@ declare module '@tanstack/react-router' {
       id: '/_authed/w/$slug'
       path: '/w/$slug'
       fullPath: '/w/$slug'
-      preLoaderRoute: typeof AuthedWSlugRouteImport
+      preLoaderRoute: typeof AuthedWSlugRouteRouteImport
       parentRoute: typeof AuthedRoute
+    }
+    '/_authed/w/$slug/': {
+      id: '/_authed/w/$slug/'
+      path: '/'
+      fullPath: '/w/$slug/'
+      preLoaderRoute: typeof AuthedWSlugIndexRouteImport
+      parentRoute: typeof AuthedWSlugRouteRoute
+    }
+    '/_authed/w/$slug/settings': {
+      id: '/_authed/w/$slug/settings'
+      path: '/settings'
+      fullPath: '/w/$slug/settings'
+      preLoaderRoute: typeof AuthedWSlugSettingsRouteImport
+      parentRoute: typeof AuthedWSlugRouteRoute
+    }
+    '/_authed/w/$slug/links/$code': {
+      id: '/_authed/w/$slug/links/$code'
+      path: '/links/$code'
+      fullPath: '/w/$slug/links/$code'
+      preLoaderRoute: typeof AuthedWSlugLinksCodeRouteImport
+      parentRoute: typeof AuthedWSlugRouteRoute
     }
   }
 }
 
+interface AuthedWSlugRouteRouteChildren {
+  AuthedWSlugSettingsRoute: typeof AuthedWSlugSettingsRoute
+  AuthedWSlugIndexRoute: typeof AuthedWSlugIndexRoute
+  AuthedWSlugLinksCodeRoute: typeof AuthedWSlugLinksCodeRoute
+}
+
+const AuthedWSlugRouteRouteChildren: AuthedWSlugRouteRouteChildren = {
+  AuthedWSlugSettingsRoute: AuthedWSlugSettingsRoute,
+  AuthedWSlugIndexRoute: AuthedWSlugIndexRoute,
+  AuthedWSlugLinksCodeRoute: AuthedWSlugLinksCodeRoute,
+}
+
+const AuthedWSlugRouteRouteWithChildren =
+  AuthedWSlugRouteRoute._addFileChildren(AuthedWSlugRouteRouteChildren)
+
 interface AuthedRouteChildren {
   AuthedOnboardingRoute: typeof AuthedOnboardingRoute
+  AuthedWSlugRouteRoute: typeof AuthedWSlugRouteRouteWithChildren
   AuthedInvitesTokenRoute: typeof AuthedInvitesTokenRoute
-  AuthedWSlugRoute: typeof AuthedWSlugRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedOnboardingRoute: AuthedOnboardingRoute,
+  AuthedWSlugRouteRoute: AuthedWSlugRouteRouteWithChildren,
   AuthedInvitesTokenRoute: AuthedInvitesTokenRoute,
-  AuthedWSlugRoute: AuthedWSlugRoute,
 }
 
 const AuthedRouteWithChildren =

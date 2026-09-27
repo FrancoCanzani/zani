@@ -12,7 +12,7 @@ Signed-in users land on `/w/$slug`. Accounts without a workspace go through `/on
 - TanStack Router (file-based) + React
 - Tailwind CSS + shadcn/ui
 - Hono on Cloudflare Workers (Zod validation + RPC client)
-- Cloudflare D1 + KV + Email
+- Cloudflare D1 + KV + Analytics Engine + Email
 - Drizzle
 - Better Auth (email OTP)
 
@@ -40,7 +40,7 @@ Smoke checks:
 - Onboarding: [http://localhost:5173/onboarding](http://localhost:5173/onboarding)
 - Health: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health)
 
-D1 (`DB`), KV (`KV`), and Email (`EMAIL`) are local Wrangler bindings. Generate and apply local migrations with `bun run db`. No remote Cloudflare resources are required.
+D1 (`DB`), KV (`KV`), Analytics Engine (`CLICKS`), and Email (`EMAIL`) are local Wrangler bindings. Generate and apply local migrations with `bun run db`. No remote Cloudflare resources are required. Analytics Engine writes from local dev do not land in the production dataset.
 
 ## Checks
 
@@ -67,7 +67,8 @@ Copy `.env.example` only if you need remote Drizzle Kit access to D1.
 Bindings are declared in `wrangler.jsonc`:
 
 - `DB` — D1
-- `KV` — KV
+- `KV` — KV, key `link:{code}` for redirect lookups
+- `CLICKS` — Analytics Engine dataset `clicks`
 - `EMAIL` — Cloudflare Email sending
 
 Replace the local placeholder IDs with real resource IDs before deploying. Do not enable `remote: true` on `EMAIL` for local development.

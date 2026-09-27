@@ -5,3 +5,11 @@ export function PendingScreen({ label }: { label: string }) {
     </main>
   )
 }
+
+export function pendingScreen(label: string) {
+  function Pending() {
+    return <PendingScreen label={label} />
+  }
+
+  return Pending
+}

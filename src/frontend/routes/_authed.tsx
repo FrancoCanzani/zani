@@ -12,9 +12,5 @@ export const Route = createFileRoute("/_authed")({
     }
     return { session: context.session }
   },
-  component: AuthedLayout,
+  component: Outlet,
 })
-
-function AuthedLayout() {
-  return <Outlet />
-}
