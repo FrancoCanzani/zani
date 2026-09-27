@@ -8,7 +8,7 @@ Signed-in users land on `/w/$slug`. Accounts without a workspace go through `/on
 
 ## Stack
 
-- Bun + Turborepo
+- Bun
 - TanStack Router (file-based) + React
 - Tailwind CSS + shadcn/ui
 - Hono on Cloudflare Workers (Zod validation + RPC client)
@@ -16,17 +16,15 @@ Signed-in users land on `/w/$slug`. Accounts without a workspace go through `/on
 - Drizzle
 - Better Auth (email OTP)
 
-## Apps and packages
+## App
 
-- `apps/web` — TanStack Router SPA (`src/frontend`) and Hono Worker (`src/backend`). Typed API lives in `src/backend/api.ts`; Better Auth is mounted on the Worker entry beside it.
-- `packages/ui` — shared shadcn/ui components
-- `packages/db` — Drizzle schema and D1 migrations
+The TanStack Router SPA lives in `src/frontend` and the Hono Worker lives in `src/backend`. The typed API is `src/backend/api.ts`; Better Auth is mounted on the Worker entry beside it. shadcn/ui lives in `src/frontend`. The Drizzle schema and D1 migrations live in `src/backend/db`.
 
 ## Local development
 
 ```bash
 bun install
-cp apps/web/.dev.vars.example apps/web/.dev.vars
+cp .dev.vars.example .dev.vars
 # Set BETTER_AUTH_SECRET to a long random value, e.g. `openssl rand -base64 32`
 bun run dev
 ```
@@ -42,7 +40,7 @@ Smoke checks:
 - Onboarding: [http://localhost:5173/onboarding](http://localhost:5173/onboarding)
 - Health: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health)
 
-D1 (`DB`), KV (`KV`), and Email (`EMAIL`) are local Wrangler bindings. Generate and apply local migrations with `bun run db` (from the repo root or `apps/web`). No remote Cloudflare resources are required.
+D1 (`DB`), KV (`KV`), and Email (`EMAIL`) are local Wrangler bindings. Generate and apply local migrations with `bun run db`. No remote Cloudflare resources are required.
 
 ## Checks
 
@@ -54,9 +52,9 @@ bun run build
 
 ## Environment
 
-Worker secrets belong in `apps/web/.dev.vars` (see `.dev.vars.example`). Do not commit secrets.
+Worker secrets belong in `.dev.vars` (see `.dev.vars.example`). Do not commit secrets.
 
-Wrangler vars in `apps/web/wrangler.jsonc`:
+Wrangler vars in `wrangler.jsonc`:
 
 - `ENVIRONMENT` — `development` locally. Set to `production` before deploying so OTP mail goes through Cloudflare Email instead of the console.
 - `BETTER_AUTH_URL` — origin of the app (`http://localhost:5173` locally).
@@ -66,7 +64,7 @@ Copy `.env.example` only if you need remote Drizzle Kit access to D1.
 
 ## Cloudflare resources
 
-Bindings are declared in `apps/web/wrangler.jsonc`:
+Bindings are declared in `wrangler.jsonc`:
 
 - `DB` — D1
 - `KV` — KV

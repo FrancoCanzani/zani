@@ -17,10 +17,9 @@ The only legal comment is a short `//` that explains a non-obvious **why**: a pl
 ## Tooling
 
 - Package manager: Bun. Prefer `bun` commands. Do not introduce npm/pnpm/yarn unless a tool requires it.
-- Monorepo: Turborepo.
 - App: TanStack Router (file-based) + Hono on Cloudflare Workers.
-- UI: shadcn/ui in `packages/ui`.
-- Database: Drizzle + Cloudflare D1 in `packages/db`.
+- UI: shadcn/ui in `src/frontend`.
+- Database: Drizzle + Cloudflare D1 in `src/backend/db`.
 - Cache: Cloudflare KV binding `KV`.
 - Email: Cloudflare Email binding `EMAIL`. In `ENVIRONMENT=development`, OTPs are logged to the console and mail is not sent.
 
@@ -38,15 +37,15 @@ Hono on the Worker is native — no HTTP adapter. Keep three trees:
 
 Each resource exports a chained `new Hono<AppEnv>().get(...)` (or `.post`, …) and is mounted with `.route()`. Do not mutate routers with `registerX(app)` helpers — that drops RPC inference.
 
-Validate `json` / `query` / `param` with `@hono/zod-validator`. Zod lives on `apps/web`, not `packages/ui`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, later redirects) must not use it.
+Validate `json` / `query` / `param` with `@hono/zod-validator`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, later redirects) must not use it.
 
 The SPA talks to the versioned API through `hc<V1Api>` in `frontend/lib/api.ts`. Auth cookies still go through the Better Auth client.
 
 ## Routing
 
-Never hand-edit `apps/web/src/frontend/route-tree.gen.ts`. The TanStack Router Vite plugin regenerates it from `apps/web/src/frontend/routes/` during `bun run dev` / build. Add or change route files only.
+Never hand-edit `src/frontend/route-tree.gen.ts`. The TanStack Router Vite plugin regenerates it from `src/frontend/routes/` during `bun run dev` / build. Add or change route files only.
 
-Keep the Pwor-style split in `apps/web/src`:
+Keep the split in `src`:
 
 - `frontend/` — TanStack Router app
 - `backend/` — Hono Worker
@@ -58,7 +57,7 @@ Route files should export `component: ThePage` (plus `validateSearch` if needed)
 
 Never run remote DB commands (`wrangler d1 … --remote`, drizzle-kit migrate/push against Cloudflare) unless the user explicitly asks.
 
-Use `bun run db` from the repo root or `apps/web` (generate + local migrate; interactive Wrangler confirm). Or `bun run db:migrate:dev` in `apps/web`. Do not apply remote migrations unless asked.
+Use `bun run db` (generate + local migrate; interactive Wrangler confirm). Or `bun run db:migrate:dev`. Do not apply remote migrations unless asked.
 
 Do not create product tables (`campaigns`, `domains`, …) unless the task asks for them. Auth tables, workspace tables, `link`, and `click` already exist.
 
