@@ -2,11 +2,11 @@ import { and, eq, sql } from "drizzle-orm"
 
 import type { InviteRole } from "@shared/workspace"
 
-import { user, workspaceInvite, workspaceMember } from "../db/schema"
-import { createDb } from "./db"
-import { newId, nowMs } from "./id"
-import { sendAppEmail } from "./mail"
-import { randomToken, sha256Hex } from "./token"
+import { user, workspaceInvite, workspaceMember } from "../../../../db/schema"
+import { createDb } from "../../../../lib/db"
+import { newId, nowMs } from "../../../../lib/id"
+import { sendAppEmail } from "../../../../lib/mail"
+import { randomToken, sha256Hex } from "../../../../lib/token"
 
 const INVITE_TTL_MS = 1000 * 60 * 60 * 24 * 7
 

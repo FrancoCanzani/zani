@@ -1,14 +1,14 @@
 import { and, eq } from "drizzle-orm"
 import { Hono } from "hono"
 
-import { workspace, workspaceInvite, workspaceMember } from "../../db/schema"
-import { createDb } from "../../lib/db"
-import { newId, nowMs } from "../../lib/id"
-import { sha256Hex } from "../../lib/token"
-import { requireSession } from "../../middleware/session"
-import type { AppEnv } from "../../types"
+import { workspace, workspaceInvite, workspaceMember } from "../../../db/schema"
+import { createDb } from "../../../lib/db"
+import { newId, nowMs } from "../../../lib/id"
+import { sha256Hex } from "../../../lib/token"
+import { requireSession } from "../../../middleware/session"
+import type { AppEnv } from "../../../types"
 
-export const invites = new Hono<AppEnv>().post(
+export const acceptInvite = new Hono<AppEnv>().post(
   "/:token/accept",
   requireSession,
   async (c) => {

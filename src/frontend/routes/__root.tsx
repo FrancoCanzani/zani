@@ -1,9 +1,9 @@
 import type { QueryClient } from "@tanstack/react-query"
-import { Outlet, createRootRouteWithContext } from "@tanstack/react-router"
+import { createRootRouteWithContext } from "@tanstack/react-router"
 
 import { NotFoundScreen } from "@components/not-found-screen"
-import { PendingScreen } from "@components/pending-screen"
-import { ThemeProvider } from "@components/theme-provider"
+import { pendingScreen } from "@components/pending-screen"
+import { RootLayout } from "@components/root-layout"
 import { authClient } from "@lib/auth/client"
 import type { Session } from "@lib/auth/session"
 
@@ -19,15 +19,7 @@ export const Route = createRootRouteWithContext<RouterContext>()({
     const { data: session } = await authClient.getSession()
     return { session }
   },
-  pendingComponent: () => <PendingScreen label="Loading…" />,
+  pendingComponent: pendingScreen("Loading…"),
   notFoundComponent: NotFoundScreen,
-  component: RootComponent,
+  component: RootLayout,
 })
-
-function RootComponent() {
-  return (
-    <ThemeProvider>
-      <Outlet />
-    </ThemeProvider>
-  )
-}

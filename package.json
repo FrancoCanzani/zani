@@ -10,7 +10,7 @@
     "format": "prettier --write \"**/*.{ts,tsx}\"",
     "check-types": "bun run cf-typegen && tsc --noEmit && tsc --noEmit -p tsconfig.backend.json && tsc --noEmit -p tsconfig.node.json",
     "typecheck": "bun run check-types",
-    "cf-typegen": "wrangler types --include-runtime=false --strict-vars=false",
+    "cf-typegen": "wrangler types --strict-vars=false",
     "preview": "bun run build && vite preview",
     "deploy": "bun run build && wrangler deploy",
     "db:generate": "drizzle-kit generate",

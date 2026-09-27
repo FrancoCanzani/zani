@@ -20,12 +20,13 @@ The only legal comment is a short `//` that explains a non-obvious **why**: a pl
 - App: TanStack Router (file-based) + Hono on Cloudflare Workers.
 - UI: shadcn/ui in `src/frontend`.
 - Database: Drizzle + Cloudflare D1 in `src/backend/db`.
-- Cache: Cloudflare KV binding `KV`.
+- Cache: Cloudflare KV binding `KV`. Link redirects read `link:{code}`.
+- Clicks: Analytics Engine binding `CLICKS`, dataset `clicks`.
 - Email: Cloudflare Email binding `EMAIL`. In `ENVIRONMENT=development`, OTPs are logged to the console and mail is not sent.
 
 `bun run check-types` is the typecheck to run.
 
-HTTP API routes live under `/api/v1`. Keep `run_worker_first` on `/api/*`. Create Better Auth with `createAuth(env)` per request — do not use a module-level singleton.
+HTTP API routes live under `/api/v1`. `run_worker_first` is true so short-link redirects run before static assets. Create Better Auth with `createAuth(env)` per request — do not use a module-level singleton.
 
 ## Backend
 
@@ -33,11 +34,11 @@ Hono on the Worker is native — no HTTP adapter. Keep three trees:
 
 - `/api/v1/auth/*` — Better Auth `handler`, mounted on the Worker entry, not on the typed API
 - `/api/v1/*` — chained Hono app exported as `AppType` / `V1Api` for `hc`
-- future `/:code` redirects — Worker entry, not the API router, not behind auth
+- `/:code` redirects — `backend/redirect.ts` from the Worker `notFound`, not the API router, not behind auth
 
-Each resource exports a chained `new Hono<AppEnv>().get(...)` (or `.post`, …) and is mounted with `.route()`. Do not mutate routers with `registerX(app)` helpers — that drops RPC inference.
+Each resource lives in `backend/routes/v1/<resource>/` and exports a chained `new Hono<AppEnv>().get(...)` (or `.post`, …) mounted with `.route()`. Helpers for that resource live in its `lib` folder. Auth, email, and other cross-cutting helpers stay in `backend/lib`. Do not mutate routers with `registerX(app)` helpers — that drops RPC inference.
 
-Validate `json` / `query` / `param` with `@hono/zod-validator`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, later redirects) must not use it.
+Validate `json` / `query` / `param` with `@hono/zod-validator`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, redirects) must not use it.
 
 The SPA talks to the versioned API through `hc<V1Api>` in `frontend/lib/api.ts`. Auth cookies still go through the Better Auth client.
 
@@ -51,7 +52,7 @@ Keep the split in `src`:
 - `backend/` — Hono Worker
 - `shared/` — types used by both
 
-Route files should export `component: ThePage` (plus `validateSearch` if needed). Do not add a route component that only unpacks `useParams` / `useSearch` and forwards them as props.
+Route files export the route definition only (`loader`, `beforeLoad`, `validateSearch`, `component: ThePage`). Do not define components in route files. Page components live in `frontend/features` and read params with `getRouteApi`.
 
 ## Database
 
@@ -71,9 +72,9 @@ Do not seed, insert, or copy data — real or fake — unless asked.
 
 Resource identifiers live in Wrangler configuration. Do not hardcode Cloudflare IDs throughout application code.
 
-Use bindings (`env.DB`, `env.KV`, `env.EMAIL`) rather than the Cloudflare REST API.
+Use bindings (`env.DB`, `env.KV`, `env.CLICKS`, `env.EMAIL`) rather than the Cloudflare REST API.
 
-Do not provision R2, Queues, Analytics Engine, or Durable Objects unless the current task requires them.
+Do not provision R2, Queues, or Durable Objects unless the current task requires them. Do not add another Analytics Engine dataset unless the task asks.
 
 Do not set `send_email.remote` to `true` in local Wrangler config.
 
