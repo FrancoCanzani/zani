@@ -30,7 +30,6 @@ export default defineConfig({
         import.meta.dirname,
         "./src/frontend/components"
       ),
-      "@shared": path.resolve(import.meta.dirname, "./src/shared"),
     },
   },
   build: {

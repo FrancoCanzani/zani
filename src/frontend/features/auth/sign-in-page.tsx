@@ -76,7 +76,7 @@ export function SignInPage() {
         to="/"
         className="tracking-tight transition-opacity hover:opacity-70"
       >
-        Zani Links
+        zani
       </Link>
 
       <p className="mt-10 text-sm text-muted-foreground italic">Welcome back</p>

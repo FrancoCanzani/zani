@@ -1,10 +1,12 @@
-# SaaS foundation
+# Estimates + deposits (foundation)
 
-Development foundation for a URL-shortening, link analytics, and campaigns product.
+Development foundation for a SaaS that helps solo tradespeople and tiny crews send estimates customers can accept and pay a deposit on.
 
-The first product slice is versioned HTTP APIs, email OTP sign-in, and workspace onboarding. Shortening, redirects, analytics, campaigns, and a dashboard are not implemented yet.
+Product line: **Send estimates that customers actually accept and pay.**
 
-Signed-in users land on `/w/$slug`. Accounts without a workspace go through `/onboarding` to create one and optionally invite members. Invite links are `/invites/$token`.
+The first product slice is versioned HTTP APIs, email OTP sign-in, display-name completion, a dashboard, and creating a business. Estimates, public share links, Stripe Connect deposits, and subscriptions are not implemented yet.
+
+Flow: sign in → `/welcome` (name) → `/dashboard` → set up business → `/dashboard/$slug` (business view; slug is a UUID). Invite links are `/invites/$token`.
 
 ## Stack
 
@@ -12,7 +14,7 @@ Signed-in users land on `/w/$slug`. Accounts without a workspace go through `/on
 - TanStack Router (file-based) + React
 - Tailwind CSS + shadcn/ui
 - Hono on Cloudflare Workers (Zod validation + RPC client)
-- Cloudflare D1 + KV + Analytics Engine + Email
+- Cloudflare D1 + Email
 - Drizzle
 - Better Auth (email OTP)
 
@@ -37,10 +39,11 @@ Smoke checks:
 
 - App: [http://localhost:5173](http://localhost:5173)
 - Sign in: [http://localhost:5173/sign-in](http://localhost:5173/sign-in)
-- Onboarding: [http://localhost:5173/onboarding](http://localhost:5173/onboarding)
+- Welcome (name): [http://localhost:5173/welcome](http://localhost:5173/welcome)
+- Dashboard: [http://localhost:5173/dashboard](http://localhost:5173/dashboard)
 - Health: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health)
 
-D1 (`DB`), KV (`KV`), Analytics Engine (`CLICKS`), and Email (`EMAIL`) are local Wrangler bindings. Generate and apply local migrations with `bun run db`. No remote Cloudflare resources are required. Analytics Engine writes from local dev do not land in the production dataset.
+D1 (`DB`) and Email (`EMAIL`) are local Wrangler bindings. Generate migrations with `bun run db:generate`; apply locally yourself with `bun run db:migrate:dev` when ready. No remote Cloudflare resources are required.
 
 ## Checks
 
@@ -67,8 +70,6 @@ Copy `.env.example` only if you need remote Drizzle Kit access to D1.
 Bindings are declared in `wrangler.jsonc`:
 
 - `DB` — D1
-- `KV` — KV, key `link:{code}` for redirect lookups
-- `CLICKS` — Analytics Engine dataset `clicks`
 - `EMAIL` — Cloudflare Email sending
 
 Replace the local placeholder IDs with real resource IDs before deploying. Do not enable `remote: true` on `EMAIL` for local development.

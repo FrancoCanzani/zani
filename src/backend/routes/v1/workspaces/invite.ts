@@ -1,18 +1,17 @@
 import { zValidator } from "@hono/zod-validator"
 import { Hono } from "hono"
 
-import {
-  canInvite,
-  createInviteBodySchema,
-  parseWorkspaceRole,
-} from "@shared/workspace"
-
 import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"
 import type { AppEnv } from "../../../types"
 
 import { workspaceFromContext } from "./lib/context"
 import { issueWorkspaceInvite } from "./lib/invite"
+import {
+  canInvite,
+  createInviteBodySchema,
+  parseWorkspaceRole,
+} from "./lib/schema"
 
 export const createInvite = new Hono<AppEnv>().post(
   "/:slug/invites",

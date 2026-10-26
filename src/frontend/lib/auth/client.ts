@@ -1,9 +1,7 @@
 import { emailOTPClient } from "better-auth/client/plugins"
 import { createAuthClient } from "better-auth/react"
 
-import { AUTH_BASE_PATH } from "@shared/api"
-
 export const authClient = createAuthClient({
-  basePath: AUTH_BASE_PATH,
+  basePath: "/api/v1/auth",
   plugins: [emailOTPClient()],
 })

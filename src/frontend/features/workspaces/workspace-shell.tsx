@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import { useSuspenseQuery } from "@tanstack/react-query"
 import { Link, Outlet, getRouteApi, useRouter } from "@tanstack/react-router"
 import { ChevronDownIcon } from "lucide-react"
 
@@ -12,16 +12,13 @@ import {
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
 
-import { authClient } from "@lib/auth/client"
-
 import { workspaceQueryOptions, workspacesQueryOptions } from "./api"
 
-const routeApi = getRouteApi("/_authed/w/$slug")
+const routeApi = getRouteApi("/_authed/dashboard/$slug")
 
 export function WorkspaceShell() {
   const { slug } = routeApi.useParams()
   const router = useRouter()
-  const queryClient = useQueryClient()
   const { data: workspace } = useSuspenseQuery(workspaceQueryOptions(slug))
   const { data: workspaces } = useSuspenseQuery(workspacesQueryOptions())
 
@@ -29,11 +26,7 @@ export function WorkspaceShell() {
     <div className="flex min-h-svh flex-col">
       <header>
         <div className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between gap-4 px-6">
-          <Link
-            to="/w/$slug"
-            params={{ slug }}
-            className="text-lg tracking-tight"
-          >
+          <Link to="/dashboard" className="text-lg tracking-tight">
             zani
           </Link>
           <DropdownMenu>
@@ -42,11 +35,15 @@ export function WorkspaceShell() {
               <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link to="/dashboard">Dashboard</Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
               <DropdownMenuRadioGroup
                 value={slug}
                 onValueChange={(next) => {
                   void router.navigate({
-                    to: "/w/$slug",
+                    to: "/dashboard/$slug",
                     params: { slug: next },
                   })
                 }}
@@ -57,30 +54,12 @@ export function WorkspaceShell() {
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/onboarding">New workspace</Link>
+                <Link to="/businesses/new">New business</Link>
               </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onSelect={() => {
-                  void authClient.signOut({
-                    fetchOptions: {
-                      onSuccess: async () => {
-                        queryClient.clear()
-                        await router.invalidate()
-                        await router.navigate({ to: "/sign-in" })
-                      },
-                    },
-                  })
-                }}
-              >
-                Sign out
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
-                <Link to="/w/$slug/settings" params={{ slug }}>
-                  Settings
+                <Link to="/dashboard/$slug/settings" params={{ slug }}>
+                  Business settings
                 </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>

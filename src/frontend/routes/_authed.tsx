@@ -1,5 +1,7 @@
 import { Outlet, createFileRoute, redirect } from "@tanstack/react-router"
 
+import { needsDisplayName } from "@lib/auth/profile"
+
 export const Route = createFileRoute("/_authed")({
   beforeLoad: ({ context, location }) => {
     if (!context.session) {
@@ -10,6 +12,16 @@ export const Route = createFileRoute("/_authed")({
         },
       })
     }
+
+    const onWelcome = location.pathname === "/welcome"
+    if (needsDisplayName(context.session.user)) {
+      if (!onWelcome) {
+        throw redirect({ to: "/welcome" })
+      }
+    } else if (onWelcome) {
+      throw redirect({ to: "/dashboard" })
+    }
+
     return { session: context.session }
   },
   component: Outlet,
