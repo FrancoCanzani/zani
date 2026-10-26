@@ -27,18 +27,6 @@
       "migrations_dir": "src/backend/db/migrations"
     }
   ],
-  "kv_namespaces": [
-    {
-      "binding": "KV",
-      "id": "00000000-0000-4000-8000-000000000002"
-    }
-  ],
-  "analytics_engine_datasets": [
-    {
-      "binding": "CLICKS",
-      "dataset": "clicks"
-    }
-  ],
   "send_email": [
     {
       "name": "EMAIL"

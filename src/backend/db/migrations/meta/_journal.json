@@ -22,6 +22,34 @@
       "when": 1789478497962,
       "tag": "0002_links",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790516387309,
+      "tag": "0003_youthful_randall",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1792929294537,
+      "tag": "0004_chubby_iron_fist",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1793027232374,
+      "tag": "0005_optimal_shiva",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1793033788568,
+      "tag": "0006_light_starhawk",
+      "breakpoints": true
     }
   ]
 }

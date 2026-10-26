@@ -4,9 +4,7 @@
     "lib": ["ESNext", "DOM"],
     "types": ["./worker-configuration.d.ts"],
     "noEmit": true,
-    "paths": {
-      "@shared/*": ["./src/shared/*"]
-    }
+    "paths": {}
   },
-  "include": ["src/backend", "src/shared", "worker-configuration.d.ts"]
+  "include": ["src/backend", "worker-configuration.d.ts"]
 }

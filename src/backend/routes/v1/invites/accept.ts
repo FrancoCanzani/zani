@@ -3,8 +3,7 @@ import { Hono } from "hono"
 
 import { workspace, workspaceInvite, workspaceMember } from "../../../db/schema"
 import { createDb } from "../../../lib/db"
-import { newId, nowMs } from "../../../lib/id"
-import { sha256Hex } from "../../../lib/token"
+import { newId, nowMs, sha256Hex } from "../../../lib/utils"
 import { requireSession } from "../../../middleware/session"
 import type { AppEnv } from "../../../types"
 

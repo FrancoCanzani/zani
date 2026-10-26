@@ -4,109 +4,86 @@ import { Button } from "@components/ui/button"
 
 export function GuestHome() {
   return (
-    <div className="relative min-h-svh">
-      <div
-        aria-hidden
-        className="pointer-events-none fixed inset-x-0 top-0 z-10 h-32 bg-background/70 backdrop-blur-xl"
-        style={{
-          maskImage:
-            "linear-gradient(to bottom, black 0%, rgba(0,0,0,0.9) 35%, transparent 100%)",
-          WebkitMaskImage:
-            "linear-gradient(to bottom, black 0%, rgba(0,0,0,0.9) 35%, transparent 100%)",
-        }}
-      />
-
+    <div className="min-h-svh">
       <div className="mx-auto w-full max-w-2xl px-6 sm:px-8">
-        <header className="sticky top-0 z-20 flex items-center justify-between py-7">
+        <header className="flex items-center justify-between py-7">
           <Link to="/" className="text-2xl tracking-tight">
-            Zani Links
+            zani
           </Link>
-          <nav className="flex items-center gap-6 text-muted-foreground">
-            <a
-              href="#about"
-              className="transition-colors hover:text-foreground"
-            >
-              About
-            </a>
-            <Link
-              to="/sign-in"
-              className="transition-colors hover:text-foreground"
-            >
-              Sign in
-            </Link>
-          </nav>
+          <Link
+            to="/sign-in"
+            className="text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Sign in
+          </Link>
         </header>
 
         <main>
-          <section className="flex flex-col gap-7 py-32">
-            <p className="text-muted-foreground italic">
-              For teams that ship fast.
+          <section className="flex flex-col gap-6 py-28 sm:py-36">
+            <p className="text-muted-foreground">
+              For solo trades and tiny crews
             </p>
-            <h1 className="max-w-xl text-2xl font-normal tracking-tight sm:text-3xl">
-              Your link manager when you want something simpler.
+            <h1 className="max-w-xl text-3xl font-normal tracking-tight sm:text-4xl">
+              Send estimates that customers actually accept and pay.
             </h1>
-            <div className="flex flex-wrap items-center gap-3 pt-1">
-              <Button
-                asChild
-                className="border-neutral-900 bg-neutral-800 text-white shadow-sm hover:bg-neutral-800"
-              >
+            <p className="max-w-lg text-muted-foreground leading-relaxed">
+              Build a clean estimate on your phone, share a link, and take a
+              deposit when they say yes. No PDFs. No chasing.
+            </p>
+            <div className="pt-2">
+              <Button asChild>
                 <Link to="/sign-in">Get started</Link>
-              </Button>
-              <Button asChild variant="outline" className="bg-white shadow-sm">
-                <a href="#about">Read our docs</a>
               </Button>
             </div>
           </section>
 
-          <section id="about" className="space-y-12 pb-32">
-            <div className="space-y-4">
-              <h2 className="text-xl font-normal text-muted-foreground">
-                So, what is this?
-              </h2>
-              <p className="max-w-xl leading-relaxed">
-                Zani Links is a simple place to create and share short links.
-                Workspaces for your team, readable codes, destinations you
-                control — without the weight of a full marketing suite.
-              </p>
-              <p className="max-w-xl leading-relaxed">
-                Invite people, keep links organized, and see basic click data
-                when you need it. That’s it.
-              </p>
-            </div>
-
-            <div className="space-y-4">
-              <h2 className="text-xl font-normal text-muted-foreground">
+          <section className="space-y-14 border-t border-border py-16 pb-28">
+            <div className="space-y-3">
+              <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
                 How it works
               </h2>
-              <ul className="max-w-xl space-y-3 leading-relaxed">
+              <ol className="max-w-lg space-y-4 leading-relaxed">
                 <li>
-                  <span className="font-medium">Workspace first.</span> Sign in,
-                  name a workspace, invite the people who need access.
+                  <span className="font-medium">1. Build</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — a clear estimate in about a minute.
+                  </span>
                 </li>
                 <li>
-                  <span className="font-medium">Links you own.</span> Short
-                  codes and destinations live under{" "}
-                  <code className="font-mono text-sm">/w/$slug</code>, not a
-                  personal free-for-all.
+                  <span className="font-medium">2. Share</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — send the link over WhatsApp, text, or email.
+                  </span>
                 </li>
                 <li>
-                  <span className="font-medium">Campaigns later.</span> Group
-                  links by launch, keep UTMs consistent, report in one place.
+                  <span className="font-medium">3. Get booked</span>
+                  <span className="text-muted-foreground">
+                    {" "}
+                    — they accept and pay a deposit on the same page. Money
+                    goes to you.
+                  </span>
                 </li>
-              </ul>
+              </ol>
+            </div>
+
+            <div className="space-y-3">
+              <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
+                Why a deposit
+              </h2>
+              <p className="max-w-lg leading-relaxed text-muted-foreground">
+                A deposit books the date and covers materials. You are not
+                locking up the full job price, and we are not holding your money
+                in escrow. Just the moment that turns a maybe into a real job.
+              </p>
             </div>
 
             <div className="space-y-4">
-              <h2 className="text-xl font-normal text-muted-foreground">
-                Get in
-              </h2>
-              <p className="max-w-xl leading-relaxed">
-                Email OTP. No password. Create a workspace and start linking.
+              <p className="max-w-lg leading-relaxed text-muted-foreground">
+                Sign in with email. No password.
               </p>
-              <Button
-                asChild
-                className="border-neutral-900 bg-neutral-800 text-white shadow-sm hover:bg-neutral-800"
-              >
+              <Button asChild variant="outline">
                 <Link to="/sign-in">Sign in</Link>
               </Button>
             </div>

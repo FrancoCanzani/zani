@@ -12,12 +12,15 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as SignInRouteImport } from './routes/sign-in'
-import { Route as AuthedOnboardingRouteImport } from './routes/_authed/onboarding'
+import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
+import { Route as AuthedWelcomeRouteImport } from './routes/_authed/welcome'
+import { Route as AuthedBusinessesNewRouteImport } from './routes/_authed/businesses/new'
+import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
+import { Route as AuthedDashboardSlugRouteRouteImport } from './routes/_authed/dashboard/$slug/route'
 import { Route as AuthedInvitesTokenRouteImport } from './routes/_authed/invites/$token'
-import { Route as AuthedWSlugRouteRouteImport } from './routes/_authed/w/$slug/route'
-import { Route as AuthedWSlugIndexRouteImport } from './routes/_authed/w/$slug/index'
-import { Route as AuthedWSlugSettingsRouteImport } from './routes/_authed/w/$slug/settings'
-import { Route as AuthedWSlugLinksCodeRouteImport } from './routes/_authed/w/$slug/links/$code'
+import { Route as AuthedDashboardSlugIndexRouteImport } from './routes/_authed/dashboard/$slug/index'
+import { Route as AuthedDashboardSlugSettingsRouteImport } from './routes/_authed/dashboard/$slug/settings'
+import { Route as AuthedDashboardSlugEstimatesEstimateIdRouteImport } from './routes/_authed/dashboard/$slug/estimates/$estimateId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -33,99 +36,136 @@ const SignInRoute = SignInRouteImport.update({
   path: '/sign-in',
   getParentRoute: () => rootRouteImport,
 } as any)
-const AuthedOnboardingRoute = AuthedOnboardingRouteImport.update({
-  id: '/onboarding',
-  path: '/onboarding',
+const AuthedAccountRoute = AuthedAccountRouteImport.update({
+  id: '/account',
+  path: '/account',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedWelcomeRoute = AuthedWelcomeRouteImport.update({
+  id: '/welcome',
+  path: '/welcome',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedBusinessesNewRoute = AuthedBusinessesNewRouteImport.update({
+  id: '/businesses/new',
+  path: '/businesses/new',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDashboardIndexRoute = AuthedDashboardIndexRouteImport.update({
+  id: '/dashboard/',
+  path: '/dashboard/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedDashboardSlugRouteRoute =
+  AuthedDashboardSlugRouteRouteImport.update({
+    id: '/dashboard/$slug',
+    path: '/dashboard/$slug',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 const AuthedInvitesTokenRoute = AuthedInvitesTokenRouteImport.update({
   id: '/invites/$token',
   path: '/invites/$token',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedWSlugRouteRoute = AuthedWSlugRouteRouteImport.update({
-  id: '/w/$slug',
-  path: '/w/$slug',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedWSlugIndexRoute = AuthedWSlugIndexRouteImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => AuthedWSlugRouteRoute,
-} as any)
-const AuthedWSlugSettingsRoute = AuthedWSlugSettingsRouteImport.update({
-  id: '/settings',
-  path: '/settings',
-  getParentRoute: () => AuthedWSlugRouteRoute,
-} as any)
-const AuthedWSlugLinksCodeRoute = AuthedWSlugLinksCodeRouteImport.update({
-  id: '/links/$code',
-  path: '/links/$code',
-  getParentRoute: () => AuthedWSlugRouteRoute,
-} as any)
+const AuthedDashboardSlugIndexRoute =
+  AuthedDashboardSlugIndexRouteImport.update({
+    id: '/',
+    path: '/',
+    getParentRoute: () => AuthedDashboardSlugRouteRoute,
+  } as any)
+const AuthedDashboardSlugSettingsRoute =
+  AuthedDashboardSlugSettingsRouteImport.update({
+    id: '/settings',
+    path: '/settings',
+    getParentRoute: () => AuthedDashboardSlugRouteRoute,
+  } as any)
+const AuthedDashboardSlugEstimatesEstimateIdRoute =
+  AuthedDashboardSlugEstimatesEstimateIdRouteImport.update({
+    id: '/estimates/$estimateId',
+    path: '/estimates/$estimateId',
+    getParentRoute: () => AuthedDashboardSlugRouteRoute,
+  } as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
-  '/onboarding': typeof AuthedOnboardingRoute
-  '/w/$slug': typeof AuthedWSlugRouteRouteWithChildren
+  '/account': typeof AuthedAccountRoute
+  '/welcome': typeof AuthedWelcomeRoute
+  '/dashboard/$slug': typeof AuthedDashboardSlugRouteRouteWithChildren
+  '/businesses/new': typeof AuthedBusinessesNewRoute
   '/invites/$token': typeof AuthedInvitesTokenRoute
-  '/w/$slug/settings': typeof AuthedWSlugSettingsRoute
-  '/w/$slug/': typeof AuthedWSlugIndexRoute
-  '/w/$slug/links/$code': typeof AuthedWSlugLinksCodeRoute
+  '/dashboard/': typeof AuthedDashboardIndexRoute
+  '/dashboard/$slug/settings': typeof AuthedDashboardSlugSettingsRoute
+  '/dashboard/$slug/': typeof AuthedDashboardSlugIndexRoute
+  '/dashboard/$slug/estimates/$estimateId': typeof AuthedDashboardSlugEstimatesEstimateIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
-  '/onboarding': typeof AuthedOnboardingRoute
+  '/account': typeof AuthedAccountRoute
+  '/welcome': typeof AuthedWelcomeRoute
+  '/businesses/new': typeof AuthedBusinessesNewRoute
   '/invites/$token': typeof AuthedInvitesTokenRoute
-  '/w/$slug/settings': typeof AuthedWSlugSettingsRoute
-  '/w/$slug': typeof AuthedWSlugIndexRoute
-  '/w/$slug/links/$code': typeof AuthedWSlugLinksCodeRoute
+  '/dashboard': typeof AuthedDashboardIndexRoute
+  '/dashboard/$slug/settings': typeof AuthedDashboardSlugSettingsRoute
+  '/dashboard/$slug': typeof AuthedDashboardSlugIndexRoute
+  '/dashboard/$slug/estimates/$estimateId': typeof AuthedDashboardSlugEstimatesEstimateIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/_authed': typeof AuthedRouteWithChildren
   '/sign-in': typeof SignInRoute
-  '/_authed/onboarding': typeof AuthedOnboardingRoute
-  '/_authed/w/$slug': typeof AuthedWSlugRouteRouteWithChildren
+  '/_authed/account': typeof AuthedAccountRoute
+  '/_authed/welcome': typeof AuthedWelcomeRoute
+  '/_authed/dashboard/$slug': typeof AuthedDashboardSlugRouteRouteWithChildren
+  '/_authed/businesses/new': typeof AuthedBusinessesNewRoute
   '/_authed/invites/$token': typeof AuthedInvitesTokenRoute
-  '/_authed/w/$slug/settings': typeof AuthedWSlugSettingsRoute
-  '/_authed/w/$slug/': typeof AuthedWSlugIndexRoute
-  '/_authed/w/$slug/links/$code': typeof AuthedWSlugLinksCodeRoute
+  '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
+  '/_authed/dashboard/$slug/settings': typeof AuthedDashboardSlugSettingsRoute
+  '/_authed/dashboard/$slug/': typeof AuthedDashboardSlugIndexRoute
+  '/_authed/dashboard/$slug/estimates/$estimateId': typeof AuthedDashboardSlugEstimatesEstimateIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/sign-in'
-    | '/onboarding'
-    | '/w/$slug'
+    | '/account'
+    | '/welcome'
+    | '/dashboard/$slug'
+    | '/businesses/new'
     | '/invites/$token'
-    | '/w/$slug/settings'
-    | '/w/$slug/'
-    | '/w/$slug/links/$code'
+    | '/dashboard/'
+    | '/dashboard/$slug/settings'
+    | '/dashboard/$slug/'
+    | '/dashboard/$slug/estimates/$estimateId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/sign-in'
-    | '/onboarding'
+    | '/account'
+    | '/welcome'
+    | '/businesses/new'
     | '/invites/$token'
-    | '/w/$slug/settings'
-    | '/w/$slug'
-    | '/w/$slug/links/$code'
+    | '/dashboard'
+    | '/dashboard/$slug/settings'
+    | '/dashboard/$slug'
+    | '/dashboard/$slug/estimates/$estimateId'
   id:
     | '__root__'
     | '/'
     | '/_authed'
     | '/sign-in'
-    | '/_authed/onboarding'
-    | '/_authed/w/$slug'
+    | '/_authed/account'
+    | '/_authed/welcome'
+    | '/_authed/dashboard/$slug'
+    | '/_authed/businesses/new'
     | '/_authed/invites/$token'
-    | '/_authed/w/$slug/settings'
-    | '/_authed/w/$slug/'
-    | '/_authed/w/$slug/links/$code'
+    | '/_authed/dashboard/'
+    | '/_authed/dashboard/$slug/settings'
+    | '/_authed/dashboard/$slug/'
+    | '/_authed/dashboard/$slug/estimates/$estimateId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -157,11 +197,39 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SignInRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/_authed/onboarding': {
-      id: '/_authed/onboarding'
-      path: '/onboarding'
-      fullPath: '/onboarding'
-      preLoaderRoute: typeof AuthedOnboardingRouteImport
+    '/_authed/account': {
+      id: '/_authed/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AuthedAccountRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/welcome': {
+      id: '/_authed/welcome'
+      path: '/welcome'
+      fullPath: '/welcome'
+      preLoaderRoute: typeof AuthedWelcomeRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/businesses/new': {
+      id: '/_authed/businesses/new'
+      path: '/businesses/new'
+      fullPath: '/businesses/new'
+      preLoaderRoute: typeof AuthedBusinessesNewRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/dashboard/': {
+      id: '/_authed/dashboard/'
+      path: '/dashboard'
+      fullPath: '/dashboard/'
+      preLoaderRoute: typeof AuthedDashboardIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/dashboard/$slug': {
+      id: '/_authed/dashboard/$slug'
+      path: '/dashboard/$slug'
+      fullPath: '/dashboard/$slug'
+      preLoaderRoute: typeof AuthedDashboardSlugRouteRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/invites/$token': {
@@ -171,62 +239,65 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedInvitesTokenRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/w/$slug': {
-      id: '/_authed/w/$slug'
-      path: '/w/$slug'
-      fullPath: '/w/$slug'
-      preLoaderRoute: typeof AuthedWSlugRouteRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/w/$slug/': {
-      id: '/_authed/w/$slug/'
+    '/_authed/dashboard/$slug/': {
+      id: '/_authed/dashboard/$slug/'
       path: '/'
-      fullPath: '/w/$slug/'
-      preLoaderRoute: typeof AuthedWSlugIndexRouteImport
-      parentRoute: typeof AuthedWSlugRouteRoute
+      fullPath: '/dashboard/$slug/'
+      preLoaderRoute: typeof AuthedDashboardSlugIndexRouteImport
+      parentRoute: typeof AuthedDashboardSlugRouteRoute
     }
-    '/_authed/w/$slug/settings': {
-      id: '/_authed/w/$slug/settings'
+    '/_authed/dashboard/$slug/settings': {
+      id: '/_authed/dashboard/$slug/settings'
       path: '/settings'
-      fullPath: '/w/$slug/settings'
-      preLoaderRoute: typeof AuthedWSlugSettingsRouteImport
-      parentRoute: typeof AuthedWSlugRouteRoute
+      fullPath: '/dashboard/$slug/settings'
+      preLoaderRoute: typeof AuthedDashboardSlugSettingsRouteImport
+      parentRoute: typeof AuthedDashboardSlugRouteRoute
     }
-    '/_authed/w/$slug/links/$code': {
-      id: '/_authed/w/$slug/links/$code'
-      path: '/links/$code'
-      fullPath: '/w/$slug/links/$code'
-      preLoaderRoute: typeof AuthedWSlugLinksCodeRouteImport
-      parentRoute: typeof AuthedWSlugRouteRoute
+    '/_authed/dashboard/$slug/estimates/$estimateId': {
+      id: '/_authed/dashboard/$slug/estimates/$estimateId'
+      path: '/estimates/$estimateId'
+      fullPath: '/dashboard/$slug/estimates/$estimateId'
+      preLoaderRoute: typeof AuthedDashboardSlugEstimatesEstimateIdRouteImport
+      parentRoute: typeof AuthedDashboardSlugRouteRoute
     }
   }
 }
 
-interface AuthedWSlugRouteRouteChildren {
-  AuthedWSlugSettingsRoute: typeof AuthedWSlugSettingsRoute
-  AuthedWSlugIndexRoute: typeof AuthedWSlugIndexRoute
-  AuthedWSlugLinksCodeRoute: typeof AuthedWSlugLinksCodeRoute
+interface AuthedDashboardSlugRouteRouteChildren {
+  AuthedDashboardSlugSettingsRoute: typeof AuthedDashboardSlugSettingsRoute
+  AuthedDashboardSlugIndexRoute: typeof AuthedDashboardSlugIndexRoute
+  AuthedDashboardSlugEstimatesEstimateIdRoute: typeof AuthedDashboardSlugEstimatesEstimateIdRoute
 }
 
-const AuthedWSlugRouteRouteChildren: AuthedWSlugRouteRouteChildren = {
-  AuthedWSlugSettingsRoute: AuthedWSlugSettingsRoute,
-  AuthedWSlugIndexRoute: AuthedWSlugIndexRoute,
-  AuthedWSlugLinksCodeRoute: AuthedWSlugLinksCodeRoute,
-}
+const AuthedDashboardSlugRouteRouteChildren: AuthedDashboardSlugRouteRouteChildren =
+  {
+    AuthedDashboardSlugSettingsRoute: AuthedDashboardSlugSettingsRoute,
+    AuthedDashboardSlugIndexRoute: AuthedDashboardSlugIndexRoute,
+    AuthedDashboardSlugEstimatesEstimateIdRoute:
+      AuthedDashboardSlugEstimatesEstimateIdRoute,
+  }
 
-const AuthedWSlugRouteRouteWithChildren =
-  AuthedWSlugRouteRoute._addFileChildren(AuthedWSlugRouteRouteChildren)
+const AuthedDashboardSlugRouteRouteWithChildren =
+  AuthedDashboardSlugRouteRoute._addFileChildren(
+    AuthedDashboardSlugRouteRouteChildren,
+  )
 
 interface AuthedRouteChildren {
-  AuthedOnboardingRoute: typeof AuthedOnboardingRoute
-  AuthedWSlugRouteRoute: typeof AuthedWSlugRouteRouteWithChildren
+  AuthedAccountRoute: typeof AuthedAccountRoute
+  AuthedWelcomeRoute: typeof AuthedWelcomeRoute
+  AuthedDashboardSlugRouteRoute: typeof AuthedDashboardSlugRouteRouteWithChildren
+  AuthedBusinessesNewRoute: typeof AuthedBusinessesNewRoute
   AuthedInvitesTokenRoute: typeof AuthedInvitesTokenRoute
+  AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
-  AuthedOnboardingRoute: AuthedOnboardingRoute,
-  AuthedWSlugRouteRoute: AuthedWSlugRouteRouteWithChildren,
+  AuthedAccountRoute: AuthedAccountRoute,
+  AuthedWelcomeRoute: AuthedWelcomeRoute,
+  AuthedDashboardSlugRouteRoute: AuthedDashboardSlugRouteRouteWithChildren,
+  AuthedBusinessesNewRoute: AuthedBusinessesNewRoute,
   AuthedInvitesTokenRoute: AuthedInvitesTokenRoute,
+  AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,
 }
 
 const AuthedRouteWithChildren =

@@ -125,72 +125,80 @@ export const workspaceInvite = sqliteTable(
   ]
 )
 
-export const clickDevice = ["phone", "tablet", "desktop"] as const
-export const clickBrowser = [
-  "chrome",
-  "safari",
-  "firefox",
-  "edge",
-  "other",
-] as const
-export const clickOs = [
-  "ios",
-  "android",
-  "macos",
-  "windows",
-  "linux",
-  "other",
-] as const
-
-export type ClickDevice = (typeof clickDevice)[number]
-export type ClickBrowser = (typeof clickBrowser)[number]
-export type ClickOs = (typeof clickOs)[number]
-
-export const link = sqliteTable(
-  "link",
+export const customer = sqliteTable(
+  "customer",
   {
     id: text("id").primaryKey(),
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
-    code: text("code").notNull().unique(),
-    destinationUrl: text("destination_url").notNull(),
-    name: text("name"),
-    createdByUserId: text("created_by_user_id").references(() => user.id, {
-      onDelete: "set null",
-    }),
-    disabledAt: integer("disabled_at"),
+    name: text("name").notNull(),
+    phone: text("phone"),
+    email: text("email"),
+    notes: text("notes"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
-  (table) => [index("link_workspaceId_idx").on(table.workspaceId)]
+  (table) => [
+    index("customer_workspaceId_idx").on(table.workspaceId),
+    index("customer_workspace_name_idx").on(table.workspaceId, table.name),
+  ]
 )
 
-export const click = sqliteTable(
-  "click",
+export const estimateStatuses = [
+  "draft",
+  "sent",
+  "viewed",
+  "accepted",
+  "cancelled",
+] as const
+
+export type EstimateStatus = (typeof estimateStatuses)[number]
+
+export type EstimateLineItem = {
+  id: string
+  description: string
+  quantity: number
+  unitAmountCents: number
+}
+
+export const estimate = sqliteTable(
+  "estimate",
   {
     id: text("id").primaryKey(),
-    linkId: text("link_id")
-      .notNull()
-      .references(() => link.id, { onDelete: "cascade" }),
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
-    occurredAt: integer("occurred_at").notNull(),
-    country: text("country"),
-    city: text("city"),
-    region: text("region"),
-    referrerHost: text("referrer_host").notNull(),
-    device: text("device").$type<ClickDevice>().notNull(),
-    browser: text("browser").$type<ClickBrowser>().notNull(),
-    os: text("os").$type<ClickOs>().notNull(),
-    bot: integer("bot", { mode: "boolean" }).notNull(),
+    publicSlug: text("public_slug").notNull().unique(),
+    status: text("status").$type<EstimateStatus>().notNull().default("draft"),
+    title: text("title").notNull().default(""),
+    customerId: text("customer_id").references(() => customer.id, {
+      onDelete: "set null",
+    }),
+    customerName: text("customer_name").notNull().default(""),
+    customerPhone: text("customer_phone"),
+    customerEmail: text("customer_email"),
+    currency: text("currency").notNull().default("usd"),
+    lineItems: text("line_items", { mode: "json" })
+      .$type<EstimateLineItem[]>()
+      .notNull(),
+    depositPercent: integer("deposit_percent").notNull().default(30),
+    notes: text("notes"),
+    createdByUserId: text("created_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+    sentAt: integer("sent_at"),
+    viewedAt: integer("viewed_at"),
+    acceptedAt: integer("accepted_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
   },
   (table) => [
-    index("click_link_occurred_idx").on(table.linkId, table.occurredAt),
-    index("click_workspace_occurred_idx").on(
+    index("estimate_workspaceId_idx").on(table.workspaceId),
+    index("estimate_workspace_updated_idx").on(
       table.workspaceId,
-      table.occurredAt
+      table.updatedAt
     ),
+    index("estimate_customerId_idx").on(table.customerId),
   ]
 )

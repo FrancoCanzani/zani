@@ -35,7 +35,7 @@ export const Route = createFileRoute("/_authed/invites/$token")({
     const body = await response.json()
     writeLastWorkspaceSlug(body.workspace.slug)
     throw redirect({
-      to: "/w/$slug",
+      to: "/dashboard/$slug",
       params: { slug: body.workspace.slug },
     })
   },

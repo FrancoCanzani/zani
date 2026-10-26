@@ -26,9 +26,8 @@
       "@lib/*": ["./src/frontend/lib/*"],
       "@features/*": ["./src/frontend/features/*"],
       "@routes/*": ["./src/frontend/routes/*"],
-      "@components/*": ["./src/frontend/components/*"],
-      "@shared/*": ["./src/shared/*"]
+      "@components/*": ["./src/frontend/components/*"]
     }
   },
-  "include": ["src/frontend", "src/shared", "worker-configuration.d.ts"]
+  "include": ["src/frontend", "worker-configuration.d.ts"]
 }
