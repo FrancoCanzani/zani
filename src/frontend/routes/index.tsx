@@ -13,7 +13,7 @@ export const Route = createFileRoute("/")({
       throw redirect({ to: "/welcome" })
     }
 
-    throw redirect({ to: "/dashboard" })
+    throw redirect({ to: "/businesses" })
   },
   component: GuestHome,
 })

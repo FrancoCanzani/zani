@@ -29,6 +29,8 @@ export const createCustomer = new Hono<AppEnv>().post(
       name: body.name,
       phone: body.phone ?? null,
       email: body.email ?? null,
+      address: body.address ?? null,
+      taxId: body.taxId ?? null,
       notes: body.notes ?? null,
       createdAt: now,
       updatedAt: now,

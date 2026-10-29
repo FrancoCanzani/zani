@@ -8,6 +8,8 @@ export type Customer = {
   name: string
   phone: string | null
   email: string | null
+  address: string | null
+  taxId: string | null
   notes: string | null
   createdAt: number
   updatedAt: number
@@ -17,6 +19,8 @@ export type CustomerInput = {
   name: string
   phone: string | null
   email: string | null
+  address?: string | null
+  taxId?: string | null
   notes?: string | null
 }
 

@@ -31,7 +31,7 @@ import {
 import { api } from "@lib/api"
 import { fieldErrors } from "@lib/utils"
 
-const routeApi = getRouteApi("/_authed/dashboard/$slug/settings")
+const routeApi = getRouteApi("/_authed/businesses/$slug/settings")
 
 const businessFormSchema = z.object({
   name: z.string().trim().min(1, "Enter a business name.").max(80),
@@ -133,7 +133,7 @@ export function SettingsPage() {
     <section className="mx-auto w-full max-w-lg space-y-8">
       <div className="space-y-4">
         <Link
-          to="/dashboard/$slug"
+          to="/businesses/$slug"
           params={{ slug }}
           className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >

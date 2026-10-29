@@ -19,7 +19,7 @@ export const Route = createFileRoute("/_authed")({
         throw redirect({ to: "/welcome" })
       }
     } else if (onWelcome) {
-      throw redirect({ to: "/dashboard" })
+      throw redirect({ to: "/businesses" })
     }
 
     return { session: context.session }

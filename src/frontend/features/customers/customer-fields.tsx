@@ -20,6 +20,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@components/ui/select"
+import { Textarea } from "@components/ui/textarea"
 
 import {
   createCustomer,
@@ -36,11 +37,15 @@ type CustomerFieldsProps = {
   customerName: string
   customerPhone: string
   customerEmail: string
+  customerAddress: string
+  customerTaxId: string
   onChange: (next: {
     customerId: string | null
     customerName: string
     customerPhone: string
     customerEmail: string
+    customerAddress: string
+    customerTaxId: string
   }) => void
 }
 
@@ -51,6 +56,8 @@ export function CustomerFields({
   customerName,
   customerPhone,
   customerEmail,
+  customerAddress,
+  customerTaxId,
   onChange,
 }: CustomerFieldsProps) {
   const queryClient = useQueryClient()
@@ -58,6 +65,8 @@ export function CustomerFields({
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
   const [email, setEmail] = useState("")
+  const [address, setAddress] = useState("")
+  const [taxId, setTaxId] = useState("")
   const [formError, setFormError] = useState<string | null>(null)
 
   const { data } = useQuery({
@@ -72,6 +81,8 @@ export function CustomerFields({
         name: name.trim(),
         phone: phone.trim() || null,
         email: email.trim() || null,
+        address: address.trim() || null,
+        taxId: taxId.trim() || null,
       }),
     onSuccess: async (body) => {
       await queryClient.invalidateQueries({ queryKey: ["customers", slug] })
@@ -90,6 +101,8 @@ export function CustomerFields({
       customerName: customer.name,
       customerPhone: customer.phone ?? "",
       customerEmail: customer.email ?? "",
+      customerAddress: customer.address ?? "",
+      customerTaxId: customer.taxId ?? "",
     })
   }
 
@@ -99,6 +112,8 @@ export function CustomerFields({
       customerName: "",
       customerPhone: "",
       customerEmail: "",
+      customerAddress: "",
+      customerTaxId: "",
     })
   }
 
@@ -106,6 +121,8 @@ export function CustomerFields({
     setName("")
     setPhone("")
     setEmail("")
+    setAddress("")
+    setTaxId("")
     setFormError(null)
   }
 
@@ -122,7 +139,6 @@ export function CustomerFields({
   if (readOnly) {
     return (
       <div className="space-y-1">
-        <Label>Customer</Label>
         <p className="text-sm">
           {customerName.trim() || "No customer"}
           {customerPhone || customerEmail ? (
@@ -132,15 +148,22 @@ export function CustomerFields({
             </span>
           ) : null}
         </p>
+        {customerAddress.trim() ? (
+          <p className="whitespace-pre-line text-sm text-muted-foreground">
+            {customerAddress}
+          </p>
+        ) : null}
+        {customerTaxId.trim() ? (
+          <p className="text-sm text-muted-foreground">Tax ID {customerTaxId}</p>
+        ) : null}
       </div>
     )
   }
 
   return (
     <div className="space-y-3">
-      <div className="flex items-end gap-2">
-        <div className="min-w-0 flex-1 space-y-2">
-          <Label htmlFor="customer">Customer</Label>
+      <div className="flex items-center gap-2">
+        <div className="min-w-0 flex-1">
           <Select
             value={customerId ?? NONE}
             onValueChange={(value) => {
@@ -154,7 +177,12 @@ export function CustomerFields({
               }
             }}
           >
-            <SelectTrigger id="customer" className="w-full" size="default">
+            <SelectTrigger
+              id="customer"
+              aria-label="Customer"
+              className="w-full"
+              size="default"
+            >
               <SelectValue placeholder="Select a customer" />
             </SelectTrigger>
             <SelectContent>
@@ -170,6 +198,7 @@ export function CustomerFields({
         <Button
           type="button"
           variant="outline"
+          size="default"
           onClick={() => {
             resetForm()
             setDialogOpen(true)
@@ -180,10 +209,19 @@ export function CustomerFields({
         </Button>
       </div>
 
-      {customerId && (customerPhone || customerEmail) ? (
-        <p className="text-sm text-muted-foreground">
-          {[customerPhone, customerEmail].filter(Boolean).join(" · ")}
-        </p>
+      {customerId &&
+      (customerPhone || customerEmail || customerAddress || customerTaxId) ? (
+        <div className="space-y-1 text-sm text-muted-foreground">
+          {customerPhone || customerEmail ? (
+            <p>
+              {[customerPhone, customerEmail].filter(Boolean).join(" · ")}
+            </p>
+          ) : null}
+          {customerAddress.trim() ? (
+            <p className="whitespace-pre-line">{customerAddress}</p>
+          ) : null}
+          {customerTaxId.trim() ? <p>Tax ID {customerTaxId}</p> : null}
+        </div>
       ) : null}
 
       <Dialog
@@ -199,7 +237,7 @@ export function CustomerFields({
           <DialogHeader>
             <DialogTitle>Add customer</DialogTitle>
             <DialogDescription>
-              Saved to this business for the next estimate.
+              Saved to this business for the next invoice.
             </DialogDescription>
           </DialogHeader>
           <form className="grid gap-4" onSubmit={onSubmit}>
@@ -234,6 +272,25 @@ export function CustomerFields({
                 autoComplete="email"
                 onChange={(event) => setEmail(event.target.value)}
                 placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-customer-address">Address</Label>
+              <Textarea
+                id="new-customer-address"
+                value={address}
+                onChange={(event) => setAddress(event.target.value)}
+                placeholder="Optional"
+                rows={2}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="new-customer-tax">Tax ID</Label>
+              <Input
+                id="new-customer-tax"
+                value={taxId}
+                onChange={(event) => setTaxId(event.target.value)}
+                placeholder="VAT / GST / EIN — optional"
               />
             </div>
             {formError ? (

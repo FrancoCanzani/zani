@@ -73,6 +73,15 @@ export const workspace = sqliteTable("workspace", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   plan: text("plan").notNull().default("free"),
+  defaultCurrency: text("default_currency").notNull().default("usd"),
+  invoiceNumberPrefix: text("invoice_number_prefix").notNull().default("INV-"),
+  nextInvoiceNumber: integer("next_invoice_number").notNull().default(1),
+  defaultPaymentTerms: text("default_payment_terms"),
+  defaultTaxName: text("default_tax_name"),
+  defaultTaxRateBps: integer("default_tax_rate_bps").notNull().default(0),
+  taxInclusive: integer("tax_inclusive", { mode: "boolean" })
+    .notNull()
+    .default(false),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 })
@@ -135,6 +144,8 @@ export const customer = sqliteTable(
     name: text("name").notNull(),
     phone: text("phone"),
     email: text("email"),
+    address: text("address"),
+    taxId: text("tax_id"),
     notes: text("notes"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
@@ -145,60 +156,96 @@ export const customer = sqliteTable(
   ]
 )
 
-export const estimateStatuses = [
+export const product = sqliteTable(
+  "product",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    unitAmountCents: integer("unit_amount_cents").notNull().default(0),
+    currency: text("currency").notNull().default("usd"),
+    archivedAt: integer("archived_at"),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    index("product_workspaceId_idx").on(table.workspaceId),
+    index("product_workspace_name_idx").on(table.workspaceId, table.name),
+  ]
+)
+
+export const invoiceStatuses = [
   "draft",
   "sent",
-  "viewed",
-  "accepted",
-  "cancelled",
+  "partially_paid",
+  "paid",
+  "void",
 ] as const
 
-export type EstimateStatus = (typeof estimateStatuses)[number]
+export type InvoiceStatus = (typeof invoiceStatuses)[number]
 
-export type EstimateLineItem = {
+export type InvoiceLineItem = {
   id: string
+  productId: string | null
+  name: string
   description: string
   quantity: number
   unitAmountCents: number
 }
 
-export const estimate = sqliteTable(
-  "estimate",
+export const invoice = sqliteTable(
+  "invoice",
   {
     id: text("id").primaryKey(),
     workspaceId: text("workspace_id")
       .notNull()
       .references(() => workspace.id, { onDelete: "cascade" }),
     publicSlug: text("public_slug").notNull().unique(),
-    status: text("status").$type<EstimateStatus>().notNull().default("draft"),
-    title: text("title").notNull().default(""),
+    status: text("status").$type<InvoiceStatus>().notNull().default("draft"),
+    number: text("number").notNull(),
     customerId: text("customer_id").references(() => customer.id, {
       onDelete: "set null",
     }),
     customerName: text("customer_name").notNull().default(""),
     customerPhone: text("customer_phone"),
     customerEmail: text("customer_email"),
+    customerAddress: text("customer_address"),
+    customerTaxId: text("customer_tax_id"),
     currency: text("currency").notNull().default("usd"),
-    lineItems: text("line_items", { mode: "json" })
-      .$type<EstimateLineItem[]>()
-      .notNull(),
-    depositPercent: integer("deposit_percent").notNull().default(30),
+    issueDate: text("issue_date").notNull(),
+    dueDate: text("due_date"),
+    paymentTerms: text("payment_terms"),
     notes: text("notes"),
+    taxName: text("tax_name"),
+    taxRateBps: integer("tax_rate_bps").notNull().default(0),
+    taxInclusive: integer("tax_inclusive", { mode: "boolean" })
+      .notNull()
+      .default(false),
+    lineItems: text("line_items", { mode: "json" })
+      .$type<InvoiceLineItem[]>()
+      .notNull(),
+    amountPaidCents: integer("amount_paid_cents").notNull().default(0),
     createdByUserId: text("created_by_user_id").references(() => user.id, {
       onDelete: "set null",
     }),
     sentAt: integer("sent_at"),
-    viewedAt: integer("viewed_at"),
-    acceptedAt: integer("accepted_at"),
+    paidAt: integer("paid_at"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
   },
   (table) => [
-    index("estimate_workspaceId_idx").on(table.workspaceId),
-    index("estimate_workspace_updated_idx").on(
+    index("invoice_workspaceId_idx").on(table.workspaceId),
+    index("invoice_workspace_updated_idx").on(
       table.workspaceId,
       table.updatedAt
     ),
-    index("estimate_customerId_idx").on(table.customerId),
+    index("invoice_customerId_idx").on(table.customerId),
+    uniqueIndex("invoice_workspace_number_idx").on(
+      table.workspaceId,
+      table.number
+    ),
   ]
 )

@@ -1,32 +1,50 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { Link, Outlet, getRouteApi, useRouter } from "@tanstack/react-router"
+import {
+  Link,
+  Outlet,
+  getRouteApi,
+  useRouter,
+  useRouterState,
+} from "@tanstack/react-router"
 import { ChevronDownIcon } from "lucide-react"
 
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
+import { cn } from "@lib/utils"
 
 import { workspaceQueryOptions, workspacesQueryOptions } from "./api"
 
-const routeApi = getRouteApi("/_authed/dashboard/$slug")
+const routeApi = getRouteApi("/_authed/businesses/$slug")
 
 export function WorkspaceShell() {
   const { slug } = routeApi.useParams()
   const router = useRouter()
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  })
   const { data: workspace } = useSuspenseQuery(workspaceQueryOptions(slug))
   const { data: workspaces } = useSuspenseQuery(workspacesQueryOptions())
 
+  const isInvoiceBuilder = /\/invoices\/[^/]+$/.test(pathname)
+
   return (
-    <div className="flex min-h-svh flex-col">
-      <header>
-        <div className="mx-auto flex h-14 w-full max-w-4xl items-center justify-between gap-4 px-6">
-          <Link to="/dashboard" className="text-lg tracking-tight">
+    <div
+      className={cn(
+        "flex flex-col",
+        isInvoiceBuilder ? "h-svh overflow-hidden" : "min-h-svh"
+      )}
+    >
+      <header className="shrink-0 px-5">
+        <div className="mx-auto flex h-12 w-full max-w-5xl items-center justify-between gap-4">
+          <Link to="/businesses" className="text-lg tracking-tight">
             zani
           </Link>
           <DropdownMenu>
@@ -36,14 +54,20 @@ export function WorkspaceShell() {
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
               <DropdownMenuItem asChild>
-                <Link to="/dashboard">Dashboard</Link>
+                <Link to="/businesses">Businesses</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/businesses/$slug" params={{ slug }}>
+                  Invoices
+                </Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
+              <DropdownMenuLabel>Switch business</DropdownMenuLabel>
               <DropdownMenuRadioGroup
                 value={slug}
                 onValueChange={(next) => {
                   void router.navigate({
-                    to: "/dashboard/$slug",
+                    to: "/businesses/$slug",
                     params: { slug: next },
                   })
                 }}
@@ -54,11 +78,12 @@ export function WorkspaceShell() {
                   </DropdownMenuRadioItem>
                 ))}
               </DropdownMenuRadioGroup>
+              <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/businesses/new">New business</Link>
               </DropdownMenuItem>
               <DropdownMenuItem asChild>
-                <Link to="/dashboard/$slug/settings" params={{ slug }}>
+                <Link to="/businesses/$slug/settings" params={{ slug }}>
                   Business settings
                 </Link>
               </DropdownMenuItem>
@@ -66,7 +91,14 @@ export function WorkspaceShell() {
           </DropdownMenu>
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-8">
+      <div
+        className={cn(
+          "mx-auto flex w-full max-w-5xl flex-1 flex-col px-5",
+          isInvoiceBuilder
+            ? "min-h-0 overflow-hidden pt-3"
+            : "pt-4 pb-8"
+        )}
+      >
         <Outlet />
       </div>
     </div>
