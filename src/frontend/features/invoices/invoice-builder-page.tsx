@@ -106,6 +106,7 @@ export function InvoiceBuilderPage() {
     data.invoice.paymentTerms ?? ""
   )
   const [notes, setNotes] = useState(data.invoice.notes ?? "")
+  const [terms, setTerms] = useState(data.invoice.terms ?? "")
   const [taxName, setTaxName] = useState(data.invoice.taxName ?? "")
   const [taxRateBps, setTaxRateBps] = useState(data.invoice.taxRateBps)
   const [taxInclusive, setTaxInclusive] = useState(data.invoice.taxInclusive)
@@ -188,6 +189,7 @@ export function InvoiceBuilderPage() {
       dueDate: dueDate || null,
       paymentTerms: paymentTerms.trim() || null,
       notes: notes.trim() || null,
+      terms: terms.trim() || null,
       taxName: taxName.trim() || null,
       taxRateBps,
       taxInclusive,
@@ -224,6 +226,7 @@ export function InvoiceBuilderPage() {
       dueDate={dueDate || null}
       paymentTerms={paymentTerms}
       notes={notes}
+      terms={terms}
       taxName={taxName}
       taxRateBps={taxRateBps}
       taxInclusive={taxInclusive}
@@ -320,44 +323,53 @@ export function InvoiceBuilderPage() {
                     />
                   </div>
                 </div>
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="currency">Currency</Label>
-                    <Select
-                      value={currency}
-                      disabled={readOnly}
-                      onValueChange={(value) => {
-                        if (value) {
-                          setCurrency(value)
-                        }
-                      }}
-                    >
-                      <SelectTrigger id="currency" className="w-full">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {CURRENCIES.map((code) => (
-                          <SelectItem key={code} value={code}>
-                            {code.toUpperCase()}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="paymentTerms">Payment terms</Label>
-                    <Input
-                      id="paymentTerms"
-                      value={paymentTerms}
-                      disabled={readOnly}
-                      onChange={(event) => setPaymentTerms(event.target.value)}
-                      placeholder="Net 30"
-                    />
-                  </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="currency">Currency</Label>
+                  <Select
+                    value={currency}
+                    disabled={readOnly}
+                    onValueChange={(value) => {
+                      if (value) {
+                        setCurrency(value)
+                      }
+                    }}
+                  >
+                    <SelectTrigger id="currency" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {CURRENCIES.map((code) => (
+                        <SelectItem key={code} value={code}>
+                          {code.toUpperCase()}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
+
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Label htmlFor="paymentTerms">Payment terms</Label>
+                    <span className="text-xs text-muted-foreground">
+                      Optional
+                    </span>
+                  </div>
+                  <Input
+                    id="paymentTerms"
+                    value={paymentTerms}
+                    disabled={readOnly}
+                    onChange={(event) => setPaymentTerms(event.target.value)}
+                    placeholder="50% of total amount upfront"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Terms of payment
+                  </p>
+                </div>
+
                 <div className="grid gap-4 sm:grid-cols-[1fr_6.5rem]">
                   <div className="space-y-2">
-                    <Label htmlFor="taxName">Tax name</Label>
+                    <Label htmlFor="taxName">Tax</Label>
                     <Input
                       id="taxName"
                       value={taxName}
@@ -388,7 +400,7 @@ export function InvoiceBuilderPage() {
                     onCheckedChange={setTaxInclusive}
                   />
                   <Label htmlFor="taxInclusive" className="font-normal">
-                    Tax inclusive
+                    Prices include tax
                   </Label>
                 </div>
               </div>
@@ -404,17 +416,46 @@ export function InvoiceBuilderPage() {
               />
             </BuilderSection>
 
-            <BuilderSection value="notes" title="Additional information">
-              <div className="space-y-2">
-                <Label htmlFor="notes">Notes</Label>
-                <Textarea
-                  id="notes"
-                  value={notes}
-                  disabled={readOnly}
-                  onChange={(event) => setNotes(event.target.value)}
-                  placeholder="Payment instructions, thank-you note…"
-                  rows={4}
-                />
+            <BuilderSection value="additional" title="Additional information">
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Label htmlFor="notes">Notes</Label>
+                    <span className="text-xs text-muted-foreground">
+                      Optional
+                    </span>
+                  </div>
+                  <Textarea
+                    id="notes"
+                    value={notes}
+                    disabled={readOnly}
+                    onChange={(event) => setNotes(event.target.value)}
+                    placeholder="Notes – any relevant information not already covered"
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Additional notes for the invoice
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <Label htmlFor="terms">Terms</Label>
+                    <span className="text-xs text-muted-foreground">
+                      Optional
+                    </span>
+                  </div>
+                  <Textarea
+                    id="terms"
+                    value={terms}
+                    disabled={readOnly}
+                    onChange={(event) => setTerms(event.target.value)}
+                    placeholder="Terms & Conditions – late fees, payment methods, delivery terms, etc."
+                    rows={3}
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Terms and conditions for the invoice
+                  </p>
+                </div>
               </div>
             </BuilderSection>
           </Accordion>
@@ -519,7 +560,7 @@ function BuilderSection({
   return (
     <AccordionItem
       value={value}
-      className="rounded-xl border border-border bg-background not-last:border-b-0"
+      className="rounded-xl border border-border bg-background"
     >
       <AccordionTrigger className="px-4 py-3 text-sm font-medium hover:no-underline">
         {title}

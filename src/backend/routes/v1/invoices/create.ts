@@ -44,6 +44,7 @@ export const createInvoice = new Hono<AppEnv>().post(
       dueDate: null as string | null,
       paymentTerms: current.workspace.defaultPaymentTerms,
       notes: null as string | null,
+      terms: null as string | null,
       taxName: current.workspace.defaultTaxName,
       taxRateBps: current.workspace.defaultTaxRateBps,
       taxInclusive: current.workspace.taxInclusive,

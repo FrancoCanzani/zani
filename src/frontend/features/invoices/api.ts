@@ -46,6 +46,7 @@ export type Invoice = {
   dueDate: string | null
   paymentTerms: string | null
   notes: string | null
+  terms: string | null
   taxName: string | null
   taxRateBps: number
   taxInclusive: boolean
@@ -74,6 +75,7 @@ export type InvoiceInput = {
   dueDate: string | null
   paymentTerms: string | null
   notes: string | null
+  terms: string | null
   taxName: string | null
   taxRateBps: number
   taxInclusive: boolean
