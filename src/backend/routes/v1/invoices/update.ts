@@ -72,6 +72,7 @@ export const updateInvoice = new Hono<AppEnv>().patch(
         dueDate: body.dueDate,
         paymentTerms: body.paymentTerms ?? null,
         notes: body.notes ?? null,
+        terms: body.terms ?? null,
         taxName: body.taxName ?? null,
         taxRateBps: body.taxRateBps,
         taxInclusive: body.taxInclusive,

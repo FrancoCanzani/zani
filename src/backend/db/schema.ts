@@ -219,6 +219,7 @@ export const invoice = sqliteTable(
     dueDate: text("due_date"),
     paymentTerms: text("payment_terms"),
     notes: text("notes"),
+    terms: text("terms"),
     taxName: text("tax_name"),
     taxRateBps: integer("tax_rate_bps").notNull().default(0),
     taxInclusive: integer("tax_inclusive", { mode: "boolean" })

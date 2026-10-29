@@ -22,6 +22,7 @@ type InvoicePreviewProps = {
   dueDate: string | null
   paymentTerms: string
   notes: string
+  terms: string
   taxName: string
   taxRateBps: number
   taxInclusive: boolean
@@ -42,6 +43,7 @@ export function InvoicePreview({
   dueDate,
   paymentTerms,
   notes,
+  terms,
   taxName,
   taxRateBps,
   taxInclusive,
@@ -134,7 +136,9 @@ export function InvoicePreview({
                 </span>
               </p>
             ) : null}
-            {paymentTerms.trim() ? <p>Terms · {paymentTerms}</p> : null}
+            {paymentTerms.trim() ? (
+              <p>Payment terms · {paymentTerms}</p>
+            ) : null}
           </div>
         )}
 
@@ -225,16 +229,30 @@ export function InvoicePreview({
           </dl>
         </div>
 
-        {notes.trim() ? (
-          <div className="space-y-2 border-t border-neutral-200 pt-6">
-            <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
-              Notes
-            </p>
-            <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">
-              {notes}
-            </p>
+        {(notes.trim() || terms.trim()) && (
+          <div className="space-y-5 border-t border-neutral-200 pt-6">
+            {notes.trim() ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
+                  Notes
+                </p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">
+                  {notes}
+                </p>
+              </div>
+            ) : null}
+            {terms.trim() ? (
+              <div className="space-y-2">
+                <p className="text-xs font-medium tracking-wide text-neutral-500 uppercase">
+                  Terms
+                </p>
+                <p className="whitespace-pre-wrap text-sm leading-relaxed text-neutral-600">
+                  {terms}
+                </p>
+              </div>
+            ) : null}
           </div>
-        ) : null}
+        )}
       </div>
     </article>
   )

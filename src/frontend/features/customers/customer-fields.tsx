@@ -1,16 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { PlusIcon } from "lucide-react"
-import { useState, type SubmitEvent } from "react"
 
 import { Button } from "@components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@components/ui/dialog"
 import { Input } from "@components/ui/input"
 import { Label } from "@components/ui/label"
 import {
@@ -30,6 +20,15 @@ import {
 
 const NONE = "__none__"
 
+type CustomerSnapshot = {
+  customerId: string | null
+  customerName: string
+  customerPhone: string
+  customerEmail: string
+  customerAddress: string
+  customerTaxId: string
+}
+
 type CustomerFieldsProps = {
   slug: string
   readOnly?: boolean
@@ -39,14 +38,7 @@ type CustomerFieldsProps = {
   customerEmail: string
   customerAddress: string
   customerTaxId: string
-  onChange: (next: {
-    customerId: string | null
-    customerName: string
-    customerPhone: string
-    customerEmail: string
-    customerAddress: string
-    customerTaxId: string
-  }) => void
+  onChange: (next: CustomerSnapshot) => void
 }
 
 export function CustomerFields({
@@ -61,13 +53,6 @@ export function CustomerFields({
   onChange,
 }: CustomerFieldsProps) {
   const queryClient = useQueryClient()
-  const [dialogOpen, setDialogOpen] = useState(false)
-  const [name, setName] = useState("")
-  const [phone, setPhone] = useState("")
-  const [email, setEmail] = useState("")
-  const [address, setAddress] = useState("")
-  const [taxId, setTaxId] = useState("")
-  const [formError, setFormError] = useState<string | null>(null)
 
   const { data } = useQuery({
     ...customersQueryOptions(slug),
@@ -78,20 +63,15 @@ export function CustomerFields({
   const create = useMutation({
     mutationFn: () =>
       createCustomer(slug, {
-        name: name.trim(),
-        phone: phone.trim() || null,
-        email: email.trim() || null,
-        address: address.trim() || null,
-        taxId: taxId.trim() || null,
+        name: customerName.trim(),
+        phone: customerPhone.trim() || null,
+        email: customerEmail.trim() || null,
+        address: customerAddress.trim() || null,
+        taxId: customerTaxId.trim() || null,
       }),
     onSuccess: async (body) => {
       await queryClient.invalidateQueries({ queryKey: ["customers", slug] })
       applyCustomer(body.customer)
-      setDialogOpen(false)
-      resetForm()
-    },
-    onError: (error) => {
-      setFormError(error.message)
     },
   })
 
@@ -106,213 +86,184 @@ export function CustomerFields({
     })
   }
 
-  function clearCustomer() {
+  function patch(
+    partial: Omit<Partial<CustomerSnapshot>, "customerId">
+  ) {
     onChange({
       customerId: null,
-      customerName: "",
-      customerPhone: "",
-      customerEmail: "",
-      customerAddress: "",
-      customerTaxId: "",
+      customerName,
+      customerPhone,
+      customerEmail,
+      customerAddress,
+      customerTaxId,
+      ...partial,
     })
   }
 
-  function resetForm() {
-    setName("")
-    setPhone("")
-    setEmail("")
-    setAddress("")
-    setTaxId("")
-    setFormError(null)
-  }
-
-  function onSubmit(event: SubmitEvent<HTMLFormElement>) {
-    event.preventDefault()
-    setFormError(null)
-    if (!name.trim()) {
-      setFormError("Enter a name.")
-      return
-    }
-    create.mutate()
-  }
+  const canSaveCustomer =
+    !readOnly && !customerId && customerName.trim().length > 0
 
   if (readOnly) {
     return (
-      <div className="space-y-1">
-        <p className="text-sm">
-          {customerName.trim() || "No customer"}
-          {customerPhone || customerEmail ? (
-            <span className="text-muted-foreground">
-              {" "}
-              · {[customerPhone, customerEmail].filter(Boolean).join(" · ")}
-            </span>
-          ) : null}
-        </p>
-        {customerAddress.trim() ? (
-          <p className="whitespace-pre-line text-sm text-muted-foreground">
-            {customerAddress}
+      <div className="space-y-3 text-sm">
+        <div>
+          <p className="text-muted-foreground">Name</p>
+          <p className="mt-0.5">{customerName.trim() || "—"}</p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div>
+            <p className="text-muted-foreground">Email</p>
+            <p className="mt-0.5">{customerEmail.trim() || "—"}</p>
+          </div>
+          <div>
+            <p className="text-muted-foreground">Phone</p>
+            <p className="mt-0.5">{customerPhone.trim() || "—"}</p>
+          </div>
+        </div>
+        <div>
+          <p className="text-muted-foreground">Address</p>
+          <p className="mt-0.5 whitespace-pre-line">
+            {customerAddress.trim() || "—"}
           </p>
-        ) : null}
-        {customerTaxId.trim() ? (
-          <p className="text-sm text-muted-foreground">Tax ID {customerTaxId}</p>
-        ) : null}
+        </div>
+        <div>
+          <p className="text-muted-foreground">Tax ID</p>
+          <p className="mt-0.5">{customerTaxId.trim() || "—"}</p>
+        </div>
       </div>
     )
   }
 
   return (
-    <div className="space-y-3">
-      <div className="flex items-center gap-2">
-        <div className="min-w-0 flex-1">
-          <Select
-            value={customerId ?? NONE}
-            onValueChange={(value) => {
-              if (!value || value === NONE) {
-                clearCustomer()
-                return
-              }
-              const selected = customers.find((item) => item.id === value)
-              if (selected) {
-                applyCustomer(selected)
-              }
-            }}
-          >
-            <SelectTrigger
-              id="customer"
-              aria-label="Customer"
-              className="w-full"
-              size="default"
-            >
-              <SelectValue placeholder="Select a customer" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={NONE}>No customer</SelectItem>
-              {customers.map((customer) => (
-                <SelectItem key={customer.id} value={customer.id}>
-                  {customer.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        <Button
-          type="button"
-          variant="outline"
-          size="default"
-          onClick={() => {
-            resetForm()
-            setDialogOpen(true)
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor="customer">Saved customer</Label>
+        <Select
+          value={customerId ?? NONE}
+          onValueChange={(value) => {
+            if (!value || value === NONE) {
+              onChange({
+                customerId: null,
+                customerName: "",
+                customerPhone: "",
+                customerEmail: "",
+                customerAddress: "",
+                customerTaxId: "",
+              })
+              return
+            }
+            const selected = customers.find((item) => item.id === value)
+            if (selected) {
+              applyCustomer(selected)
+            }
           }}
         >
-          <PlusIcon />
-          Add
-        </Button>
+          <SelectTrigger id="customer" className="h-8 w-full py-0" size="sm">
+            <SelectValue placeholder="Select a customer" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={NONE}>None — type below</SelectItem>
+            {customers.map((customer) => (
+              <SelectItem key={customer.id} value={customer.id}>
+                {customer.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
 
-      {customerId &&
-      (customerPhone || customerEmail || customerAddress || customerTaxId) ? (
-        <div className="space-y-1 text-sm text-muted-foreground">
-          {customerPhone || customerEmail ? (
-            <p>
-              {[customerPhone, customerEmail].filter(Boolean).join(" · ")}
-            </p>
-          ) : null}
-          {customerAddress.trim() ? (
-            <p className="whitespace-pre-line">{customerAddress}</p>
-          ) : null}
-          {customerTaxId.trim() ? <p>Tax ID {customerTaxId}</p> : null}
+      <div className="space-y-2">
+        <Label htmlFor="bill-to-name">Name</Label>
+        <Input
+          id="bill-to-name"
+          value={customerName}
+          autoComplete="organization"
+          onChange={(event) => patch({ customerName: event.target.value })}
+          placeholder="John Doe"
+        />
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="space-y-2">
+          <Label htmlFor="bill-to-email">
+            Email{" "}
+            <span className="font-normal text-muted-foreground">Optional</span>
+          </Label>
+          <Input
+            id="bill-to-email"
+            type="email"
+            value={customerEmail}
+            autoComplete="email"
+            onChange={(event) => patch({ customerEmail: event.target.value })}
+            placeholder="client@email.com"
+          />
+        </div>
+        <div className="space-y-2">
+          <Label htmlFor="bill-to-phone">
+            Phone{" "}
+            <span className="font-normal text-muted-foreground">Optional</span>
+          </Label>
+          <Input
+            id="bill-to-phone"
+            type="tel"
+            value={customerPhone}
+            autoComplete="tel"
+            onChange={(event) => patch({ customerPhone: event.target.value })}
+            placeholder="Optional"
+          />
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="bill-to-address">
+          Address{" "}
+          <span className="font-normal text-muted-foreground">Optional</span>
+        </Label>
+        <Textarea
+          id="bill-to-address"
+          value={customerAddress}
+          onChange={(event) => patch({ customerAddress: event.target.value })}
+          placeholder="456 Client St, City, Country"
+          rows={2}
+        />
+      </div>
+
+      <div className="space-y-2">
+        <Label htmlFor="bill-to-tax">
+          Tax ID{" "}
+          <span className="font-normal text-muted-foreground">Optional</span>
+        </Label>
+        <Input
+          id="bill-to-tax"
+          value={customerTaxId}
+          onChange={(event) => patch({ customerTaxId: event.target.value })}
+          placeholder="VAT / GST / EIN"
+        />
+      </div>
+
+      {canSaveCustomer ? (
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-xs text-muted-foreground">
+            Save this customer for the next invoice.
+          </p>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 shrink-0"
+            disabled={create.isPending}
+            onClick={() => create.mutate()}
+          >
+            {create.isPending ? "Saving…" : "Save customer"}
+          </Button>
         </div>
       ) : null}
 
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open)
-          if (!open) {
-            resetForm()
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add customer</DialogTitle>
-            <DialogDescription>
-              Saved to this business for the next invoice.
-            </DialogDescription>
-          </DialogHeader>
-          <form className="grid gap-4" onSubmit={onSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="new-customer-name">Name</Label>
-              <Input
-                id="new-customer-name"
-                value={name}
-                autoFocus
-                autoComplete="name"
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Jordan Lee"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-customer-phone">Phone</Label>
-              <Input
-                id="new-customer-phone"
-                type="tel"
-                value={phone}
-                autoComplete="tel"
-                onChange={(event) => setPhone(event.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-customer-email">Email</Label>
-              <Input
-                id="new-customer-email"
-                type="email"
-                value={email}
-                autoComplete="email"
-                onChange={(event) => setEmail(event.target.value)}
-                placeholder="Optional"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-customer-address">Address</Label>
-              <Textarea
-                id="new-customer-address"
-                value={address}
-                onChange={(event) => setAddress(event.target.value)}
-                placeholder="Optional"
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="new-customer-tax">Tax ID</Label>
-              <Input
-                id="new-customer-tax"
-                value={taxId}
-                onChange={(event) => setTaxId(event.target.value)}
-                placeholder="VAT / GST / EIN — optional"
-              />
-            </div>
-            {formError ? (
-              <p className="text-sm text-destructive" role="alert">
-                {formError}
-              </p>
-            ) : null}
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
-              >
-                Cancel
-              </Button>
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Saving…" : "Save customer"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+      {create.error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {create.error.message}
+        </p>
+      ) : null}
     </div>
   )
 }

@@ -19,6 +19,7 @@ export function serializeInvoice(row: {
   dueDate: string | null
   paymentTerms: string | null
   notes: string | null
+  terms: string | null
   taxName: string | null
   taxRateBps: number
   taxInclusive: boolean
@@ -54,6 +55,7 @@ export function serializeInvoice(row: {
     dueDate: row.dueDate,
     paymentTerms: row.paymentTerms,
     notes: row.notes,
+    terms: row.terms,
     taxName: row.taxName,
     taxRateBps: row.taxRateBps,
     taxInclusive: row.taxInclusive,

@@ -42,6 +42,7 @@ export const updateInvoiceBodySchema = z.object({
     .transform((value) => value || null),
   paymentTerms: nullableTrimmed(500),
   notes: nullableTrimmed(2000),
+  terms: nullableTrimmed(4000),
   taxName: nullableTrimmed(80),
   taxRateBps: z.number().int().min(0).max(10_000),
   taxInclusive: z.boolean(),

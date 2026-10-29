@@ -6,6 +6,6 @@
   "trailingComma": "es5",
   "printWidth": 80,
   "plugins": ["prettier-plugin-tailwindcss"],
-  "tailwindStylesheet": "src/frontend/styles/globals.css",
+  "tailwindStylesheet": "src/frontend/globals.css",
   "tailwindFunctions": ["cn", "cva"]
 }

@@ -132,8 +132,8 @@ export function ProductFields({
             <SelectTrigger
               id="product"
               aria-label="Product"
-              className="w-full"
-              size="default"
+              className="h-8 w-full py-0"
+              size="sm"
             >
               <SelectValue placeholder="Select a product" />
             </SelectTrigger>
@@ -150,7 +150,8 @@ export function ProductFields({
         <Button
           type="button"
           variant="outline"
-          size="default"
+          size="sm"
+          className="h-8"
           onClick={() => {
             resetForm()
             setDialogOpen(true)
