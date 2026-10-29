@@ -14,13 +14,14 @@ import { Route as AuthedRouteImport } from './routes/_authed'
 import { Route as SignInRouteImport } from './routes/sign-in'
 import { Route as AuthedAccountRouteImport } from './routes/_authed/account'
 import { Route as AuthedWelcomeRouteImport } from './routes/_authed/welcome'
+import { Route as AuthedBusinessesIndexRouteImport } from './routes/_authed/businesses/index'
+import { Route as AuthedBusinessesSlugRouteRouteImport } from './routes/_authed/businesses/$slug/route'
 import { Route as AuthedBusinessesNewRouteImport } from './routes/_authed/businesses/new'
-import { Route as AuthedDashboardIndexRouteImport } from './routes/_authed/dashboard/index'
-import { Route as AuthedDashboardSlugRouteRouteImport } from './routes/_authed/dashboard/$slug/route'
 import { Route as AuthedInvitesTokenRouteImport } from './routes/_authed/invites/$token'
-import { Route as AuthedDashboardSlugIndexRouteImport } from './routes/_authed/dashboard/$slug/index'
-import { Route as AuthedDashboardSlugSettingsRouteImport } from './routes/_authed/dashboard/$slug/settings'
-import { Route as AuthedDashboardSlugEstimatesEstimateIdRouteImport } from './routes/_authed/dashboard/$slug/estimates/$estimateId'
+import { Route as AuthedBusinessesSlugIndexRouteImport } from './routes/_authed/businesses/$slug/index'
+import { Route as AuthedBusinessesSlugSettingsRouteImport } from './routes/_authed/businesses/$slug/settings'
+import { Route as AuthedBusinessesSlugInvoicesInvoiceIdRouteImport } from './routes/_authed/businesses/$slug/invoices/$invoiceId'
+import { Route as AuthedBusinessesSlugProductsIndexRouteImport } from './routes/_authed/businesses/$slug/products/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -46,44 +47,50 @@ const AuthedWelcomeRoute = AuthedWelcomeRouteImport.update({
   path: '/welcome',
   getParentRoute: () => AuthedRoute,
 } as any)
+const AuthedBusinessesIndexRoute = AuthedBusinessesIndexRouteImport.update({
+  id: '/businesses/',
+  path: '/businesses/',
+  getParentRoute: () => AuthedRoute,
+} as any)
+const AuthedBusinessesSlugRouteRoute =
+  AuthedBusinessesSlugRouteRouteImport.update({
+    id: '/businesses/$slug',
+    path: '/businesses/$slug',
+    getParentRoute: () => AuthedRoute,
+  } as any)
 const AuthedBusinessesNewRoute = AuthedBusinessesNewRouteImport.update({
   id: '/businesses/new',
   path: '/businesses/new',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedDashboardIndexRoute = AuthedDashboardIndexRouteImport.update({
-  id: '/dashboard/',
-  path: '/dashboard/',
-  getParentRoute: () => AuthedRoute,
-} as any)
-const AuthedDashboardSlugRouteRoute =
-  AuthedDashboardSlugRouteRouteImport.update({
-    id: '/dashboard/$slug',
-    path: '/dashboard/$slug',
-    getParentRoute: () => AuthedRoute,
-  } as any)
 const AuthedInvitesTokenRoute = AuthedInvitesTokenRouteImport.update({
   id: '/invites/$token',
   path: '/invites/$token',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedDashboardSlugIndexRoute =
-  AuthedDashboardSlugIndexRouteImport.update({
+const AuthedBusinessesSlugIndexRoute =
+  AuthedBusinessesSlugIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthedDashboardSlugRouteRoute,
+    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
   } as any)
-const AuthedDashboardSlugSettingsRoute =
-  AuthedDashboardSlugSettingsRouteImport.update({
+const AuthedBusinessesSlugSettingsRoute =
+  AuthedBusinessesSlugSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
-    getParentRoute: () => AuthedDashboardSlugRouteRoute,
+    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
   } as any)
-const AuthedDashboardSlugEstimatesEstimateIdRoute =
-  AuthedDashboardSlugEstimatesEstimateIdRouteImport.update({
-    id: '/estimates/$estimateId',
-    path: '/estimates/$estimateId',
-    getParentRoute: () => AuthedDashboardSlugRouteRoute,
+const AuthedBusinessesSlugInvoicesInvoiceIdRoute =
+  AuthedBusinessesSlugInvoicesInvoiceIdRouteImport.update({
+    id: '/invoices/$invoiceId',
+    path: '/invoices/$invoiceId',
+    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
+  } as any)
+const AuthedBusinessesSlugProductsIndexRoute =
+  AuthedBusinessesSlugProductsIndexRouteImport.update({
+    id: '/products/',
+    path: '/products/',
+    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -91,13 +98,14 @@ export interface FileRoutesByFullPath {
   '/sign-in': typeof SignInRoute
   '/account': typeof AuthedAccountRoute
   '/welcome': typeof AuthedWelcomeRoute
-  '/dashboard/$slug': typeof AuthedDashboardSlugRouteRouteWithChildren
+  '/businesses/$slug': typeof AuthedBusinessesSlugRouteRouteWithChildren
   '/businesses/new': typeof AuthedBusinessesNewRoute
   '/invites/$token': typeof AuthedInvitesTokenRoute
-  '/dashboard/': typeof AuthedDashboardIndexRoute
-  '/dashboard/$slug/settings': typeof AuthedDashboardSlugSettingsRoute
-  '/dashboard/$slug/': typeof AuthedDashboardSlugIndexRoute
-  '/dashboard/$slug/estimates/$estimateId': typeof AuthedDashboardSlugEstimatesEstimateIdRoute
+  '/businesses/': typeof AuthedBusinessesIndexRoute
+  '/businesses/$slug/settings': typeof AuthedBusinessesSlugSettingsRoute
+  '/businesses/$slug/': typeof AuthedBusinessesSlugIndexRoute
+  '/businesses/$slug/invoices/$invoiceId': typeof AuthedBusinessesSlugInvoicesInvoiceIdRoute
+  '/businesses/$slug/products/': typeof AuthedBusinessesSlugProductsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -106,10 +114,11 @@ export interface FileRoutesByTo {
   '/welcome': typeof AuthedWelcomeRoute
   '/businesses/new': typeof AuthedBusinessesNewRoute
   '/invites/$token': typeof AuthedInvitesTokenRoute
-  '/dashboard': typeof AuthedDashboardIndexRoute
-  '/dashboard/$slug/settings': typeof AuthedDashboardSlugSettingsRoute
-  '/dashboard/$slug': typeof AuthedDashboardSlugIndexRoute
-  '/dashboard/$slug/estimates/$estimateId': typeof AuthedDashboardSlugEstimatesEstimateIdRoute
+  '/businesses': typeof AuthedBusinessesIndexRoute
+  '/businesses/$slug/settings': typeof AuthedBusinessesSlugSettingsRoute
+  '/businesses/$slug': typeof AuthedBusinessesSlugIndexRoute
+  '/businesses/$slug/invoices/$invoiceId': typeof AuthedBusinessesSlugInvoicesInvoiceIdRoute
+  '/businesses/$slug/products': typeof AuthedBusinessesSlugProductsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -118,13 +127,14 @@ export interface FileRoutesById {
   '/sign-in': typeof SignInRoute
   '/_authed/account': typeof AuthedAccountRoute
   '/_authed/welcome': typeof AuthedWelcomeRoute
-  '/_authed/dashboard/$slug': typeof AuthedDashboardSlugRouteRouteWithChildren
+  '/_authed/businesses/$slug': typeof AuthedBusinessesSlugRouteRouteWithChildren
   '/_authed/businesses/new': typeof AuthedBusinessesNewRoute
   '/_authed/invites/$token': typeof AuthedInvitesTokenRoute
-  '/_authed/dashboard/': typeof AuthedDashboardIndexRoute
-  '/_authed/dashboard/$slug/settings': typeof AuthedDashboardSlugSettingsRoute
-  '/_authed/dashboard/$slug/': typeof AuthedDashboardSlugIndexRoute
-  '/_authed/dashboard/$slug/estimates/$estimateId': typeof AuthedDashboardSlugEstimatesEstimateIdRoute
+  '/_authed/businesses/': typeof AuthedBusinessesIndexRoute
+  '/_authed/businesses/$slug/settings': typeof AuthedBusinessesSlugSettingsRoute
+  '/_authed/businesses/$slug/': typeof AuthedBusinessesSlugIndexRoute
+  '/_authed/businesses/$slug/invoices/$invoiceId': typeof AuthedBusinessesSlugInvoicesInvoiceIdRoute
+  '/_authed/businesses/$slug/products/': typeof AuthedBusinessesSlugProductsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -133,13 +143,14 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/account'
     | '/welcome'
-    | '/dashboard/$slug'
+    | '/businesses/$slug'
     | '/businesses/new'
     | '/invites/$token'
-    | '/dashboard/'
-    | '/dashboard/$slug/settings'
-    | '/dashboard/$slug/'
-    | '/dashboard/$slug/estimates/$estimateId'
+    | '/businesses/'
+    | '/businesses/$slug/settings'
+    | '/businesses/$slug/'
+    | '/businesses/$slug/invoices/$invoiceId'
+    | '/businesses/$slug/products/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -148,10 +159,11 @@ export interface FileRouteTypes {
     | '/welcome'
     | '/businesses/new'
     | '/invites/$token'
-    | '/dashboard'
-    | '/dashboard/$slug/settings'
-    | '/dashboard/$slug'
-    | '/dashboard/$slug/estimates/$estimateId'
+    | '/businesses'
+    | '/businesses/$slug/settings'
+    | '/businesses/$slug'
+    | '/businesses/$slug/invoices/$invoiceId'
+    | '/businesses/$slug/products'
   id:
     | '__root__'
     | '/'
@@ -159,13 +171,14 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/_authed/account'
     | '/_authed/welcome'
-    | '/_authed/dashboard/$slug'
+    | '/_authed/businesses/$slug'
     | '/_authed/businesses/new'
     | '/_authed/invites/$token'
-    | '/_authed/dashboard/'
-    | '/_authed/dashboard/$slug/settings'
-    | '/_authed/dashboard/$slug/'
-    | '/_authed/dashboard/$slug/estimates/$estimateId'
+    | '/_authed/businesses/'
+    | '/_authed/businesses/$slug/settings'
+    | '/_authed/businesses/$slug/'
+    | '/_authed/businesses/$slug/invoices/$invoiceId'
+    | '/_authed/businesses/$slug/products/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -211,25 +224,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedWelcomeRouteImport
       parentRoute: typeof AuthedRoute
     }
+    '/_authed/businesses/': {
+      id: '/_authed/businesses/'
+      path: '/businesses'
+      fullPath: '/businesses/'
+      preLoaderRoute: typeof AuthedBusinessesIndexRouteImport
+      parentRoute: typeof AuthedRoute
+    }
+    '/_authed/businesses/$slug': {
+      id: '/_authed/businesses/$slug'
+      path: '/businesses/$slug'
+      fullPath: '/businesses/$slug'
+      preLoaderRoute: typeof AuthedBusinessesSlugRouteRouteImport
+      parentRoute: typeof AuthedRoute
+    }
     '/_authed/businesses/new': {
       id: '/_authed/businesses/new'
       path: '/businesses/new'
       fullPath: '/businesses/new'
       preLoaderRoute: typeof AuthedBusinessesNewRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/dashboard/': {
-      id: '/_authed/dashboard/'
-      path: '/dashboard'
-      fullPath: '/dashboard/'
-      preLoaderRoute: typeof AuthedDashboardIndexRouteImport
-      parentRoute: typeof AuthedRoute
-    }
-    '/_authed/dashboard/$slug': {
-      id: '/_authed/dashboard/$slug'
-      path: '/dashboard/$slug'
-      fullPath: '/dashboard/$slug'
-      preLoaderRoute: typeof AuthedDashboardSlugRouteRouteImport
       parentRoute: typeof AuthedRoute
     }
     '/_authed/invites/$token': {
@@ -239,65 +252,75 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedInvitesTokenRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/dashboard/$slug/': {
-      id: '/_authed/dashboard/$slug/'
+    '/_authed/businesses/$slug/': {
+      id: '/_authed/businesses/$slug/'
       path: '/'
-      fullPath: '/dashboard/$slug/'
-      preLoaderRoute: typeof AuthedDashboardSlugIndexRouteImport
-      parentRoute: typeof AuthedDashboardSlugRouteRoute
+      fullPath: '/businesses/$slug/'
+      preLoaderRoute: typeof AuthedBusinessesSlugIndexRouteImport
+      parentRoute: typeof AuthedBusinessesSlugRouteRoute
     }
-    '/_authed/dashboard/$slug/settings': {
-      id: '/_authed/dashboard/$slug/settings'
+    '/_authed/businesses/$slug/settings': {
+      id: '/_authed/businesses/$slug/settings'
       path: '/settings'
-      fullPath: '/dashboard/$slug/settings'
-      preLoaderRoute: typeof AuthedDashboardSlugSettingsRouteImport
-      parentRoute: typeof AuthedDashboardSlugRouteRoute
+      fullPath: '/businesses/$slug/settings'
+      preLoaderRoute: typeof AuthedBusinessesSlugSettingsRouteImport
+      parentRoute: typeof AuthedBusinessesSlugRouteRoute
     }
-    '/_authed/dashboard/$slug/estimates/$estimateId': {
-      id: '/_authed/dashboard/$slug/estimates/$estimateId'
-      path: '/estimates/$estimateId'
-      fullPath: '/dashboard/$slug/estimates/$estimateId'
-      preLoaderRoute: typeof AuthedDashboardSlugEstimatesEstimateIdRouteImport
-      parentRoute: typeof AuthedDashboardSlugRouteRoute
+    '/_authed/businesses/$slug/invoices/$invoiceId': {
+      id: '/_authed/businesses/$slug/invoices/$invoiceId'
+      path: '/invoices/$invoiceId'
+      fullPath: '/businesses/$slug/invoices/$invoiceId'
+      preLoaderRoute: typeof AuthedBusinessesSlugInvoicesInvoiceIdRouteImport
+      parentRoute: typeof AuthedBusinessesSlugRouteRoute
+    }
+    '/_authed/businesses/$slug/products/': {
+      id: '/_authed/businesses/$slug/products/'
+      path: '/products'
+      fullPath: '/businesses/$slug/products/'
+      preLoaderRoute: typeof AuthedBusinessesSlugProductsIndexRouteImport
+      parentRoute: typeof AuthedBusinessesSlugRouteRoute
     }
   }
 }
 
-interface AuthedDashboardSlugRouteRouteChildren {
-  AuthedDashboardSlugSettingsRoute: typeof AuthedDashboardSlugSettingsRoute
-  AuthedDashboardSlugIndexRoute: typeof AuthedDashboardSlugIndexRoute
-  AuthedDashboardSlugEstimatesEstimateIdRoute: typeof AuthedDashboardSlugEstimatesEstimateIdRoute
+interface AuthedBusinessesSlugRouteRouteChildren {
+  AuthedBusinessesSlugSettingsRoute: typeof AuthedBusinessesSlugSettingsRoute
+  AuthedBusinessesSlugIndexRoute: typeof AuthedBusinessesSlugIndexRoute
+  AuthedBusinessesSlugInvoicesInvoiceIdRoute: typeof AuthedBusinessesSlugInvoicesInvoiceIdRoute
+  AuthedBusinessesSlugProductsIndexRoute: typeof AuthedBusinessesSlugProductsIndexRoute
 }
 
-const AuthedDashboardSlugRouteRouteChildren: AuthedDashboardSlugRouteRouteChildren =
+const AuthedBusinessesSlugRouteRouteChildren: AuthedBusinessesSlugRouteRouteChildren =
   {
-    AuthedDashboardSlugSettingsRoute: AuthedDashboardSlugSettingsRoute,
-    AuthedDashboardSlugIndexRoute: AuthedDashboardSlugIndexRoute,
-    AuthedDashboardSlugEstimatesEstimateIdRoute:
-      AuthedDashboardSlugEstimatesEstimateIdRoute,
+    AuthedBusinessesSlugSettingsRoute: AuthedBusinessesSlugSettingsRoute,
+    AuthedBusinessesSlugIndexRoute: AuthedBusinessesSlugIndexRoute,
+    AuthedBusinessesSlugInvoicesInvoiceIdRoute:
+      AuthedBusinessesSlugInvoicesInvoiceIdRoute,
+    AuthedBusinessesSlugProductsIndexRoute:
+      AuthedBusinessesSlugProductsIndexRoute,
   }
 
-const AuthedDashboardSlugRouteRouteWithChildren =
-  AuthedDashboardSlugRouteRoute._addFileChildren(
-    AuthedDashboardSlugRouteRouteChildren,
+const AuthedBusinessesSlugRouteRouteWithChildren =
+  AuthedBusinessesSlugRouteRoute._addFileChildren(
+    AuthedBusinessesSlugRouteRouteChildren,
   )
 
 interface AuthedRouteChildren {
   AuthedAccountRoute: typeof AuthedAccountRoute
   AuthedWelcomeRoute: typeof AuthedWelcomeRoute
-  AuthedDashboardSlugRouteRoute: typeof AuthedDashboardSlugRouteRouteWithChildren
+  AuthedBusinessesSlugRouteRoute: typeof AuthedBusinessesSlugRouteRouteWithChildren
   AuthedBusinessesNewRoute: typeof AuthedBusinessesNewRoute
   AuthedInvitesTokenRoute: typeof AuthedInvitesTokenRoute
-  AuthedDashboardIndexRoute: typeof AuthedDashboardIndexRoute
+  AuthedBusinessesIndexRoute: typeof AuthedBusinessesIndexRoute
 }
 
 const AuthedRouteChildren: AuthedRouteChildren = {
   AuthedAccountRoute: AuthedAccountRoute,
   AuthedWelcomeRoute: AuthedWelcomeRoute,
-  AuthedDashboardSlugRouteRoute: AuthedDashboardSlugRouteRouteWithChildren,
+  AuthedBusinessesSlugRouteRoute: AuthedBusinessesSlugRouteRouteWithChildren,
   AuthedBusinessesNewRoute: AuthedBusinessesNewRoute,
   AuthedInvitesTokenRoute: AuthedInvitesTokenRoute,
-  AuthedDashboardIndexRoute: AuthedDashboardIndexRoute,
+  AuthedBusinessesIndexRoute: AuthedBusinessesIndexRoute,
 }
 
 const AuthedRouteWithChildren =

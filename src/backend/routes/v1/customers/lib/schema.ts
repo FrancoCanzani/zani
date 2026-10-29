@@ -18,6 +18,18 @@ export const createCustomerBodySchema = z.object({
       (value) => value === null || z.email().safeParse(value).success,
       "Invalid email"
     ),
+  address: z
+    .string()
+    .trim()
+    .max(500)
+    .nullish()
+    .transform((value) => value?.trim() || null),
+  taxId: z
+    .string()
+    .trim()
+    .max(80)
+    .nullish()
+    .transform((value) => value?.trim() || null),
   notes: z
     .string()
     .trim()

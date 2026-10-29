@@ -30,6 +30,12 @@ export function workspaceQueryOptions(slug: string) {
           slug: string
           plan: string
           role: string
+          defaultCurrency: string
+          invoiceNumberPrefix: string
+          defaultPaymentTerms: string | null
+          defaultTaxName: string | null
+          defaultTaxRateBps: number
+          taxInclusive: boolean
           createdAt: number
         }
       }>(

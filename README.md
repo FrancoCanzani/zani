@@ -1,12 +1,12 @@
-# Estimates + deposits (foundation)
+# Invoices (foundation)
 
-Development foundation for a SaaS that helps solo tradespeople and tiny crews send estimates customers can accept and pay a deposit on.
+Development foundation for a SaaS that helps solo tradespeople and tiny crews send invoices and get paid.
 
-Product line: **Send estimates that customers actually accept and pay.**
+Product line: **Send invoices customers actually pay.**
 
-The first product slice is versioned HTTP APIs, email OTP sign-in, display-name completion, a dashboard, and creating a business. Estimates, public share links, Stripe Connect deposits, and subscriptions are not implemented yet.
+The first product slice is versioned HTTP APIs, email OTP sign-in, display-name completion, businesses, customers, products, and an invoice builder. Public share links, collections automation, Stripe, and subscriptions are not implemented yet.
 
-Flow: sign in → `/welcome` (name) → `/dashboard` → set up business → `/dashboard/$slug` (business view; slug is a UUID). Invite links are `/invites/$token`.
+Flow: sign in → `/welcome` (name) → `/businesses` → set up business → `/businesses/$slug` (business view; slug is a UUID). Invite links are `/invites/$token`.
 
 ## Stack
 
@@ -40,7 +40,7 @@ Smoke checks:
 - App: [http://localhost:5173](http://localhost:5173)
 - Sign in: [http://localhost:5173/sign-in](http://localhost:5173/sign-in)
 - Welcome (name): [http://localhost:5173/welcome](http://localhost:5173/welcome)
-- Dashboard: [http://localhost:5173/dashboard](http://localhost:5173/dashboard)
+- Businesses: [http://localhost:5173/businesses](http://localhost:5173/businesses)
 - Health: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health)
 
 D1 (`DB`) and Email (`EMAIL`) are local Wrangler bindings. Generate migrations with `bun run db:generate`; apply locally yourself with `bun run db:migrate:dev` when ready. No remote Cloudflare resources are required.

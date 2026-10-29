@@ -24,11 +24,11 @@ export function GuestHome() {
               For solo trades and tiny crews
             </p>
             <h1 className="max-w-xl text-3xl font-normal tracking-tight sm:text-4xl">
-              Send estimates that customers actually accept and pay.
+              Send invoices customers actually pay.
             </h1>
             <p className="max-w-lg text-muted-foreground leading-relaxed">
-              Build a clean estimate on your phone, share a link, and take a
-              deposit when they say yes. No PDFs. No chasing.
+              Build a clean invoice, keep a product catalog, and follow up until
+              the balance clears. No chase-by-spreadsheet.
             </p>
             <div className="pt-2">
               <Button asChild>
@@ -47,36 +47,24 @@ export function GuestHome() {
                   <span className="font-medium">1. Build</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    — a clear estimate in about a minute.
+                    — customer, line items, tax, due date.
                   </span>
                 </li>
                 <li>
-                  <span className="font-medium">2. Share</span>
+                  <span className="font-medium">2. Send</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    — send the link over WhatsApp, text, or email.
+                    — get it in front of the person who owes you.
                   </span>
                 </li>
                 <li>
-                  <span className="font-medium">3. Get booked</span>
+                  <span className="font-medium">3. Collect</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    — they accept and pay a deposit on the same page. Money
-                    goes to you.
+                    — track status and close the loop when it’s paid.
                   </span>
                 </li>
               </ol>
-            </div>
-
-            <div className="space-y-3">
-              <h2 className="text-sm font-medium tracking-wide text-muted-foreground uppercase">
-                Why a deposit
-              </h2>
-              <p className="max-w-lg leading-relaxed text-muted-foreground">
-                A deposit books the date and covers materials. You are not
-                locking up the full job price, and we are not holding your money
-                in escrow. Just the moment that turns a maybe into a real job.
-              </p>
             </div>
 
             <div className="space-y-4">

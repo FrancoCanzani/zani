@@ -68,10 +68,10 @@ export function AccountPage() {
     <main className="mx-auto flex min-h-svh w-full max-w-lg flex-col px-6 py-10">
       <header className="flex items-center justify-between gap-4">
         <Link
-          to="/dashboard"
+          to="/businesses"
           className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          Dashboard
+          Businesses
         </Link>
         <p className="text-lg tracking-tight">zani</p>
       </header>

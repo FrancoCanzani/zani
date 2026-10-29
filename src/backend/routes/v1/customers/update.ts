@@ -46,6 +46,8 @@ export const updateCustomer = new Hono<AppEnv>().patch(
         name: body.name,
         phone: body.phone ?? null,
         email: body.email ?? null,
+        address: body.address ?? null,
+        taxId: body.taxId ?? null,
         notes: body.notes ?? null,
         updatedAt: now,
       })

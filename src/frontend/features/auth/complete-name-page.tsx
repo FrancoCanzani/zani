@@ -42,7 +42,7 @@ export function CompleteNamePage() {
         return
       }
       await router.invalidate()
-      await router.navigate({ to: "/dashboard" })
+      await router.navigate({ to: "/businesses" })
     },
   })
 

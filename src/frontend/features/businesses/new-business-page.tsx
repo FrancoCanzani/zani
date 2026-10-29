@@ -42,7 +42,7 @@ export function NewBusinessPage() {
       writeLastWorkspaceSlug(body.workspace.slug)
       await queryClient.invalidateQueries({ queryKey: ["workspaces"] })
       await navigate({
-        to: "/dashboard/$slug",
+        to: "/businesses/$slug",
         params: { slug: body.workspace.slug },
       })
     },
@@ -64,7 +64,7 @@ export function NewBusinessPage() {
     <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col justify-center px-6 py-16">
       <div className="flex items-center justify-between gap-4">
         <Link
-          to="/dashboard"
+          to="/businesses"
           className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
           Back
@@ -91,7 +91,7 @@ export function NewBusinessPage() {
         Set up your business
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        This name shows on estimates you send.
+        This name shows on invoices you send.
       </p>
 
       {createBusiness.error ? (
