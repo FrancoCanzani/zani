@@ -73,6 +73,10 @@ export const workspace = sqliteTable("workspace", {
   name: text("name").notNull(),
   slug: text("slug").notNull().unique(),
   plan: text("plan").notNull().default("free"),
+  email: text("email"),
+  phone: text("phone"),
+  address: text("address"),
+  taxId: text("tax_id"),
   defaultCurrency: text("default_currency").notNull().default("usd"),
   invoiceNumberPrefix: text("invoice_number_prefix").notNull().default("INV-"),
   nextInvoiceNumber: integer("next_invoice_number").notNull().default(1),
@@ -82,6 +86,7 @@ export const workspace = sqliteTable("workspace", {
   taxInclusive: integer("tax_inclusive", { mode: "boolean" })
     .notNull()
     .default(false),
+  detailsSkippedAt: integer("details_skipped_at"),
   createdAt: integer("created_at").notNull(),
   updatedAt: integer("updated_at").notNull(),
 })

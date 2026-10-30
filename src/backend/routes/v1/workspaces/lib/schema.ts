@@ -6,8 +6,26 @@ export const createWorkspaceBodySchema = z.object({
   name: z.string().trim().min(1).max(80),
 })
 
+const nullableTrimmed = (max: number) =>
+  z
+    .string()
+    .trim()
+    .max(max)
+    .nullish()
+    .transform((value) => value?.trim() || null)
+
 export const updateWorkspaceBodySchema = z.object({
-  name: z.string().trim().min(1).max(80),
+  name: z.string().trim().min(1).max(80).optional(),
+  email: nullableTrimmed(254)
+    .refine(
+      (value) => value === null || z.email().safeParse(value).success,
+      "Invalid email"
+    )
+    .optional(),
+  phone: nullableTrimmed(40).optional(),
+  address: nullableTrimmed(500).optional(),
+  taxId: nullableTrimmed(80).optional(),
+  skipDetails: z.boolean().optional(),
 })
 
 export const createInviteBodySchema = z.object({

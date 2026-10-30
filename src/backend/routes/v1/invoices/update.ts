@@ -26,7 +26,11 @@ export const updateInvoice = new Hono<AppEnv>().patch(
     const invoiceId = c.req.param("invoiceId")
 
     const [existing] = await db
-      .select({ id: invoice.id, status: invoice.status })
+      .select({
+        id: invoice.id,
+        status: invoice.status,
+        number: invoice.number,
+      })
       .from(invoice)
       .where(
         and(
@@ -42,6 +46,23 @@ export const updateInvoice = new Hono<AppEnv>().patch(
 
     if (existing.status === "paid" || existing.status === "void") {
       return c.json({ error: "immutable" as const }, 409)
+    }
+
+    if (body.number !== existing.number) {
+      const [conflict] = await db
+        .select({ id: invoice.id })
+        .from(invoice)
+        .where(
+          and(
+            eq(invoice.workspaceId, current.workspace.id),
+            eq(invoice.number, body.number)
+          )
+        )
+        .limit(1)
+
+      if (conflict) {
+        return c.json({ error: "number_taken" as const }, 409)
+      }
     }
 
     const resolved = await resolveInvoiceCustomer(c.env, current.workspace.id, {
@@ -61,6 +82,7 @@ export const updateInvoice = new Hono<AppEnv>().patch(
     await db
       .update(invoice)
       .set({
+        number: body.number,
         customerId: resolved.customerId,
         customerName: resolved.customerName,
         customerPhone: resolved.customerPhone,

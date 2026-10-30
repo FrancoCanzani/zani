@@ -18,6 +18,7 @@ import {
 import { createInvoice, invoicesQueryOptions } from "@features/invoices/api"
 import { formatCents, formatDisplayDate } from "@features/invoices/helpers"
 import { invoiceStatusLabel } from "@features/invoices/status-label"
+import { workspaceQueryOptions } from "@features/workspaces/api"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/")
 
@@ -26,6 +27,8 @@ export function InvoicesPage() {
   const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { data } = useSuspenseQuery(invoicesQueryOptions(slug))
+  const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
+  const needsDetails = !workspaceData.workspace.detailsComplete
 
   const create = useMutation({
     mutationFn: () => createInvoice(slug),
@@ -43,29 +46,55 @@ export function InvoicesPage() {
 
   if (data.invoices.length === 0) {
     return (
-      <Empty className="border-none">
-        <EmptyHeader>
-          <EmptyTitle>No invoices yet</EmptyTitle>
-          <EmptyDescription>
-            Create one. Pick a customer, add line items from your catalog, and
-            send when it’s ready.
-          </EmptyDescription>
-        </EmptyHeader>
-        <EmptyContent>
-          <Button
-            type="button"
-            disabled={create.isPending}
-            onClick={() => create.mutate()}
-          >
-            {create.isPending ? "Creating…" : "New invoice"}
-          </Button>
-        </EmptyContent>
-      </Empty>
+      <div className="flex flex-1 flex-col gap-6">
+        {needsDetails ? (
+          <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/40 px-4 py-3 text-sm">
+            <p className="text-muted-foreground">
+              Add your business details so they show on invoices.
+            </p>
+            <Button type="button" variant="outline" size="sm" asChild>
+              <Link to="/businesses/$slug/manage" params={{ slug }}>
+                Complete details
+              </Link>
+            </Button>
+          </div>
+        ) : null}
+        <Empty className="border-none">
+          <EmptyHeader>
+            <EmptyTitle>No invoices yet</EmptyTitle>
+            <EmptyDescription>
+              Create one. Pick a customer, add line items from your catalog, and
+              send when it’s ready.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button
+              type="button"
+              disabled={create.isPending}
+              onClick={() => create.mutate()}
+            >
+              {create.isPending ? "Creating…" : "New invoice"}
+            </Button>
+          </EmptyContent>
+        </Empty>
+      </div>
     )
   }
 
   return (
     <div className="flex flex-1 flex-col gap-8">
+      {needsDetails ? (
+        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/40 px-4 py-3 text-sm">
+          <p className="text-muted-foreground">
+            Add your business details so they show on invoices.
+          </p>
+          <Button type="button" variant="outline" size="sm" asChild>
+            <Link to="/businesses/$slug/manage" params={{ slug }}>
+              Complete details
+            </Link>
+          </Button>
+        </div>
+      ) : null}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl tracking-tight">Invoices</h1>

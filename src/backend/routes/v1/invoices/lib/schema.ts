@@ -18,6 +18,7 @@ const nullableTrimmed = (max: number) =>
     .transform((value) => value?.trim() || null)
 
 export const updateInvoiceBodySchema = z.object({
+  number: z.string().trim().min(1).max(40),
   customerId: z.string().min(1).nullable(),
   customerName: z.string().trim().max(120),
   customerPhone: nullableTrimmed(40),

@@ -173,22 +173,22 @@ export function CustomerFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bill-to-name">Name</Label>
+        <Label htmlFor="bill-to-name">
+          Name <span className="text-destructive">*</span>
+        </Label>
         <Input
           id="bill-to-name"
           value={customerName}
           autoComplete="organization"
           onChange={(event) => patch({ customerName: event.target.value })}
           placeholder="John Doe"
+          required
         />
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="space-y-2">
-          <Label htmlFor="bill-to-email">
-            Email{" "}
-            <span className="font-normal text-muted-foreground">Optional</span>
-          </Label>
+          <Label htmlFor="bill-to-email">Email</Label>
           <Input
             id="bill-to-email"
             type="email"
@@ -199,26 +199,20 @@ export function CustomerFields({
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="bill-to-phone">
-            Phone{" "}
-            <span className="font-normal text-muted-foreground">Optional</span>
-          </Label>
+          <Label htmlFor="bill-to-phone">Phone</Label>
           <Input
             id="bill-to-phone"
             type="tel"
             value={customerPhone}
             autoComplete="tel"
             onChange={(event) => patch({ customerPhone: event.target.value })}
-            placeholder="Optional"
+            placeholder="Phone number"
           />
         </div>
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bill-to-address">
-          Address{" "}
-          <span className="font-normal text-muted-foreground">Optional</span>
-        </Label>
+        <Label htmlFor="bill-to-address">Address</Label>
         <Textarea
           id="bill-to-address"
           value={customerAddress}
@@ -229,10 +223,7 @@ export function CustomerFields({
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bill-to-tax">
-          Tax ID{" "}
-          <span className="font-normal text-muted-foreground">Optional</span>
-        </Label>
+        <Label htmlFor="bill-to-tax">Tax ID</Label>
         <Input
           id="bill-to-tax"
           value={customerTaxId}

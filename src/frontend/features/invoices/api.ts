@@ -64,6 +64,7 @@ export type Invoice = {
 }
 
 export type InvoiceInput = {
+  number: string
   customerId: string | null
   customerName: string
   customerPhone: string | null
@@ -128,6 +129,12 @@ export async function updateInvoice(
     json: body,
   })
   if (response.status === 409) {
+    const errorBody = (await response.json().catch(() => null)) as {
+      error?: string
+    } | null
+    if (errorBody?.error === "number_taken") {
+      throw new Error("That invoice number is already in use.")
+    }
     throw new Error("This invoice can no longer be edited.")
   }
   if (response.status === 404) {
