@@ -1,5 +1,6 @@
 import { Link } from "@tanstack/react-router"
 
+import { BrandMark } from "@components/brand-mark"
 import { Button } from "@components/ui/button"
 
 export function GuestHome() {
@@ -7,9 +8,7 @@ export function GuestHome() {
     <div className="min-h-svh">
       <div className="mx-auto w-full max-w-2xl px-6 sm:px-8">
         <header className="flex items-center justify-between py-7">
-          <Link to="/" className="text-2xl tracking-tight">
-            zani
-          </Link>
+          <BrandMark className="text-2xl" />
           <Link
             to="/sign-in"
             className="text-muted-foreground transition-colors hover:text-foreground"

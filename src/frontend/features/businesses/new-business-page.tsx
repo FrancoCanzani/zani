@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { Link, useNavigate, useRouter } from "@tanstack/react-router"
+import { toast } from "sonner"
 import { z } from "zod"
 
 import { Button } from "@components/ui/button"
@@ -45,6 +46,9 @@ export function NewBusinessPage() {
         to: "/businesses/$slug",
         params: { slug: body.workspace.slug },
       })
+    },
+    onError: (error) => {
+      toast.error(error.message)
     },
   })
 
@@ -94,14 +98,8 @@ export function NewBusinessPage() {
         This name shows on invoices you send.
       </p>
 
-      {createBusiness.error ? (
-        <p className="mt-6 text-sm text-destructive" role="alert">
-          {createBusiness.error.message}
-        </p>
-      ) : null}
-
       <form
-        className={createBusiness.error ? "mt-4" : "mt-8"}
+        className="mt-8"
         onSubmit={(event) => {
           event.preventDefault()
           event.stopPropagation()

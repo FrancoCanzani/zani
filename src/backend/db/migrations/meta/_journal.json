@@ -57,6 +57,13 @@
       "when": 1793312032896,
       "tag": "0007_demonic_cerebro",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1793362244056,
+      "tag": "0008_mute_magus",
+      "breakpoints": true
     }
   ]
 }
