@@ -1,5 +1,4 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { PlusIcon } from "lucide-react"
 import { useState, type SubmitEvent } from "react"
 
 import { Button } from "@components/ui/button"
@@ -157,7 +156,6 @@ export function ProductFields({
             setDialogOpen(true)
           }}
         >
-          <PlusIcon />
           Add
         </Button>
       </div>

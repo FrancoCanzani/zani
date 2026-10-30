@@ -4,7 +4,6 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
-import { PlusIcon } from "lucide-react"
 import { useState, type SubmitEvent } from "react"
 
 import { Button } from "@components/ui/button"
@@ -16,6 +15,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@components/ui/dialog"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@components/ui/empty"
 import { Input } from "@components/ui/input"
 import { Label } from "@components/ui/label"
 import { Textarea } from "@components/ui/textarea"
@@ -83,6 +89,103 @@ export function ProductsPage() {
     create.mutate()
   }
 
+  function openCreate() {
+    resetForm()
+    setDialogOpen(true)
+  }
+
+  const productDialog = (
+    <Dialog
+      open={dialogOpen}
+      onOpenChange={(open) => {
+        setDialogOpen(open)
+        if (!open) {
+          resetForm()
+        }
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Add product</DialogTitle>
+          <DialogDescription>
+            Saved to this business for the next invoice.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-4" onSubmit={onSubmit}>
+          <div className="space-y-2">
+            <Label htmlFor="product-name">Name</Label>
+            <Input
+              id="product-name"
+              value={name}
+              autoFocus
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Consulting hour"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="product-description">Description</Label>
+            <Textarea
+              id="product-description"
+              value={description}
+              onChange={(event) => setDescription(event.target.value)}
+              placeholder="Optional"
+              rows={2}
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="product-price">Unit price</Label>
+            <Input
+              id="product-price"
+              inputMode="decimal"
+              value={price}
+              onChange={(event) => setPrice(event.target.value)}
+              onBlur={() => setPrice(centsToInput(inputToCents(price)))}
+            />
+          </div>
+          {formError ? (
+            <p className="text-sm text-destructive" role="alert">
+              {formError}
+            </p>
+          ) : null}
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button type="submit" disabled={create.isPending}>
+              {create.isPending ? "Saving…" : "Save product"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+
+  if (data.products.length === 0) {
+    return (
+      <>
+        <Empty className="border-none">
+          <EmptyHeader>
+            <EmptyTitle>No products yet</EmptyTitle>
+            <EmptyDescription>
+              Save the services and materials you bill for so invoice lines fill
+              themselves in.
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button type="button" onClick={openCreate}>
+              Add product
+            </Button>
+          </EmptyContent>
+        </Empty>
+        {productDialog}
+      </>
+    )
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-8">
       <div className="flex items-start justify-between gap-4">
@@ -92,14 +195,7 @@ export function ProductsPage() {
             Reusable line items for your invoices.
           </p>
         </div>
-        <Button
-          type="button"
-          onClick={() => {
-            resetForm()
-            setDialogOpen(true)
-          }}
-        >
-          <PlusIcon />
+        <Button type="button" onClick={openCreate}>
           Add product
         </Button>
       </div>
@@ -110,114 +206,39 @@ export function ProductsPage() {
         </p>
       ) : null}
 
-      {data.products.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-border px-5 py-10">
-          <p className="max-w-sm leading-relaxed text-muted-foreground">
-            No products yet. Save the services and materials you bill for so
-            invoice lines fill themselves in.
-          </p>
-        </div>
-      ) : (
-        <ul className="divide-y border-y">
-          {data.products.map((product) => (
-            <li
-              key={product.id}
-              className="flex items-start justify-between gap-4 py-4"
-            >
-              <div className="min-w-0 space-y-1">
-                <p className="truncate font-medium">{product.name}</p>
-                {product.description ? (
-                  <p className="text-sm text-muted-foreground">
-                    {product.description}
-                  </p>
-                ) : null}
-              </div>
-              <div className="flex shrink-0 items-center gap-3">
-                <p className="tabular-nums text-sm">
-                  {formatCents(product.unitAmountCents, product.currency)}
+      <ul className="divide-y border-y">
+        {data.products.map((product) => (
+          <li
+            key={product.id}
+            className="flex items-start justify-between gap-4 py-4"
+          >
+            <div className="min-w-0 space-y-1">
+              <p className="truncate font-medium">{product.name}</p>
+              {product.description ? (
+                <p className="text-sm text-muted-foreground">
+                  {product.description}
                 </p>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  disabled={archive.isPending}
-                  onClick={() => archive.mutate(product.id)}
-                >
-                  Archive
-                </Button>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      <Dialog
-        open={dialogOpen}
-        onOpenChange={(open) => {
-          setDialogOpen(open)
-          if (!open) {
-            resetForm()
-          }
-        }}
-      >
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Add product</DialogTitle>
-            <DialogDescription>
-              Saved to this business for the next invoice.
-            </DialogDescription>
-          </DialogHeader>
-          <form className="grid gap-4" onSubmit={onSubmit}>
-            <div className="space-y-2">
-              <Label htmlFor="product-name">Name</Label>
-              <Input
-                id="product-name"
-                value={name}
-                autoFocus
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Consulting hour"
-              />
+              ) : null}
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-description">Description</Label>
-              <Textarea
-                id="product-description"
-                value={description}
-                onChange={(event) => setDescription(event.target.value)}
-                placeholder="Optional"
-                rows={2}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="product-price">Unit price</Label>
-              <Input
-                id="product-price"
-                inputMode="decimal"
-                value={price}
-                onChange={(event) => setPrice(event.target.value)}
-                onBlur={() => setPrice(centsToInput(inputToCents(price)))}
-              />
-            </div>
-            {formError ? (
-              <p className="text-sm text-destructive" role="alert">
-                {formError}
+            <div className="flex shrink-0 items-center gap-3">
+              <p className="tabular-nums text-sm">
+                {formatCents(product.unitAmountCents, product.currency)}
               </p>
-            ) : null}
-            <DialogFooter>
               <Button
                 type="button"
-                variant="outline"
-                onClick={() => setDialogOpen(false)}
+                variant="ghost"
+                size="sm"
+                disabled={archive.isPending}
+                onClick={() => archive.mutate(product.id)}
               >
-                Cancel
+                Archive
               </Button>
-              <Button type="submit" disabled={create.isPending}>
-                {create.isPending ? "Saving…" : "Save product"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
+            </div>
+          </li>
+        ))}
+      </ul>
+
+      {productDialog}
     </div>
   )
 }

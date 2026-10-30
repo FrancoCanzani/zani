@@ -3,6 +3,13 @@ import { Link, getRouteApi } from "@tanstack/react-router"
 
 import { BrandMark } from "@components/brand-mark"
 import { Button } from "@components/ui/button"
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from "@components/ui/empty"
 
 import { UserMenu } from "@features/account/user-menu"
 import { workspacesQueryOptions } from "@features/workspaces/api"
@@ -21,47 +28,71 @@ export function BusinessesPage() {
         <UserMenu name={session.user.name} email={session.user.email} />
       </header>
 
-      <div className="mt-16 flex flex-1 flex-col gap-8">
-        <div className="space-y-2">
-          <h1 className="text-2xl tracking-tight sm:text-3xl">Businesses</h1>
-          <p className="text-sm leading-relaxed text-muted-foreground">
-            Open a business to create invoices.
-          </p>
-        </div>
-
-        {businesses.length === 0 ? (
-          <div className="space-y-4 rounded-lg border border-dashed border-border px-5 py-8">
-            <p className="leading-relaxed text-muted-foreground">
+      {businesses.length === 0 ? (
+        <Empty className="border-none">
+          <EmptyHeader>
+            <EmptyTitle>No businesses yet</EmptyTitle>
+            <EmptyDescription>
               You don’t have a business yet. Set one up to start invoicing.
-            </p>
+            </EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
             <Button asChild>
               <Link to="/businesses/new">Set up your business</Link>
             </Button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            <ul className="divide-y border-y">
-              {businesses.map((business) => (
-                <li key={business.id}>
-                  <Link
-                    to="/businesses/$slug"
-                    params={{ slug: business.slug }}
-                    className="flex items-center justify-between gap-4 py-4 transition-colors hover:text-muted-foreground"
-                  >
-                    <span className="truncate font-medium">{business.name}</span>
-                    <span className="shrink-0 text-sm text-muted-foreground">
-                      Open
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <Button asChild variant="outline">
+          </EmptyContent>
+        </Empty>
+      ) : (
+        <div className="mt-16 flex flex-1 flex-col gap-8">
+          <div className="flex items-center justify-between gap-4">
+            <div className="space-y-1">
+              <h1 className="text-2xl tracking-tight sm:text-3xl">
+                Businesses
+              </h1>
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                Open a business to create invoices.
+              </p>
+            </div>
+            <Button asChild className="shrink-0">
               <Link to="/businesses/new">New business</Link>
             </Button>
           </div>
-        )}
-      </div>
+
+          <ul className="flex flex-col gap-1">
+            {businesses.map((business) => (
+              <li
+                key={business.id}
+                className="flex items-center justify-between gap-4 rounded-lg px-3 py-3 transition-colors hover:bg-muted/60"
+              >
+                <Link
+                  to="/businesses/$slug"
+                  params={{ slug: business.slug }}
+                  className="min-w-0 flex-1 truncate font-medium transition-colors hover:text-muted-foreground"
+                >
+                  {business.name}
+                </Link>
+                <div className="flex shrink-0 items-center gap-3 text-sm">
+                  <Link
+                    to="/businesses/$slug/manage"
+                    params={{ slug: business.slug }}
+                    className="text-muted-foreground transition-colors hover:text-foreground"
+                  >
+                    Manage
+                  </Link>
+                  <Button asChild size="sm" variant="outline">
+                    <Link
+                      to="/businesses/$slug"
+                      params={{ slug: business.slug }}
+                    >
+                      Open
+                    </Link>
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </main>
   )
 }

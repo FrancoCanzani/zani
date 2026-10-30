@@ -1,4 +1,4 @@
-import { PlusIcon, Trash2Icon } from "lucide-react"
+import { Trash2Icon } from "lucide-react"
 import { useState, type SubmitEvent } from "react"
 
 import { Button } from "@components/ui/button"
@@ -124,7 +124,6 @@ export function InvoiceLineItems({
         </p>
         {!readOnly ? (
           <Button type="button" variant="outline" size="sm" onClick={openCreate}>
-            <PlusIcon />
             Add item
           </Button>
         ) : null}

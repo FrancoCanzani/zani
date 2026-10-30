@@ -46,21 +46,21 @@ export function GuestHome() {
                   <span className="font-medium">1. Build</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    — customer, line items, tax, due date.
+                    Customer, line items, tax, due date.
                   </span>
                 </li>
                 <li>
                   <span className="font-medium">2. Send</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    — get it in front of the person who owes you.
+                    Get it in front of the person who owes you.
                   </span>
                 </li>
                 <li>
                   <span className="font-medium">3. Collect</span>
                   <span className="text-muted-foreground">
                     {" "}
-                    — track status and close the loop when it’s paid.
+                    Track status and close the loop when it’s paid.
                   </span>
                 </li>
               </ol>

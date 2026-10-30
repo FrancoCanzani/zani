@@ -1,9 +1,10 @@
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Link, useNavigate, useRouter } from "@tanstack/react-router"
+import { Link, useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 import { z } from "zod"
 
+import { BrandMark } from "@components/brand-mark"
 import { Button } from "@components/ui/button"
 import {
   Field,
@@ -15,7 +16,6 @@ import { Input } from "@components/ui/input"
 
 import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
 import { api } from "@lib/api"
-import { authClient } from "@lib/auth/client"
 import { fieldErrors } from "@lib/utils"
 
 const businessSchema = z.object({
@@ -24,7 +24,6 @@ const businessSchema = z.object({
 
 export function NewBusinessPage() {
   const navigate = useNavigate()
-  const router = useRouter()
   const queryClient = useQueryClient()
 
   const createBusiness = useMutation({
@@ -65,76 +64,65 @@ export function NewBusinessPage() {
   })
 
   return (
-    <main className="mx-auto flex min-h-svh w-full max-w-sm flex-col justify-center px-6 py-16">
-      <div className="flex items-center justify-between gap-4">
+    <div className="flex min-h-svh flex-col">
+      <header className="px-5">
+        <div className="mx-auto flex h-12 w-full max-w-5xl items-center">
+          <BrandMark to="/businesses" />
+        </div>
+      </header>
+
+      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-10">
         <Link
           to="/businesses"
           className="text-sm text-muted-foreground transition-colors hover:text-foreground"
         >
-          Back
+          Go back
         </Link>
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={() => {
-            void authClient.signOut({
-              fetchOptions: {
-                onSuccess: async () => {
-                  queryClient.clear()
-                  await router.invalidate()
-                  await router.navigate({ to: "/sign-in" })
-                },
-              },
-            })
+        <h1 className="mt-4 text-2xl font-normal tracking-tight sm:text-3xl">
+          Set up your business
+        </h1>
+        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+          This name shows on invoices you send.
+        </p>
+
+        <form
+          className="mt-8"
+          onSubmit={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            createBusiness.reset()
+            void form.handleSubmit()
           }}
         >
-          Sign out
-        </Button>
-      </div>
-      <h1 className="mt-4 text-2xl font-normal tracking-tight sm:text-3xl">
-        Set up your business
-      </h1>
-      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        This name shows on invoices you send.
-      </p>
-
-      <form
-        className="mt-8"
-        onSubmit={(event) => {
-          event.preventDefault()
-          event.stopPropagation()
-          createBusiness.reset()
-          void form.handleSubmit()
-        }}
-      >
-        <FieldGroup>
-          <form.Field name="name">
-            {(field) => (
-              <Field data-invalid={field.state.meta.errors.length > 0}>
-                <FieldLabel htmlFor={field.name}>Business name</FieldLabel>
-                <Input
-                  id={field.name}
-                  name={field.name}
-                  autoComplete="organization"
-                  autoFocus
-                  value={field.state.value}
-                  onBlur={field.handleBlur}
-                  onChange={(event) => field.handleChange(event.target.value)}
-                  placeholder="Rivera Plumbing"
-                />
-                <FieldError errors={fieldErrors(field.state.meta.errors)} />
-              </Field>
-            )}
-          </form.Field>
-          <form.Subscribe selector={(state) => state.isSubmitting}>
-            {(isSubmitting) => (
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating…" : "Continue"}
-              </Button>
-            )}
-          </form.Subscribe>
-        </FieldGroup>
-      </form>
-    </main>
+          <FieldGroup>
+            <form.Field name="name">
+              {(field) => (
+                <Field data-invalid={field.state.meta.errors.length > 0}>
+                  <FieldLabel htmlFor={field.name}>Business name</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    autoComplete="organization"
+                    autoFocus
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    placeholder="Rivera Plumbing"
+                  />
+                  <FieldError errors={fieldErrors(field.state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(isSubmitting) => (
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Creating…" : "Continue"}
+                </Button>
+              )}
+            </form.Subscribe>
+          </FieldGroup>
+        </form>
+      </main>
+    </div>
   )
 }
