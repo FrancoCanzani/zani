@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
+import { Link } from "@tanstack/react-router"
 import { Trash2Icon } from "lucide-react"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
@@ -20,7 +21,12 @@ import {
   newLineItem,
   type LineItem,
 } from "@features/invoices/helpers"
-import { productsQueryOptions } from "@features/products/api"
+import {
+  paperInputClass,
+  paperNumberClass,
+  paperSelectTriggerClass,
+} from "@features/invoices/paper-field"
+import { productsQueryOptions, type Product } from "@features/products/api"
 
 type InvoiceLinesProps = {
   slug: string
@@ -30,7 +36,9 @@ type InvoiceLinesProps = {
   onChange: (items: LineItem[]) => void
 }
 
-const CUSTOM = "__custom__"
+const PICK = "__pick__"
+const lineGridClass =
+  "grid grid-cols-[minmax(0,1fr)_3.5rem_5rem_5.5rem_1.75rem] gap-x-3 gap-y-1"
 
 export function InvoiceLines({
   slug,
@@ -59,24 +67,50 @@ export function InvoiceLines({
     commit(next.length > 0 ? next : [newLineItem()])
   }
 
+  function addBlank() {
+    const base =
+      items.length === 1 &&
+      !items[0]!.name.trim() &&
+      items[0]!.unitAmountCents === 0
+        ? []
+        : items
+    commit([...base, newLineItem()])
+  }
+
+  function addProduct(product: Product) {
+    const next = newLineItem()
+    next.productId = product.id
+    next.name = product.name
+    next.description = product.description ?? ""
+    next.unitAmountCents = product.unitAmountCents
+    const base =
+      items.length === 1 &&
+      !items[0]!.name.trim() &&
+      items[0]!.unitAmountCents === 0
+        ? []
+        : items
+    commit([...base, next])
+  }
+
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-[minmax(0,1fr)_4rem_5.5rem_5.5rem_1.75rem] gap-2 border-b border-border pb-2 text-xs text-muted-foreground">
+    <div className="space-y-2">
+      <div
+        className={`${lineGridClass} border-b border-dashed border-border pb-2 text-[11px] text-muted-foreground`}
+      >
         <span>Item</span>
-        <span className="text-right">Qty</span>
-        <span className="text-right">Price</span>
-        <span className="text-right">Total</span>
+        <span className="text-right font-mono">Qty</span>
+        <span className="text-right font-mono">Price</span>
+        <span className="text-right font-mono">Total</span>
         <span />
       </div>
 
-      <ul className="space-y-2">
+      <ul className="space-y-1">
         {items.map((item) => (
           <LineRow
             key={item.id}
             item={item}
             currency={currency}
             readOnly={readOnly}
-            products={products}
             canRemove={!readOnly && items.length > 1}
             onChange={(patch) => update(item.id, patch)}
             onRemove={() => remove(item.id)}
@@ -85,15 +119,63 @@ export function InvoiceLines({
       </ul>
 
       {!readOnly ? (
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          className="h-7 px-0 text-sm text-muted-foreground hover:bg-transparent hover:text-foreground"
-          onClick={() => commit([...items, newLineItem()])}
-        >
-          Add line
-        </Button>
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 text-sm">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-auto px-0 py-0.5 text-muted-foreground hover:bg-transparent hover:text-foreground"
+            onClick={addBlank}
+          >
+            Add line
+          </Button>
+          {products.length > 0 ? (
+            <>
+              <span className="text-muted-foreground/40" aria-hidden>
+                ·
+              </span>
+              <Select
+                value={PICK}
+                onValueChange={(value) => {
+                  if (!value || value === PICK) {
+                    return
+                  }
+                  const product = products.find((entry) => entry.id === value)
+                  if (product) {
+                    addProduct(product)
+                  }
+                }}
+              >
+                <SelectTrigger
+                  className={`${paperSelectTriggerClass} w-auto text-muted-foreground`}
+                >
+                  <SelectValue placeholder="Add from products" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={PICK} disabled>
+                    Add from products
+                  </SelectItem>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id}>
+                      {product.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </>
+          ) : (
+            <p className="text-muted-foreground">
+              No products yet.{" "}
+              <Link
+                to="/businesses/$slug/products"
+                params={{ slug }}
+                className="underline underline-offset-2 hover:text-foreground"
+              >
+                Add products
+              </Link>
+            </p>
+          )}
+        </div>
       ) : null}
     </div>
   )
@@ -103,7 +185,6 @@ function LineRow({
   item,
   currency,
   readOnly,
-  products,
   canRemove,
   onChange,
   onRemove,
@@ -111,76 +192,39 @@ function LineRow({
   item: LineItem
   currency: string
   readOnly: boolean
-  products: Array<{
-    id: string
-    name: string
-    description: string | null
-    unitAmountCents: number
-  }>
   canRemove: boolean
   onChange: (patch: Partial<LineItem>) => void
   onRemove: () => void
 }) {
   const [price, setPrice] = useState(centsToInput(item.unitAmountCents))
   const [qty, setQty] = useState(String(item.quantity))
-  const selectValue = item.productId ?? CUSTOM
+
+  useEffect(() => {
+    setPrice(centsToInput(item.unitAmountCents))
+  }, [item.unitAmountCents])
+
+  useEffect(() => {
+    setQty(String(item.quantity))
+  }, [item.quantity])
 
   return (
-    <li className="grid grid-cols-[minmax(0,1fr)_4rem_5.5rem_5.5rem_1.75rem] items-start gap-2">
-      {readOnly ? (
-        <p className="truncate text-sm">{item.name.trim() || "—"}</p>
-      ) : (
-        <div className="min-w-0 space-y-1.5">
-          <Select
-            value={selectValue}
-            onValueChange={(next) => {
-              if (!next || next === CUSTOM) {
-                onChange({ productId: null, name: item.productId ? "" : item.name })
-                return
-              }
-              const product = products.find((entry) => entry.id === next)
-              if (!product) {
-                return
-              }
-              setPrice(centsToInput(product.unitAmountCents))
-              onChange({
-                productId: product.id,
-                name: product.name,
-                description: product.description ?? "",
-                unitAmountCents: product.unitAmountCents,
-              })
-            }}
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue placeholder="Select a product" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={CUSTOM}>Custom item</SelectItem>
-              {products.map((product) => (
-                <SelectItem key={product.id} value={product.id}>
-                  {product.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          {!item.productId ? (
-            <Input
-              value={item.name}
-              placeholder="Item name"
-              aria-label="Item name"
-              onChange={(event) =>
-                onChange({ name: event.target.value, productId: null })
-              }
-            />
-          ) : null}
-        </div>
-      )}
+    <li className={`${lineGridClass} items-center`}>
       <Input
-        key={`${item.id}-qty-${item.quantity}`}
-        defaultValue={String(item.quantity)}
+        value={item.name}
         disabled={readOnly}
+        placeholder="Item"
+        aria-label="Item name"
+        className={paperInputClass}
+        onChange={(event) =>
+          onChange({ name: event.target.value, productId: null })
+        }
+      />
+      <Input
+        type="text"
         inputMode="decimal"
-        className="text-right tabular-nums"
+        value={qty}
+        disabled={readOnly}
+        className={paperNumberClass}
         aria-label="Quantity"
         onChange={(event) => {
           const next = event.target.value
@@ -191,36 +235,31 @@ function LineRow({
           }
         }}
         onBlur={() => {
-          const next = Number(qty || String(item.quantity))
+          const next = Number(qty)
           const quantity = Number.isFinite(next) && next > 0 ? next : 1
           setQty(String(quantity))
           onChange({ quantity })
         }}
       />
       <Input
-        key={`${item.id}-price-${item.unitAmountCents}`}
-        defaultValue={centsToInput(item.unitAmountCents)}
-        disabled={readOnly}
+        type="text"
         inputMode="decimal"
-        className="text-right tabular-nums"
+        value={price}
+        disabled={readOnly}
+        className={paperNumberClass}
         aria-label="Unit price"
         onChange={(event) => {
           const next = event.target.value
           setPrice(next)
-          onChange({
-            productId: null,
-            unitAmountCents: inputToCents(next),
-          })
+          onChange({ unitAmountCents: inputToCents(next) })
         }}
         onBlur={() => {
-          const unitAmountCents = inputToCents(
-            price || centsToInput(item.unitAmountCents)
-          )
+          const unitAmountCents = inputToCents(price)
           setPrice(centsToInput(unitAmountCents))
           onChange({ unitAmountCents })
         }}
       />
-      <p className="text-right text-sm tabular-nums">
+      <p className="text-right font-mono text-sm tabular-nums">
         {formatCents(lineTotalCents(item), currency)}
       </p>
       <div className="flex items-center justify-end">

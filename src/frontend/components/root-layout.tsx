@@ -5,7 +5,7 @@ import { Toaster } from "@components/ui/sonner"
 
 export function RootLayout() {
   return (
-    <ThemeProvider>
+    <ThemeProvider defaultTheme="light">
       <Outlet />
       <Toaster position="bottom-center" richColors closeButton />
     </ThemeProvider>

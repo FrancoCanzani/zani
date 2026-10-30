@@ -65,7 +65,9 @@ export function InvoiceBuilderPage() {
   const [issueDate, setIssueDate] = useState(data.invoice.issueDate)
   const [dueDate, setDueDate] = useState(data.invoice.dueDate ?? "")
   const [notes, setNotes] = useState(data.invoice.notes ?? "")
-  const [terms, setTerms] = useState(data.invoice.terms ?? "")
+  const [bankDetails, setBankDetails] = useState(
+    data.invoice.bankDetails ?? ""
+  )
   const [taxName, setTaxName] = useState(data.invoice.taxName ?? "")
   const [taxRateBps, setTaxRateBps] = useState(data.invoice.taxRateBps)
   const [taxInclusive, setTaxInclusive] = useState(data.invoice.taxInclusive)
@@ -154,7 +156,7 @@ export function InvoiceBuilderPage() {
       dueDate: dueDate || null,
       paymentTerms: data.invoice.paymentTerms,
       notes: notes.trim() || null,
-      terms: terms.trim() || null,
+      bankDetails: bankDetails.trim() || null,
       taxName: taxName.trim() || null,
       taxRateBps,
       taxInclusive,
@@ -222,6 +224,7 @@ export function InvoiceBuilderPage() {
           businessEmail={workspaceData.workspace.email}
           businessPhone={workspaceData.workspace.phone}
           businessAddress={workspaceData.workspace.address}
+          businessTaxId={workspaceData.workspace.taxId}
           readOnly={readOnly}
           values={{
             number,
@@ -229,7 +232,7 @@ export function InvoiceBuilderPage() {
             dueDate,
             currency,
             notes,
-            terms,
+            bankDetails,
             taxName,
             taxRateBps,
             taxInclusive,
@@ -250,7 +253,8 @@ export function InvoiceBuilderPage() {
             if (patch.dueDate !== undefined) setDueDate(patch.dueDate)
             if (patch.currency !== undefined) setCurrency(patch.currency)
             if (patch.notes !== undefined) setNotes(patch.notes)
-            if (patch.terms !== undefined) setTerms(patch.terms)
+            if (patch.bankDetails !== undefined)
+              setBankDetails(patch.bankDetails)
             if (patch.taxName !== undefined) setTaxName(patch.taxName)
             if (patch.taxRateBps !== undefined) setTaxRateBps(patch.taxRateBps)
             if (patch.taxInclusive !== undefined)
@@ -264,7 +268,7 @@ export function InvoiceBuilderPage() {
       <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-5 backdrop-blur supports-backdrop-filter:bg-background/80">
         <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium tabular-nums">
+            <p className="truncate font-mono text-sm tabular-nums">
               {formatCents(totals.totalCents, currency)}
               <span className="ml-2 font-normal text-muted-foreground">
                 {invoiceStatusLabel(status)}

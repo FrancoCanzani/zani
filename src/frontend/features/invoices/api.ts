@@ -46,7 +46,7 @@ export type Invoice = {
   dueDate: string | null
   paymentTerms: string | null
   notes: string | null
-  terms: string | null
+  bankDetails: string | null
   taxName: string | null
   taxRateBps: number
   taxInclusive: boolean
@@ -76,7 +76,7 @@ export type InvoiceInput = {
   dueDate: string | null
   paymentTerms: string | null
   notes: string | null
-  terms: string | null
+  bankDetails: string | null
   taxName: string | null
   taxRateBps: number
   taxInclusive: boolean
@@ -109,10 +109,14 @@ export function invoiceQueryOptions(slug: string, invoiceId: string) {
   })
 }
 
-export async function createInvoice(slug: string) {
+export async function createInvoice(slug: string, customerId: string) {
   const response = await api.workspaces[":slug"].invoices.$post({
     param: { slug },
+    json: { customerId },
   })
+  if (response.status === 404) {
+    throw new Error("Customer not found.")
+  }
   if (!response.ok) {
     throw new Error("Could not create the invoice.")
   }
