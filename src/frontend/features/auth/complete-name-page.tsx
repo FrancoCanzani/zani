@@ -5,12 +5,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 import { Button } from "@components/ui/button"
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
 import { authClient } from "@lib/auth/client"
@@ -50,7 +45,7 @@ export function CompleteNamePage() {
         <p className="text-sm text-muted-foreground">Almost there</p>
         <Button
           type="button"
-          variant="ghost"
+          variant="destructive"
           onClick={() => {
             void authClient.signOut({
               fetchOptions: {

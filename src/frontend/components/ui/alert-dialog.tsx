@@ -147,7 +147,7 @@ function AlertDialogDescription({
 
 function AlertDialogAction({
   className,
-  variant = "default",
+  variant = "secondary",
   size = "sm",
   ...props
 }: React.ComponentProps<typeof AlertDialogPrimitive.Action> &

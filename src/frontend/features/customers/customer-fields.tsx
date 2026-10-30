@@ -162,7 +162,7 @@ export function CustomerFields({
             <SelectValue placeholder="Select a customer" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value={NONE}>None — type below</SelectItem>
+            <SelectItem value={NONE}>None, type below</SelectItem>
             {customers.map((customer) => (
               <SelectItem key={customer.id} value={customer.id}>
                 {customer.name}

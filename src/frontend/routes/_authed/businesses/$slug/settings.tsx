@@ -1,19 +1,10 @@
-import { createFileRoute } from "@tanstack/react-router"
-
-import { NotFoundScreen } from "@components/not-found-screen"
-import { pendingScreen } from "@components/pending-screen"
-
-import { workspaceMembersQueryOptions } from "@features/workspaces/api"
-import { SettingsPage } from "@features/workspaces/settings-page"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/_authed/businesses/$slug/settings")({
-  pendingComponent: pendingScreen("Loading settings…"),
-  notFoundComponent: NotFoundScreen,
-  loader: async ({ context, params }) => {
-    await context.queryClient.query({
-      ...workspaceMembersQueryOptions(params.slug),
-      staleTime: "static",
+  beforeLoad: ({ params }) => {
+    throw redirect({
+      to: "/businesses/$slug/manage",
+      params: { slug: params.slug },
     })
   },
-  component: SettingsPage,
 })

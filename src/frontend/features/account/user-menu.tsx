@@ -21,11 +21,12 @@ type UserMenuProps = {
 export function UserMenu({ name, email }: UserMenuProps) {
   const router = useRouter()
   const queryClient = useQueryClient()
+  const firstName = name.trim().split(/\s+/)[0] || name
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger className="flex max-w-[10rem] items-center gap-1 rounded-md px-2 py-1 text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
-        <span className="truncate">{name}</span>
+        <span className="truncate">{firstName}</span>
         <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" className="w-56">
@@ -36,7 +37,7 @@ export function UserMenu({ name, email }: UserMenuProps) {
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem asChild>
-          <Link to="/account">Account</Link>
+          <Link to="/account">Settings</Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem

@@ -430,7 +430,7 @@ export function InvoiceBuilderPage() {
                     value={notes}
                     disabled={readOnly}
                     onChange={(event) => setNotes(event.target.value)}
-                    placeholder="Notes – any relevant information not already covered"
+                    placeholder="Any relevant information not already covered"
                     rows={3}
                   />
                   <p className="text-xs text-muted-foreground">
@@ -449,7 +449,7 @@ export function InvoiceBuilderPage() {
                     value={terms}
                     disabled={readOnly}
                     onChange={(event) => setTerms(event.target.value)}
-                    placeholder="Terms & Conditions – late fees, payment methods, delivery terms, etc."
+                    placeholder="Late fees, payment methods, delivery terms, etc."
                     rows={3}
                   />
                   <p className="text-xs text-muted-foreground">
