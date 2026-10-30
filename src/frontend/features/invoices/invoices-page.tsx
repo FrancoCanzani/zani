@@ -1,3 +1,4 @@
+import { useState, type FormEvent } from "react"
 import {
   useMutation,
   useQueryClient,
@@ -8,13 +9,30 @@ import { toast } from "sonner"
 
 import { Button } from "@components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@components/ui/dialog"
+import {
   Empty,
   EmptyContent,
   EmptyDescription,
   EmptyHeader,
   EmptyTitle,
 } from "@components/ui/empty"
+import { Label } from "@components/ui/label"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@components/ui/select"
 
+import { customersQueryOptions } from "@features/customers/api"
 import { createInvoice, invoicesQueryOptions } from "@features/invoices/api"
 import { formatCents, formatDisplayDate } from "@features/invoices/helpers"
 import { invoiceStatusLabel } from "@features/invoices/status-label"
@@ -28,13 +46,20 @@ export function InvoicesPage() {
   const queryClient = useQueryClient()
   const { data } = useSuspenseQuery(invoicesQueryOptions(slug))
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
+  const { data: customersData } = useSuspenseQuery(customersQueryOptions(slug))
   const needsDetails = !workspaceData.workspace.detailsComplete
+  const [pickerOpen, setPickerOpen] = useState(false)
+  const [customerId, setCustomerId] = useState("")
 
   const create = useMutation({
-    mutationFn: () => createInvoice(slug),
-    onSuccess: async (body) => {
-      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
-      await navigate({
+    mutationFn: (selectedCustomerId: string) =>
+      createInvoice(slug, selectedCustomerId),
+    onSuccess: (body) => {
+      setPickerOpen(false)
+      setCustomerId("")
+      queryClient.setQueryData(["invoice", slug, body.invoice.id], body)
+      void queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
+      void navigate({
         to: "/businesses/$slug/invoices/$invoiceId",
         params: { slug, invoiceId: body.invoice.id },
       })
@@ -44,21 +69,97 @@ export function InvoicesPage() {
     },
   })
 
+  function onNewInvoice() {
+    if (customersData.customers.length === 0) {
+      toast.message("Add a customer first")
+      void navigate({
+        to: "/businesses/$slug/customers",
+        params: { slug },
+      })
+      return
+    }
+    setCustomerId(customersData.customers[0]?.id ?? "")
+    setPickerOpen(true)
+  }
+
+  function onCreateSubmit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (!customerId) return
+    create.mutate(customerId)
+  }
+
+  const picker = (
+    <Dialog
+      open={pickerOpen}
+      onOpenChange={(open) => {
+        setPickerOpen(open)
+        if (!open) setCustomerId("")
+      }}
+    >
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>New invoice</DialogTitle>
+          <DialogDescription>
+            Choose who this invoice is for.
+          </DialogDescription>
+        </DialogHeader>
+        <form className="grid gap-4" onSubmit={onCreateSubmit}>
+          <div className="space-y-1.5">
+            <Label htmlFor="invoice-customer">Customer</Label>
+            <Select
+              value={customerId}
+              onValueChange={setCustomerId}
+              required
+            >
+              <SelectTrigger id="invoice-customer" className="w-full">
+                <SelectValue placeholder="Select a customer" />
+              </SelectTrigger>
+              <SelectContent>
+                {customersData.customers.map((customer) => (
+                  <SelectItem key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPickerOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              disabled={!customerId || create.isPending}
+            >
+              {create.isPending ? "Creating…" : "Continue"}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+
+  const detailsBanner = needsDetails ? (
+    <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/40 px-4 py-3 text-sm">
+      <p className="text-muted-foreground">
+        Add your business details so they show on invoices.
+      </p>
+      <Button type="button" variant="outline" size="sm" asChild>
+        <Link to="/businesses/$slug/manage" params={{ slug }}>
+          Complete details
+        </Link>
+      </Button>
+    </div>
+  ) : null
+
   if (data.invoices.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-6">
-        {needsDetails ? (
-          <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/40 px-4 py-3 text-sm">
-            <p className="text-muted-foreground">
-              Add your business details so they show on invoices.
-            </p>
-            <Button type="button" variant="outline" size="sm" asChild>
-              <Link to="/businesses/$slug/manage" params={{ slug }}>
-                Complete details
-              </Link>
-            </Button>
-          </div>
-        ) : null}
+        {detailsBanner}
         <Empty className="border-none">
           <EmptyHeader>
             <EmptyTitle>No invoices yet</EmptyTitle>
@@ -68,33 +169,19 @@ export function InvoicesPage() {
             </EmptyDescription>
           </EmptyHeader>
           <EmptyContent>
-            <Button
-              type="button"
-              disabled={create.isPending}
-              onClick={() => create.mutate()}
-            >
-              {create.isPending ? "Creating…" : "New invoice"}
+            <Button type="button" onClick={onNewInvoice}>
+              New invoice
             </Button>
           </EmptyContent>
         </Empty>
+        {picker}
       </div>
     )
   }
 
   return (
     <div className="flex flex-1 flex-col gap-8">
-      {needsDetails ? (
-        <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/40 px-4 py-3 text-sm">
-          <p className="text-muted-foreground">
-            Add your business details so they show on invoices.
-          </p>
-          <Button type="button" variant="outline" size="sm" asChild>
-            <Link to="/businesses/$slug/manage" params={{ slug }}>
-              Complete details
-            </Link>
-          </Button>
-        </div>
-      ) : null}
+      {detailsBanner}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-2xl tracking-tight">Invoices</h1>
@@ -102,12 +189,8 @@ export function InvoicesPage() {
             Create, send, and track what’s outstanding.
           </p>
         </div>
-        <Button
-          type="button"
-          disabled={create.isPending}
-          onClick={() => create.mutate()}
-        >
-          {create.isPending ? "Creating…" : "New invoice"}
+        <Button type="button" onClick={onNewInvoice}>
+          New invoice
         </Button>
       </div>
 
@@ -157,6 +240,7 @@ export function InvoicesPage() {
           </tbody>
         </table>
       </div>
+      {picker}
     </div>
   )
 }

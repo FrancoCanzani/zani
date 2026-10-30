@@ -20,6 +20,7 @@ export function serializeInvoice(row: {
   paymentTerms: string | null
   notes: string | null
   terms: string | null
+  bankDetails: string | null
   taxName: string | null
   taxRateBps: number
   taxInclusive: boolean
@@ -38,6 +39,10 @@ export function serializeInvoice(row: {
     row.amountPaidCents
   )
 
+  const notesParts = [row.notes, row.terms]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -54,8 +59,8 @@ export function serializeInvoice(row: {
     issueDate: row.issueDate,
     dueDate: row.dueDate,
     paymentTerms: row.paymentTerms,
-    notes: row.notes,
-    terms: row.terms,
+    notes: notesParts.length > 0 ? notesParts.join("\n\n") : null,
+    bankDetails: row.bankDetails,
     taxName: row.taxName,
     taxRateBps: row.taxRateBps,
     taxInclusive: row.taxInclusive,
