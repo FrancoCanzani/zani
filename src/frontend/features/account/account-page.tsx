@@ -2,6 +2,7 @@ import { useForm } from "@tanstack/react-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { Link, getRouteApi, useRouter } from "@tanstack/react-router"
 import { useState } from "react"
+import { toast } from "sonner"
 import { z } from "zod"
 
 import {
@@ -22,7 +23,9 @@ import {
   FieldLabel,
 } from "@components/ui/field"
 import { Input } from "@components/ui/input"
+import { InputOTP, InputOTPGroup, InputOTPSlot } from "@components/ui/input-otp"
 
+import { UserMenu } from "@features/account/user-menu"
 import { authClient } from "@lib/auth/client"
 import { fieldErrors } from "@lib/utils"
 
@@ -32,15 +35,16 @@ const nameSchema = z.object({
   name: z.string().trim().min(1, "Enter your name.").max(80),
 })
 
+type DeleteStep = "confirm" | "otp"
+
 export function AccountPage() {
   const { session } = routeApi.useRouteContext()
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [error, setError] = useState<string | null>(null)
-  const [saved, setSaved] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
-  const [deleteError, setDeleteError] = useState<string | null>(null)
-  const [deleting, setDeleting] = useState(false)
+  const [deleteStep, setDeleteStep] = useState<DeleteStep>("confirm")
+  const [deleteOtp, setDeleteOtp] = useState("")
+  const [deletePending, setDeletePending] = useState(false)
 
   const form = useForm({
     defaultValues: {
@@ -50,19 +54,66 @@ export function AccountPage() {
       onSubmit: nameSchema,
     },
     onSubmit: async ({ value, formApi }) => {
-      setError(null)
-      setSaved(false)
       const name = value.name.trim()
       const { error: updateError } = await authClient.updateUser({ name })
       if (updateError) {
-        setError(updateError.message ?? "Could not save your name.")
+        toast.error(updateError.message ?? "Could not save your name.")
         return
       }
       formApi.setFieldValue("name", name)
-      setSaved(true)
+      toast.success("Name saved.")
       await router.invalidate()
     },
   })
+
+  function resetDeleteDialog() {
+    setDeleteStep("confirm")
+    setDeleteOtp("")
+    setDeletePending(false)
+  }
+
+  async function sendDeleteCode() {
+    setDeletePending(true)
+    const { error: sendError } = await authClient.emailOtp.sendVerificationOtp({
+      email: session.user.email,
+      type: "sign-in",
+    })
+    setDeletePending(false)
+    if (sendError) {
+      toast.error(sendError.message ?? "Could not send a confirmation code.")
+      return
+    }
+    setDeleteOtp("")
+    setDeleteStep("otp")
+    toast.success("Code sent.")
+  }
+
+  async function confirmDelete() {
+    if (deletePending || deleteOtp.length !== 6) {
+      return
+    }
+    setDeletePending(true)
+    const { error: verifyError } = await authClient.signIn.emailOtp({
+      email: session.user.email,
+      otp: deleteOtp,
+    })
+    if (verifyError) {
+      setDeletePending(false)
+      toast.error(verifyError.message ?? "That code is invalid or expired.")
+      return
+    }
+    const { error: deleteUserError } = await authClient.deleteUser()
+    if (deleteUserError) {
+      setDeletePending(false)
+      toast.error(
+        deleteUserError.message ?? "Could not delete your account."
+      )
+      return
+    }
+    queryClient.clear()
+    await router.invalidate()
+    await router.navigate({ to: "/sign-in" })
+  }
 
   return (
     <main className="mx-auto flex min-h-svh w-full max-w-lg flex-col px-6 py-10">
@@ -73,7 +124,7 @@ export function AccountPage() {
         >
           Businesses
         </Link>
-        <p className="text-lg tracking-tight">zani</p>
+        <UserMenu name={session.user.name} email={session.user.email} />
       </header>
 
       <div className="mt-16 flex flex-1 flex-col gap-10">
@@ -89,18 +140,9 @@ export function AccountPage() {
           onSubmit={(event) => {
             event.preventDefault()
             event.stopPropagation()
-            setSaved(false)
             void form.handleSubmit()
           }}
         >
-          {error ? (
-            <p className="text-sm text-destructive" role="alert">
-              {error}
-            </p>
-          ) : null}
-          {saved ? (
-            <p className="text-sm text-muted-foreground">Saved.</p>
-          ) : null}
           <FieldGroup>
             <form.Field name="name">
               {(field) => (
@@ -114,7 +156,6 @@ export function AccountPage() {
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(event) => {
-                        setSaved(false)
                         field.handleChange(event.target.value)
                       }}
                       maxLength={80}
@@ -150,47 +191,22 @@ export function AccountPage() {
           <p className="text-sm text-muted-foreground">Email</p>
           <p className="truncate">{session.user.email}</p>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Sign-in code goes here.
+            You sign in with a one-time code we email to this address.
           </p>
-        </div>
-
-        <div>
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              void authClient.signOut({
-                fetchOptions: {
-                  onSuccess: async () => {
-                    queryClient.clear()
-                    await router.invalidate()
-                    await router.navigate({ to: "/sign-in" })
-                  },
-                },
-              })
-            }}
-          >
-            Sign out
-          </Button>
         </div>
 
         <section className="space-y-3 border-t pt-10">
           <h2 className="text-sm text-muted-foreground">Delete account</h2>
           <p className="text-sm leading-relaxed text-muted-foreground">
-            Permanently deletes your account and any businesses you own. This
-            cannot be undone.
+            Permanently deletes your account and any businesses you own. We’ll
+            email a confirmation code first.
           </p>
-          {deleteError ? (
-            <p className="text-sm text-destructive" role="alert">
-              {deleteError}
-            </p>
-          ) : null}
           <AlertDialog
             open={deleteOpen}
             onOpenChange={(open) => {
               setDeleteOpen(open)
               if (!open) {
-                setDeleteError(null)
+                resetDeleteDialog()
               }
             }}
           >
@@ -200,43 +216,87 @@ export function AccountPage() {
               </Button>
             </AlertDialogTrigger>
             <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Delete your account?</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This removes your account and businesses you own. Crew
-                  memberships on other businesses are removed. You can’t undo
-                  this.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel disabled={deleting}>Cancel</AlertDialogCancel>
-                <Button
-                  type="button"
-                  variant="destructive"
-                  disabled={deleting}
-                  onClick={() => {
-                    void (async () => {
-                      setDeleting(true)
-                      setDeleteError(null)
-                      const { error: deleteUserError } =
-                        await authClient.deleteUser()
-                      if (deleteUserError) {
-                        setDeleteError(
-                          deleteUserError.message ??
-                            "Could not delete your account. Sign in again and retry."
-                        )
-                        setDeleting(false)
-                        return
-                      }
-                      queryClient.clear()
-                      await router.invalidate()
-                      await router.navigate({ to: "/sign-in" })
-                    })()
-                  }}
-                >
-                  {deleting ? "Deleting…" : "Delete account"}
-                </Button>
-              </AlertDialogFooter>
+              {deleteStep === "confirm" ? (
+                <>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete your account?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      We’ll email a one-time code to {session.user.email}. Enter
+                      it to permanently delete your account and businesses you
+                      own. This can’t be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deletePending}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={deletePending}
+                      onClick={() => {
+                        void sendDeleteCode()
+                      }}
+                    >
+                      {deletePending ? "Sending…" : "Send code"}
+                    </Button>
+                  </AlertDialogFooter>
+                </>
+              ) : (
+                <>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Enter confirmation code</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Code sent to {session.user.email}. Enter it to delete your
+                      account.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <div className="flex justify-center py-2">
+                    <InputOTP
+                      maxLength={6}
+                      value={deleteOtp}
+                      onChange={setDeleteOtp}
+                      disabled={deletePending}
+                      autoFocus
+                      containerClassName="justify-center"
+                    >
+                      <InputOTPGroup>
+                        <InputOTPSlot index={0} />
+                        <InputOTPSlot index={1} />
+                        <InputOTPSlot index={2} />
+                        <InputOTPSlot index={3} />
+                        <InputOTPSlot index={4} />
+                        <InputOTPSlot index={5} />
+                      </InputOTPGroup>
+                    </InputOTP>
+                  </div>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel disabled={deletePending}>
+                      Cancel
+                    </AlertDialogCancel>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={deletePending}
+                      onClick={() => {
+                        void sendDeleteCode()
+                      }}
+                    >
+                      Resend
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="destructive"
+                      disabled={deletePending || deleteOtp.length !== 6}
+                      onClick={() => {
+                        void confirmDelete()
+                      }}
+                    >
+                      {deletePending ? "Deleting…" : "Delete account"}
+                    </Button>
+                  </AlertDialogFooter>
+                </>
+              )}
             </AlertDialogContent>
           </AlertDialog>
         </section>

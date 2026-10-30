@@ -1,7 +1,7 @@
 import { useForm } from "@tanstack/react-form"
 import { useQueryClient } from "@tanstack/react-query"
 import { useRouter } from "@tanstack/react-router"
-import { useState } from "react"
+import { toast } from "sonner"
 import { z } from "zod"
 
 import { Button } from "@components/ui/button"
@@ -23,7 +23,6 @@ const nameSchema = z.object({
 export function CompleteNamePage() {
   const router = useRouter()
   const queryClient = useQueryClient()
-  const [error, setError] = useState<string | null>(null)
 
   const form = useForm({
     defaultValues: {
@@ -33,12 +32,11 @@ export function CompleteNamePage() {
       onSubmit: nameSchema,
     },
     onSubmit: async ({ value }) => {
-      setError(null)
       const { error: updateError } = await authClient.updateUser({
         name: value.name.trim(),
       })
       if (updateError) {
-        setError(updateError.message ?? "Could not save your name.")
+        toast.error(updateError.message ?? "Could not save your name.")
         return
       }
       await router.invalidate()
@@ -75,14 +73,8 @@ export function CompleteNamePage() {
         So customers and your crew know who you are.
       </p>
 
-      {error ? (
-        <p className="mt-6 text-sm text-destructive" role="alert">
-          {error}
-        </p>
-      ) : null}
-
       <form
-        className={error ? "mt-4" : "mt-8"}
+        className="mt-8"
         onSubmit={(event) => {
           event.preventDefault()
           event.stopPropagation()

@@ -3,6 +3,7 @@
 @import "shadcn/tailwind.css";
 @import "@fontsource-variable/source-sans-3";
 @import "@fontsource-variable/source-code-pro";
+@import "@fontsource-variable/instrument-sans";
 
 @custom-variant dark (&:is(.dark *));
 @source "./**/*.{ts,tsx}";
@@ -49,6 +50,7 @@
   --radius-4xl: calc(var(--radius) * 2.6);
   --font-sans: "Source Sans 3 Variable", sans-serif;
   --font-mono: "Source Code Pro Variable", ui-monospace, monospace;
+  --font-brand: "Instrument Sans Variable", "Source Sans 3 Variable", sans-serif;
   --text-xl: 1.125rem;
   --text-xl--line-height: 1.5rem;
   --text-2xl: 1.25rem;
