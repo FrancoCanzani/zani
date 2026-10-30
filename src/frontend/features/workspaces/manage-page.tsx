@@ -18,6 +18,7 @@ import {
 } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
+import { BusinessDetailsFields } from "@features/workspaces/business-details-fields"
 import {
   workspaceMembersQueryOptions,
   workspaceQueryOptions,
@@ -32,10 +33,6 @@ import { api } from "@lib/api"
 import { fieldErrors } from "@lib/utils"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/manage")
-
-const businessFormSchema = z.object({
-  name: z.string().trim().min(1, "Enter a business name.").max(80),
-})
 
 const inviteFormSchema = z.object({
   email: z.email(),
@@ -53,32 +50,6 @@ export function ManagePage() {
   const role = parseWorkspaceRole(workspace.role)
   const manageBusiness = role ? canManageBusiness(role) : false
   const inviteAllowed = role ? canInvite(role) : false
-
-  const rename = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await api.workspaces[":slug"].$patch({
-        param: { slug },
-        json: { name },
-      })
-
-      if (response.status === 403) {
-        throw new Error("You cannot rename this business.")
-      }
-      if (!response.ok) {
-        throw new Error("Could not save the business name.")
-      }
-
-      return response.json()
-    },
-    onSuccess: async (body) => {
-      queryClient.setQueryData(workspaceQueryOptions(slug).queryKey, body)
-      await queryClient.invalidateQueries({ queryKey: ["workspaces"] })
-      toast.success("Business name saved.")
-    },
-    onError: (error) => {
-      toast.error(error.message)
-    },
-  })
 
   const invite = useMutation({
     mutationFn: async (email: string) => {
@@ -110,20 +81,6 @@ export function ManagePage() {
     },
   })
 
-  const businessForm = useForm({
-    defaultValues: {
-      name: workspace.name,
-    },
-    validators: {
-      onSubmit: businessFormSchema,
-    },
-    onSubmit: async ({ value, formApi }) => {
-      const name = value.name.trim()
-      await rename.mutateAsync(name)
-      formApi.setFieldValue("name", name)
-    },
-  })
-
   const inviteForm = useForm({
     defaultValues: {
       email: "",
@@ -142,66 +99,34 @@ export function ManagePage() {
       <div className="space-y-1">
         <h1 className="text-2xl tracking-tight">Manage</h1>
         <p className="text-sm text-muted-foreground">
-          Name, people, and invites for this business.
+          Business details, people, and invites.
         </p>
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm text-muted-foreground">Name</h2>
+        <h2 className="text-sm text-muted-foreground">Business</h2>
+        {!workspace.detailsComplete ? (
+          <p className="text-sm text-muted-foreground">
+            Add contact details so they show on invoices.
+          </p>
+        ) : null}
         {manageBusiness ? (
-          <form
-            className="space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              rename.reset()
-              void businessForm.handleSubmit()
-            }}
-          >
-            <FieldGroup>
-              <businessForm.Field name="name">
-                {(field) => (
-                  <Field data-invalid={field.state.meta.errors.length > 0}>
-                    <div className="flex gap-2">
-                      <Input
-                        id={field.name}
-                        name={field.name}
-                        value={field.state.value}
-                        onBlur={field.handleBlur}
-                        onChange={(event) =>
-                          field.handleChange(event.target.value)
-                        }
-                        maxLength={80}
-                        aria-label="Business name"
-                        className="flex-1"
-                      />
-                      <businessForm.Subscribe
-                        selector={(state) => [
-                          state.isSubmitting,
-                          state.values.name,
-                        ]}
-                      >
-                        {([isSubmitting, name]) => (
-                          <Button
-                            type="submit"
-                            disabled={
-                              Boolean(isSubmitting) ||
-                              String(name).trim() === workspace.name
-                            }
-                          >
-                            {isSubmitting ? "Saving…" : "Save"}
-                          </Button>
-                        )}
-                      </businessForm.Subscribe>
-                    </div>
-                    <FieldError errors={fieldErrors(field.state.meta.errors)} />
-                  </Field>
-                )}
-              </businessForm.Field>
-            </FieldGroup>
-          </form>
+          <BusinessDetailsFields slug={slug} workspace={workspace} />
         ) : (
-          <p>{workspace.name}</p>
+          <div className="space-y-1 text-sm">
+            <p className="font-medium">{workspace.name}</p>
+            {workspace.email ? (
+              <p className="text-muted-foreground">{workspace.email}</p>
+            ) : null}
+            {workspace.phone ? (
+              <p className="text-muted-foreground">{workspace.phone}</p>
+            ) : null}
+            {workspace.address ? (
+              <p className="whitespace-pre-line text-muted-foreground">
+                {workspace.address}
+              </p>
+            ) : null}
+          </div>
         )}
       </section>
 

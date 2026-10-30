@@ -48,3 +48,23 @@ export async function createCustomer(slug: string, body: CustomerInput) {
   }
   return requireJson<{ customer: Customer }>(response, "customer")
 }
+
+export async function updateCustomer(
+  slug: string,
+  customerId: string,
+  body: CustomerInput
+) {
+  const response = await api.workspaces[":slug"].customers[
+    ":customerId"
+  ].$patch({
+    param: { slug, customerId },
+    json: body,
+  })
+  if (response.status === 404) {
+    throw new Error("Customer not found.")
+  }
+  if (!response.ok) {
+    throw new Error("Could not update the customer.")
+  }
+  return requireJson<{ customer: Customer }>(response, "customer")
+}

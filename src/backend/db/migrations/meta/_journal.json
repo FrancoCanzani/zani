@@ -64,6 +64,13 @@
       "when": 1793362244056,
       "tag": "0008_mute_magus",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1793388752001,
+      "tag": "0009_organic_inertia",
+      "breakpoints": true
     }
   ]
 }

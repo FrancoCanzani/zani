@@ -19,18 +19,18 @@ export function AccountPage() {
 
       <div className="mt-16 flex flex-1 flex-col gap-8">
         <div className="space-y-2">
+          <Link
+            to="/businesses"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Back
+          </Link>
           <h1 className="text-2xl tracking-tight sm:text-3xl">Settings</h1>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Your name and sign-in email.
           </p>
         </div>
         <AccountSettings name={session.user.name} email={session.user.email} />
-        <Link
-          to="/businesses"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Go back
-        </Link>
       </div>
     </main>
   )

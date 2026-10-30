@@ -64,6 +64,18 @@ export function WorkspaceShell() {
               Invoices
             </Link>
             <Link
+              to="/businesses/$slug/customers"
+              params={{ slug }}
+              className={cn(
+                "rounded-md px-2.5 py-1.5 transition-colors hover:text-foreground",
+                pathname.startsWith(`/businesses/${slug}/customers`)
+                  ? "text-foreground"
+                  : "text-muted-foreground"
+              )}
+            >
+              Customers
+            </Link>
+            <Link
               to="/businesses/$slug/products"
               params={{ slug }}
               className={cn(
@@ -112,11 +124,6 @@ export function WorkspaceShell() {
                 <Link to="/businesses">All businesses</Link>
               </DropdownMenuItem>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/businesses/$slug/manage" params={{ slug }}>
-                  Manage
-                </Link>
-              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/account">Settings</Link>
               </DropdownMenuItem>
