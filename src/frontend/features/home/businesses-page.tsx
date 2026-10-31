@@ -50,43 +50,48 @@ export function BusinessesPage() {
                 Businesses
               </h1>
               <p className="text-sm leading-relaxed text-muted-foreground">
-                Open a business to create invoices.
+                Open a business to manage invoices.
               </p>
             </div>
-            <Button asChild className="shrink-0">
+            <Button asChild className="shrink-0 rounded-full">
               <Link to="/businesses/new">New business</Link>
             </Button>
           </div>
 
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col overflow-hidden rounded-xl bg-secondary">
             {businesses.map((business) => (
               <li
                 key={business.id}
-                className="flex items-center justify-between gap-4 rounded-lg px-3 py-3 transition-colors hover:bg-muted/60"
+                className="relative border-b border-dashed transition-colors last:border-none hover:bg-stone-50"
               >
                 <Link
                   to="/businesses/$slug"
                   params={{ slug: business.slug }}
-                  className="min-w-0 flex-1 truncate font-medium transition-colors hover:text-muted-foreground"
-                >
-                  {business.name}
-                </Link>
-                <div className="flex shrink-0 items-center gap-3 text-sm">
-                  <Link
-                    to="/businesses/$slug/manage"
-                    params={{ slug: business.slug }}
-                    className="text-muted-foreground transition-colors hover:text-foreground"
-                  >
-                    Manage
-                  </Link>
-                  <Button asChild size="sm" variant="outline">
-                    <Link
-                      to="/businesses/$slug"
-                      params={{ slug: business.slug }}
-                    >
-                      Open
-                    </Link>
-                  </Button>
+                  className="absolute inset-0"
+                  aria-label={`Open ${business.name}`}
+                />
+                <div className="pointer-events-none relative flex items-center justify-between gap-4 px-3 py-3">
+                  <span className="min-w-0 flex-1 truncate">
+                    {business.name}
+                  </span>
+                  <div className="pointer-events-auto relative z-10 flex shrink-0 items-center gap-1">
+                    <Button asChild size="xs" variant="ghost">
+                      <Link
+                        to="/businesses/$slug/manage"
+                        params={{ slug: business.slug }}
+                      >
+                        Manage
+                      </Link>
+                    </Button>
+                    <Button asChild size="xs" variant="ghost">
+                      <Link
+                        to="/businesses/$slug"
+                        params={{ slug: business.slug }}
+                      >
+                        Open
+                      </Link>
+                    </Button>
+                  </div>
                 </div>
               </li>
             ))}
