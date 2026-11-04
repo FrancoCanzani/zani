@@ -98,10 +98,7 @@ export function InvoiceBuilderPage() {
       setStatus(body.invoice.status)
       setAmountPaidCents(body.invoice.amountPaidCents)
       queryClient.setQueryData(["invoice", slug, invoiceId], body)
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ["invoices", slug] }),
-        queryClient.invalidateQueries({ queryKey: ["customers", slug] }),
-      ])
+      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
       setSavedFlash(true)
       window.setTimeout(() => setSavedFlash(false), 1500)
     },

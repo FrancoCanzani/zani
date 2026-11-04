@@ -258,7 +258,7 @@ export function InvoiceBillTo({
                 {customer.name}
               </SelectItem>
             ))}
-            <SelectItem value={MANUAL}>Enter manually</SelectItem>
+            <SelectItem value={MANUAL}>One-off (this invoice only)</SelectItem>
           </SelectContent>
         </Select>
 
