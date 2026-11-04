@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import { Link } from "@tanstack/react-router"
 import { Trash2Icon } from "lucide-react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { Button } from "@components/ui/button"
 import { Input } from "@components/ui/input"
@@ -12,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@components/ui/select"
+import { Textarea } from "@components/ui/textarea"
 
 import {
   centsToInput,
@@ -38,7 +39,7 @@ type InvoiceLinesProps = {
 
 const PICK = "__pick__"
 const lineGridClass =
-  "grid grid-cols-[minmax(0,1fr)_3.5rem_5rem_5.5rem_1.75rem] gap-x-3 gap-y-1"
+  "grid grid-cols-[3.5rem_5rem_minmax(0,1fr)_1.75rem] gap-x-3 gap-y-1 sm:grid-cols-[minmax(0,1fr)_3.5rem_5rem_5.5rem_1.75rem]"
 
 export function InvoiceLines({
   slug,
@@ -95,7 +96,7 @@ export function InvoiceLines({
   return (
     <div className="space-y-2">
       <div
-        className={`${lineGridClass} border-b border-dashed border-border pb-2 text-[11px] text-muted-foreground`}
+        className={`${lineGridClass} hidden border-b border-dashed border-border pb-2 text-[11px] text-muted-foreground sm:grid`}
       >
         <span>Item</span>
         <span className="text-right font-mono">Qty</span>
@@ -104,7 +105,7 @@ export function InvoiceLines({
         <span />
       </div>
 
-      <ul className="space-y-1">
+      <ul className="divide-y divide-border/50 sm:divide-y-0">
         {items.map((item) => (
           <LineRow
             key={item.id}
@@ -198,27 +199,33 @@ function LineRow({
 }) {
   const [price, setPrice] = useState(centsToInput(item.unitAmountCents))
   const [qty, setQty] = useState(String(item.quantity))
-
-  useEffect(() => {
-    setPrice(centsToInput(item.unitAmountCents))
-  }, [item.unitAmountCents])
-
-  useEffect(() => {
-    setQty(String(item.quantity))
-  }, [item.quantity])
+  const showDescription = !readOnly || item.description.trim().length > 0
 
   return (
-    <li className={`${lineGridClass} items-center`}>
-      <Input
-        value={item.name}
-        disabled={readOnly}
-        placeholder="Item"
-        aria-label="Item name"
-        className={paperInputClass}
-        onChange={(event) =>
-          onChange({ name: event.target.value, productId: null })
-        }
-      />
+    <li className={`${lineGridClass} items-start py-2 sm:py-1`}>
+      <div className="col-span-4 min-w-0 sm:col-span-1">
+        <Input
+          value={item.name}
+          disabled={readOnly}
+          placeholder="Item"
+          aria-label="Item name"
+          className={paperInputClass}
+          onChange={(event) =>
+            onChange({ name: event.target.value, productId: null })
+          }
+        />
+        {showDescription ? (
+          <Textarea
+            value={item.description}
+            disabled={readOnly}
+            placeholder="Add description"
+            aria-label="Item description"
+            rows={1}
+            className={`${paperInputClass} min-h-0 resize-none text-xs text-muted-foreground placeholder:text-muted-foreground/40`}
+            onChange={(event) => onChange({ description: event.target.value })}
+          />
+        ) : null}
+      </div>
       <Input
         type="text"
         inputMode="decimal"
@@ -259,7 +266,7 @@ function LineRow({
           onChange({ unitAmountCents })
         }}
       />
-      <p className="text-right font-mono text-sm tabular-nums">
+      <p className="py-0.5 text-right font-mono text-sm tabular-nums">
         {formatCents(lineTotalCents(item), currency)}
       </p>
       <div className="flex items-center justify-end">
