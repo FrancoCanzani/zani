@@ -112,6 +112,34 @@ export function newLineItem(): LineItem {
   }
 }
 
+export const DUE_PRESET_DAYS = [0, 7, 14, 30, 60] as const
+
+export function duePresetLabel(days: number) {
+  return days === 0 ? "Due on receipt" : `Net ${days}`
+}
+
+function isoToUtcMs(iso: string) {
+  return Date.parse(`${iso}T00:00:00Z`)
+}
+
+export function addDaysIso(iso: string, days: number) {
+  const ms = isoToUtcMs(iso)
+  if (Number.isNaN(ms)) {
+    return iso
+  }
+  return new Date(ms + days * 86_400_000).toISOString().slice(0, 10)
+}
+
+export function matchingDuePreset(issueDate: string, dueDate: string) {
+  if (!issueDate || !dueDate) {
+    return null
+  }
+  const days = Math.round(
+    (isoToUtcMs(dueDate) - isoToUtcMs(issueDate)) / 86_400_000
+  )
+  return DUE_PRESET_DAYS.find((preset) => preset === days) ?? null
+}
+
 export function formatDisplayDate(iso: string | null) {
   if (!iso) {
     return null

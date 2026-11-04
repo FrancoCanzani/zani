@@ -16,8 +16,12 @@ import {
 } from "@features/invoices/invoice-bill-to"
 import { InvoiceLines } from "@features/invoices/invoice-lines"
 import {
+  addDaysIso,
   bpsToPercentInput,
+  DUE_PRESET_DAYS,
+  duePresetLabel,
   formatCents,
+  matchingDuePreset,
   formatTaxRate,
   invoiceTotals,
   percentToBps,
@@ -41,6 +45,8 @@ const CURRENCIES = [
   "nok",
   "dkk",
 ] as const
+
+const CUSTOM_DUE = "custom"
 
 const currencyNames = new Intl.DisplayNames(undefined, { type: "currency" })
 
@@ -120,6 +126,7 @@ export function InvoicePaper({
     values.amountPaidCents
   )
   const taxLabel = values.taxName.trim() || "Tax"
+  const duePreset = matchingDuePreset(values.issueDate, values.dueDate)
 
   return (
     <article className="mx-auto w-full max-w-[46rem] border border-border bg-white text-foreground shadow-sm">
@@ -145,9 +152,14 @@ export function InvoicePaper({
                 value={values.issueDate}
                 disabled={readOnly}
                 className={`relative ${paperDateClass}`}
-                onChange={(event) =>
-                  onChange({ issueDate: event.target.value })
-                }
+                onChange={(event) => {
+                  const issueDate = event.target.value
+                  onChange(
+                    duePreset !== null && issueDate
+                      ? { issueDate, dueDate: addDaysIso(issueDate, duePreset) }
+                      : { issueDate }
+                  )
+                }}
               />
             </MetaField>
             <MetaField label="Due date" htmlFor="due-date">
@@ -159,6 +171,42 @@ export function InvoicePaper({
                 className={`relative ${paperDateClass}`}
                 onChange={(event) => onChange({ dueDate: event.target.value })}
               />
+              {readOnly ? null : (
+                <Select
+                  value={duePreset === null ? CUSTOM_DUE : String(duePreset)}
+                  onValueChange={(next) => {
+                    if (!next || next === CUSTOM_DUE || !values.issueDate) {
+                      return
+                    }
+                    onChange({
+                      dueDate: addDaysIso(values.issueDate, Number(next)),
+                    })
+                  }}
+                >
+                  <SelectTrigger
+                    aria-label="Payment terms"
+                    className={`${paperSelectTriggerClass} w-fit text-[11px] text-muted-foreground`}
+                  >
+                    <SelectValue>
+                      {duePreset === null
+                        ? values.dueDate
+                          ? "Custom date"
+                          : "Set terms"
+                        : duePresetLabel(duePreset)}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    {DUE_PRESET_DAYS.map((days) => (
+                      <SelectItem key={days} value={String(days)}>
+                        {duePresetLabel(days)}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value={CUSTOM_DUE} disabled>
+                      Custom date
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             </MetaField>
             <MetaField label="Currency" htmlFor="invoice-currency">
               {readOnly ? (
