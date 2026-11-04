@@ -7,7 +7,6 @@ import {
   workspacesQueryOptions,
 } from "@features/workspaces/api"
 import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
-import { WorkspaceShell } from "@features/workspaces/workspace-shell"
 
 export const Route = createFileRoute("/_authed/businesses/$slug")({
   pendingComponent: pendingScreen("Loading business…"),
@@ -24,5 +23,4 @@ export const Route = createFileRoute("/_authed/businesses/$slug")({
       }),
     ])
   },
-  component: WorkspaceShell,
 })

@@ -1,6 +1,8 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 
-export const Route = createFileRoute("/_authed/businesses/$slug/settings")({
+export const Route = createFileRoute(
+  "/_authed/businesses/$slug/_shell/settings"
+)({
   beforeLoad: ({ params }) => {
     throw redirect({
       to: "/businesses/$slug/manage",

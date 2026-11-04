@@ -1,10 +1,6 @@
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query"
-import { Link, getRouteApi, useNavigate } from "@tanstack/react-router"
-import { toast } from "sonner"
+import { useSuspenseQuery } from "@tanstack/react-query"
+import { Link, getRouteApi, useRouter } from "@tanstack/react-router"
+import { useEffect } from "react"
 
 import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
@@ -16,53 +12,59 @@ import {
   EmptyTitle,
 } from "@components/ui/empty"
 
-import { createInvoice, invoicesQueryOptions } from "@features/invoices/api"
+import { invoicesQueryOptions } from "@features/invoices/api"
 import { formatCents, formatDisplayDate } from "@features/invoices/helpers"
 import { invoiceStatusLabel } from "@features/invoices/status-label"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 
-const routeApi = getRouteApi("/_authed/businesses/$slug/")
+const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/")
 
 export function InvoicesPage() {
   const { slug } = routeApi.useParams()
-  const navigate = useNavigate()
-  const queryClient = useQueryClient()
   const { data } = useSuspenseQuery(invoicesQueryOptions(slug))
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
   const needsDetails = !workspaceData.workspace.detailsComplete
+  const router = useRouter()
 
-  const create = useMutation({
-    mutationFn: () => createInvoice(slug),
-    onSuccess: (body) => {
-      queryClient.setQueryData(["invoice", slug, body.invoice.id], body)
-      void queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
-      void navigate({
-        to: "/businesses/$slug/invoices/$invoiceId",
-        params: { slug, invoiceId: body.invoice.id },
-      })
-    },
-    onError: (error) => {
-      toast.error(error.message)
-    },
-  })
+  // Warm the editor code so "Create invoice" only waits on the API.
+  useEffect(() => {
+    void router.loadRouteChunk(
+      router.routesById["/_authed/businesses/$slug/invoices/new"]
+    )
+    void router.loadRouteChunk(
+      router.routesById["/_authed/businesses/$slug/invoices/$invoiceId"]
+    )
+  }, [router])
 
-  const detailsBanner = needsDetails ? (
-    <div className="flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/40 px-4 py-3 text-sm">
-      <p className="text-muted-foreground">
-        Add your business details so they show on invoices.
-      </p>
-      <Button type="button" variant="outline" size="sm" asChild>
-        <Link to="/businesses/$slug/manage" params={{ slug }}>
-          Complete details
-        </Link>
-      </Button>
-    </div>
+  const createButton = (
+    <Button variant="default" size="default" asChild>
+      <Link
+        to="/businesses/$slug/invoices/new"
+        params={{ slug }}
+        preload={false}
+      >
+        Create invoice
+      </Link>
+    </Button>
+  )
+
+  const detailsSticker = needsDetails ? (
+    <Link
+      to="/businesses/$slug/manage"
+      params={{ slug }}
+      className="fixed bottom-4 left-4 z-30 flex max-w-64 flex-col gap-0.5 border border-border bg-card px-3.5 py-2.5 text-xs shadow-sm transition-colors hover:bg-muted"
+    >
+      <span className="font-medium">Add your business details</span>
+      <span className="text-muted-foreground">
+        So they show on your invoices.
+      </span>
+    </Link>
   ) : null
 
   if (data.invoices.length === 0) {
     return (
       <div className="flex flex-1 flex-col gap-6">
-        {detailsBanner}
+        {detailsSticker}
         <Empty className="border-none">
           <EmptyHeader>
             <EmptyTitle>No invoices yet</EmptyTitle>
@@ -70,17 +72,7 @@ export function InvoicesPage() {
               Pick a customer, add items, and review before you send.
             </EmptyDescription>
           </EmptyHeader>
-          <EmptyContent>
-            <Button
-              type="button"
-              variant="default"
-              size="default"
-              disabled={create.isPending}
-              onClick={() => create.mutate()}
-            >
-              {create.isPending ? "Creating…" : "Create invoice"}
-            </Button>
-          </EmptyContent>
+          <EmptyContent>{createButton}</EmptyContent>
         </Empty>
       </div>
     )
@@ -88,7 +80,7 @@ export function InvoicesPage() {
 
   return (
     <div className="flex flex-1 flex-col gap-8">
-      {detailsBanner}
+      {detailsSticker}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-4xl font-light tracking-tight">Invoices</h1>
@@ -96,15 +88,7 @@ export function InvoicesPage() {
             Create, send, and track what’s outstanding.
           </p>
         </div>
-        <Button
-          type="button"
-          variant="default"
-          size="default"
-          disabled={create.isPending}
-          onClick={() => create.mutate()}
-        >
-          {create.isPending ? "Creating…" : "Create invoice"}
-        </Button>
+        {createButton}
       </div>
 
       <div className="overflow-x-auto">

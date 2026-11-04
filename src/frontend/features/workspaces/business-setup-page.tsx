@@ -4,7 +4,7 @@ import { getRouteApi, useNavigate } from "@tanstack/react-router"
 import { BusinessDetailsFields } from "@features/workspaces/business-details-fields"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 
-const routeApi = getRouteApi("/_authed/businesses/$slug/setup")
+const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/setup")
 
 export function BusinessSetupPage() {
   const { slug } = routeApi.useParams()

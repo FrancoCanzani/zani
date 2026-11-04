@@ -18,13 +18,15 @@ import { Route as AuthedBusinessesIndexRouteImport } from './routes/_authed/busi
 import { Route as AuthedBusinessesSlugRouteRouteImport } from './routes/_authed/businesses/$slug/route'
 import { Route as AuthedBusinessesNewRouteImport } from './routes/_authed/businesses/new'
 import { Route as AuthedInvitesTokenRouteImport } from './routes/_authed/invites/$token'
-import { Route as AuthedBusinessesSlugIndexRouteImport } from './routes/_authed/businesses/$slug/index'
-import { Route as AuthedBusinessesSlugManageRouteImport } from './routes/_authed/businesses/$slug/manage'
-import { Route as AuthedBusinessesSlugSettingsRouteImport } from './routes/_authed/businesses/$slug/settings'
-import { Route as AuthedBusinessesSlugSetupRouteImport } from './routes/_authed/businesses/$slug/setup'
-import { Route as AuthedBusinessesSlugCustomersIndexRouteImport } from './routes/_authed/businesses/$slug/customers/index'
+import { Route as AuthedBusinessesSlugShellRouteImport } from './routes/_authed/businesses/$slug/_shell'
+import { Route as AuthedBusinessesSlugShellIndexRouteImport } from './routes/_authed/businesses/$slug/_shell/index'
+import { Route as AuthedBusinessesSlugShellManageRouteImport } from './routes/_authed/businesses/$slug/_shell/manage'
+import { Route as AuthedBusinessesSlugShellSettingsRouteImport } from './routes/_authed/businesses/$slug/_shell/settings'
+import { Route as AuthedBusinessesSlugShellSetupRouteImport } from './routes/_authed/businesses/$slug/_shell/setup'
 import { Route as AuthedBusinessesSlugInvoicesInvoiceIdRouteImport } from './routes/_authed/businesses/$slug/invoices/$invoiceId'
-import { Route as AuthedBusinessesSlugProductsIndexRouteImport } from './routes/_authed/businesses/$slug/products/index'
+import { Route as AuthedBusinessesSlugInvoicesNewRouteImport } from './routes/_authed/businesses/$slug/invoices/new'
+import { Route as AuthedBusinessesSlugShellCustomersIndexRouteImport } from './routes/_authed/businesses/$slug/_shell/customers/index'
+import { Route as AuthedBusinessesSlugShellProductsIndexRouteImport } from './routes/_authed/businesses/$slug/_shell/products/index'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -71,35 +73,34 @@ const AuthedInvitesTokenRoute = AuthedInvitesTokenRouteImport.update({
   path: '/invites/$token',
   getParentRoute: () => AuthedRoute,
 } as any)
-const AuthedBusinessesSlugIndexRoute =
-  AuthedBusinessesSlugIndexRouteImport.update({
+const AuthedBusinessesSlugShellRoute =
+  AuthedBusinessesSlugShellRouteImport.update({
+    id: '/_shell',
+    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
+  } as any)
+const AuthedBusinessesSlugShellIndexRoute =
+  AuthedBusinessesSlugShellIndexRouteImport.update({
     id: '/',
     path: '/',
-    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
+    getParentRoute: () => AuthedBusinessesSlugShellRoute,
   } as any)
-const AuthedBusinessesSlugManageRoute =
-  AuthedBusinessesSlugManageRouteImport.update({
+const AuthedBusinessesSlugShellManageRoute =
+  AuthedBusinessesSlugShellManageRouteImport.update({
     id: '/manage',
     path: '/manage',
-    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
+    getParentRoute: () => AuthedBusinessesSlugShellRoute,
   } as any)
-const AuthedBusinessesSlugSettingsRoute =
-  AuthedBusinessesSlugSettingsRouteImport.update({
+const AuthedBusinessesSlugShellSettingsRoute =
+  AuthedBusinessesSlugShellSettingsRouteImport.update({
     id: '/settings',
     path: '/settings',
-    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
+    getParentRoute: () => AuthedBusinessesSlugShellRoute,
   } as any)
-const AuthedBusinessesSlugSetupRoute =
-  AuthedBusinessesSlugSetupRouteImport.update({
+const AuthedBusinessesSlugShellSetupRoute =
+  AuthedBusinessesSlugShellSetupRouteImport.update({
     id: '/setup',
     path: '/setup',
-    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
-  } as any)
-const AuthedBusinessesSlugCustomersIndexRoute =
-  AuthedBusinessesSlugCustomersIndexRouteImport.update({
-    id: '/customers/',
-    path: '/customers/',
-    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
+    getParentRoute: () => AuthedBusinessesSlugShellRoute,
   } as any)
 const AuthedBusinessesSlugInvoicesInvoiceIdRoute =
   AuthedBusinessesSlugInvoicesInvoiceIdRouteImport.update({
@@ -107,11 +108,23 @@ const AuthedBusinessesSlugInvoicesInvoiceIdRoute =
     path: '/invoices/$invoiceId',
     getParentRoute: () => AuthedBusinessesSlugRouteRoute,
   } as any)
-const AuthedBusinessesSlugProductsIndexRoute =
-  AuthedBusinessesSlugProductsIndexRouteImport.update({
+const AuthedBusinessesSlugInvoicesNewRoute =
+  AuthedBusinessesSlugInvoicesNewRouteImport.update({
+    id: '/invoices/new',
+    path: '/invoices/new',
+    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
+  } as any)
+const AuthedBusinessesSlugShellCustomersIndexRoute =
+  AuthedBusinessesSlugShellCustomersIndexRouteImport.update({
+    id: '/customers/',
+    path: '/customers/',
+    getParentRoute: () => AuthedBusinessesSlugShellRoute,
+  } as any)
+const AuthedBusinessesSlugShellProductsIndexRoute =
+  AuthedBusinessesSlugShellProductsIndexRouteImport.update({
     id: '/products/',
     path: '/products/',
-    getParentRoute: () => AuthedBusinessesSlugRouteRoute,
+    getParentRoute: () => AuthedBusinessesSlugShellRoute,
   } as any)
 
 export interface FileRoutesByFullPath {
@@ -123,29 +136,31 @@ export interface FileRoutesByFullPath {
   '/businesses/new': typeof AuthedBusinessesNewRoute
   '/invites/$token': typeof AuthedInvitesTokenRoute
   '/businesses/': typeof AuthedBusinessesIndexRoute
-  '/businesses/$slug/manage': typeof AuthedBusinessesSlugManageRoute
-  '/businesses/$slug/settings': typeof AuthedBusinessesSlugSettingsRoute
-  '/businesses/$slug/setup': typeof AuthedBusinessesSlugSetupRoute
-  '/businesses/$slug/': typeof AuthedBusinessesSlugIndexRoute
+  '/businesses/$slug/manage': typeof AuthedBusinessesSlugShellManageRoute
+  '/businesses/$slug/settings': typeof AuthedBusinessesSlugShellSettingsRoute
+  '/businesses/$slug/setup': typeof AuthedBusinessesSlugShellSetupRoute
   '/businesses/$slug/invoices/$invoiceId': typeof AuthedBusinessesSlugInvoicesInvoiceIdRoute
-  '/businesses/$slug/customers/': typeof AuthedBusinessesSlugCustomersIndexRoute
-  '/businesses/$slug/products/': typeof AuthedBusinessesSlugProductsIndexRoute
+  '/businesses/$slug/invoices/new': typeof AuthedBusinessesSlugInvoicesNewRoute
+  '/businesses/$slug/': typeof AuthedBusinessesSlugShellIndexRoute
+  '/businesses/$slug/customers/': typeof AuthedBusinessesSlugShellCustomersIndexRoute
+  '/businesses/$slug/products/': typeof AuthedBusinessesSlugShellProductsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/sign-in': typeof SignInRoute
   '/account': typeof AuthedAccountRoute
   '/welcome': typeof AuthedWelcomeRoute
+  '/businesses/$slug': typeof AuthedBusinessesSlugShellIndexRoute
   '/businesses/new': typeof AuthedBusinessesNewRoute
   '/invites/$token': typeof AuthedInvitesTokenRoute
   '/businesses': typeof AuthedBusinessesIndexRoute
-  '/businesses/$slug/manage': typeof AuthedBusinessesSlugManageRoute
-  '/businesses/$slug/settings': typeof AuthedBusinessesSlugSettingsRoute
-  '/businesses/$slug/setup': typeof AuthedBusinessesSlugSetupRoute
-  '/businesses/$slug': typeof AuthedBusinessesSlugIndexRoute
+  '/businesses/$slug/manage': typeof AuthedBusinessesSlugShellManageRoute
+  '/businesses/$slug/settings': typeof AuthedBusinessesSlugShellSettingsRoute
+  '/businesses/$slug/setup': typeof AuthedBusinessesSlugShellSetupRoute
   '/businesses/$slug/invoices/$invoiceId': typeof AuthedBusinessesSlugInvoicesInvoiceIdRoute
-  '/businesses/$slug/customers': typeof AuthedBusinessesSlugCustomersIndexRoute
-  '/businesses/$slug/products': typeof AuthedBusinessesSlugProductsIndexRoute
+  '/businesses/$slug/invoices/new': typeof AuthedBusinessesSlugInvoicesNewRoute
+  '/businesses/$slug/customers': typeof AuthedBusinessesSlugShellCustomersIndexRoute
+  '/businesses/$slug/products': typeof AuthedBusinessesSlugShellProductsIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -158,13 +173,15 @@ export interface FileRoutesById {
   '/_authed/businesses/new': typeof AuthedBusinessesNewRoute
   '/_authed/invites/$token': typeof AuthedInvitesTokenRoute
   '/_authed/businesses/': typeof AuthedBusinessesIndexRoute
-  '/_authed/businesses/$slug/manage': typeof AuthedBusinessesSlugManageRoute
-  '/_authed/businesses/$slug/settings': typeof AuthedBusinessesSlugSettingsRoute
-  '/_authed/businesses/$slug/setup': typeof AuthedBusinessesSlugSetupRoute
-  '/_authed/businesses/$slug/': typeof AuthedBusinessesSlugIndexRoute
+  '/_authed/businesses/$slug/_shell': typeof AuthedBusinessesSlugShellRouteWithChildren
+  '/_authed/businesses/$slug/_shell/manage': typeof AuthedBusinessesSlugShellManageRoute
+  '/_authed/businesses/$slug/_shell/settings': typeof AuthedBusinessesSlugShellSettingsRoute
+  '/_authed/businesses/$slug/_shell/setup': typeof AuthedBusinessesSlugShellSetupRoute
   '/_authed/businesses/$slug/invoices/$invoiceId': typeof AuthedBusinessesSlugInvoicesInvoiceIdRoute
-  '/_authed/businesses/$slug/customers/': typeof AuthedBusinessesSlugCustomersIndexRoute
-  '/_authed/businesses/$slug/products/': typeof AuthedBusinessesSlugProductsIndexRoute
+  '/_authed/businesses/$slug/invoices/new': typeof AuthedBusinessesSlugInvoicesNewRoute
+  '/_authed/businesses/$slug/_shell/': typeof AuthedBusinessesSlugShellIndexRoute
+  '/_authed/businesses/$slug/_shell/customers/': typeof AuthedBusinessesSlugShellCustomersIndexRoute
+  '/_authed/businesses/$slug/_shell/products/': typeof AuthedBusinessesSlugShellProductsIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -180,8 +197,9 @@ export interface FileRouteTypes {
     | '/businesses/$slug/manage'
     | '/businesses/$slug/settings'
     | '/businesses/$slug/setup'
-    | '/businesses/$slug/'
     | '/businesses/$slug/invoices/$invoiceId'
+    | '/businesses/$slug/invoices/new'
+    | '/businesses/$slug/'
     | '/businesses/$slug/customers/'
     | '/businesses/$slug/products/'
   fileRoutesByTo: FileRoutesByTo
@@ -190,14 +208,15 @@ export interface FileRouteTypes {
     | '/sign-in'
     | '/account'
     | '/welcome'
+    | '/businesses/$slug'
     | '/businesses/new'
     | '/invites/$token'
     | '/businesses'
     | '/businesses/$slug/manage'
     | '/businesses/$slug/settings'
     | '/businesses/$slug/setup'
-    | '/businesses/$slug'
     | '/businesses/$slug/invoices/$invoiceId'
+    | '/businesses/$slug/invoices/new'
     | '/businesses/$slug/customers'
     | '/businesses/$slug/products'
   id:
@@ -211,13 +230,15 @@ export interface FileRouteTypes {
     | '/_authed/businesses/new'
     | '/_authed/invites/$token'
     | '/_authed/businesses/'
-    | '/_authed/businesses/$slug/manage'
-    | '/_authed/businesses/$slug/settings'
-    | '/_authed/businesses/$slug/setup'
-    | '/_authed/businesses/$slug/'
+    | '/_authed/businesses/$slug/_shell'
+    | '/_authed/businesses/$slug/_shell/manage'
+    | '/_authed/businesses/$slug/_shell/settings'
+    | '/_authed/businesses/$slug/_shell/setup'
     | '/_authed/businesses/$slug/invoices/$invoiceId'
-    | '/_authed/businesses/$slug/customers/'
-    | '/_authed/businesses/$slug/products/'
+    | '/_authed/businesses/$slug/invoices/new'
+    | '/_authed/businesses/$slug/_shell/'
+    | '/_authed/businesses/$slug/_shell/customers/'
+    | '/_authed/businesses/$slug/_shell/products/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -291,40 +312,40 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedInvitesTokenRouteImport
       parentRoute: typeof AuthedRoute
     }
-    '/_authed/businesses/$slug/': {
-      id: '/_authed/businesses/$slug/'
+    '/_authed/businesses/$slug/_shell': {
+      id: '/_authed/businesses/$slug/_shell'
+      path: ''
+      fullPath: '/businesses/$slug'
+      preLoaderRoute: typeof AuthedBusinessesSlugShellRouteImport
+      parentRoute: typeof AuthedBusinessesSlugRouteRoute
+    }
+    '/_authed/businesses/$slug/_shell/': {
+      id: '/_authed/businesses/$slug/_shell/'
       path: '/'
       fullPath: '/businesses/$slug/'
-      preLoaderRoute: typeof AuthedBusinessesSlugIndexRouteImport
-      parentRoute: typeof AuthedBusinessesSlugRouteRoute
+      preLoaderRoute: typeof AuthedBusinessesSlugShellIndexRouteImport
+      parentRoute: typeof AuthedBusinessesSlugShellRoute
     }
-    '/_authed/businesses/$slug/manage': {
-      id: '/_authed/businesses/$slug/manage'
+    '/_authed/businesses/$slug/_shell/manage': {
+      id: '/_authed/businesses/$slug/_shell/manage'
       path: '/manage'
       fullPath: '/businesses/$slug/manage'
-      preLoaderRoute: typeof AuthedBusinessesSlugManageRouteImport
-      parentRoute: typeof AuthedBusinessesSlugRouteRoute
+      preLoaderRoute: typeof AuthedBusinessesSlugShellManageRouteImport
+      parentRoute: typeof AuthedBusinessesSlugShellRoute
     }
-    '/_authed/businesses/$slug/settings': {
-      id: '/_authed/businesses/$slug/settings'
+    '/_authed/businesses/$slug/_shell/settings': {
+      id: '/_authed/businesses/$slug/_shell/settings'
       path: '/settings'
       fullPath: '/businesses/$slug/settings'
-      preLoaderRoute: typeof AuthedBusinessesSlugSettingsRouteImport
-      parentRoute: typeof AuthedBusinessesSlugRouteRoute
+      preLoaderRoute: typeof AuthedBusinessesSlugShellSettingsRouteImport
+      parentRoute: typeof AuthedBusinessesSlugShellRoute
     }
-    '/_authed/businesses/$slug/setup': {
-      id: '/_authed/businesses/$slug/setup'
+    '/_authed/businesses/$slug/_shell/setup': {
+      id: '/_authed/businesses/$slug/_shell/setup'
       path: '/setup'
       fullPath: '/businesses/$slug/setup'
-      preLoaderRoute: typeof AuthedBusinessesSlugSetupRouteImport
-      parentRoute: typeof AuthedBusinessesSlugRouteRoute
-    }
-    '/_authed/businesses/$slug/customers/': {
-      id: '/_authed/businesses/$slug/customers/'
-      path: '/customers'
-      fullPath: '/businesses/$slug/customers/'
-      preLoaderRoute: typeof AuthedBusinessesSlugCustomersIndexRouteImport
-      parentRoute: typeof AuthedBusinessesSlugRouteRoute
+      preLoaderRoute: typeof AuthedBusinessesSlugShellSetupRouteImport
+      parentRoute: typeof AuthedBusinessesSlugShellRoute
     }
     '/_authed/businesses/$slug/invoices/$invoiceId': {
       id: '/_authed/businesses/$slug/invoices/$invoiceId'
@@ -333,38 +354,69 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedBusinessesSlugInvoicesInvoiceIdRouteImport
       parentRoute: typeof AuthedBusinessesSlugRouteRoute
     }
-    '/_authed/businesses/$slug/products/': {
-      id: '/_authed/businesses/$slug/products/'
+    '/_authed/businesses/$slug/invoices/new': {
+      id: '/_authed/businesses/$slug/invoices/new'
+      path: '/invoices/new'
+      fullPath: '/businesses/$slug/invoices/new'
+      preLoaderRoute: typeof AuthedBusinessesSlugInvoicesNewRouteImport
+      parentRoute: typeof AuthedBusinessesSlugRouteRoute
+    }
+    '/_authed/businesses/$slug/_shell/customers/': {
+      id: '/_authed/businesses/$slug/_shell/customers/'
+      path: '/customers'
+      fullPath: '/businesses/$slug/customers/'
+      preLoaderRoute: typeof AuthedBusinessesSlugShellCustomersIndexRouteImport
+      parentRoute: typeof AuthedBusinessesSlugShellRoute
+    }
+    '/_authed/businesses/$slug/_shell/products/': {
+      id: '/_authed/businesses/$slug/_shell/products/'
       path: '/products'
       fullPath: '/businesses/$slug/products/'
-      preLoaderRoute: typeof AuthedBusinessesSlugProductsIndexRouteImport
-      parentRoute: typeof AuthedBusinessesSlugRouteRoute
+      preLoaderRoute: typeof AuthedBusinessesSlugShellProductsIndexRouteImport
+      parentRoute: typeof AuthedBusinessesSlugShellRoute
     }
   }
 }
 
+interface AuthedBusinessesSlugShellRouteChildren {
+  AuthedBusinessesSlugShellManageRoute: typeof AuthedBusinessesSlugShellManageRoute
+  AuthedBusinessesSlugShellSettingsRoute: typeof AuthedBusinessesSlugShellSettingsRoute
+  AuthedBusinessesSlugShellSetupRoute: typeof AuthedBusinessesSlugShellSetupRoute
+  AuthedBusinessesSlugShellIndexRoute: typeof AuthedBusinessesSlugShellIndexRoute
+  AuthedBusinessesSlugShellCustomersIndexRoute: typeof AuthedBusinessesSlugShellCustomersIndexRoute
+  AuthedBusinessesSlugShellProductsIndexRoute: typeof AuthedBusinessesSlugShellProductsIndexRoute
+}
+
+const AuthedBusinessesSlugShellRouteChildren: AuthedBusinessesSlugShellRouteChildren =
+  {
+    AuthedBusinessesSlugShellManageRoute: AuthedBusinessesSlugShellManageRoute,
+    AuthedBusinessesSlugShellSettingsRoute:
+      AuthedBusinessesSlugShellSettingsRoute,
+    AuthedBusinessesSlugShellSetupRoute: AuthedBusinessesSlugShellSetupRoute,
+    AuthedBusinessesSlugShellIndexRoute: AuthedBusinessesSlugShellIndexRoute,
+    AuthedBusinessesSlugShellCustomersIndexRoute:
+      AuthedBusinessesSlugShellCustomersIndexRoute,
+    AuthedBusinessesSlugShellProductsIndexRoute:
+      AuthedBusinessesSlugShellProductsIndexRoute,
+  }
+
+const AuthedBusinessesSlugShellRouteWithChildren =
+  AuthedBusinessesSlugShellRoute._addFileChildren(
+    AuthedBusinessesSlugShellRouteChildren,
+  )
+
 interface AuthedBusinessesSlugRouteRouteChildren {
-  AuthedBusinessesSlugManageRoute: typeof AuthedBusinessesSlugManageRoute
-  AuthedBusinessesSlugSettingsRoute: typeof AuthedBusinessesSlugSettingsRoute
-  AuthedBusinessesSlugSetupRoute: typeof AuthedBusinessesSlugSetupRoute
-  AuthedBusinessesSlugIndexRoute: typeof AuthedBusinessesSlugIndexRoute
+  AuthedBusinessesSlugShellRoute: typeof AuthedBusinessesSlugShellRouteWithChildren
   AuthedBusinessesSlugInvoicesInvoiceIdRoute: typeof AuthedBusinessesSlugInvoicesInvoiceIdRoute
-  AuthedBusinessesSlugCustomersIndexRoute: typeof AuthedBusinessesSlugCustomersIndexRoute
-  AuthedBusinessesSlugProductsIndexRoute: typeof AuthedBusinessesSlugProductsIndexRoute
+  AuthedBusinessesSlugInvoicesNewRoute: typeof AuthedBusinessesSlugInvoicesNewRoute
 }
 
 const AuthedBusinessesSlugRouteRouteChildren: AuthedBusinessesSlugRouteRouteChildren =
   {
-    AuthedBusinessesSlugManageRoute: AuthedBusinessesSlugManageRoute,
-    AuthedBusinessesSlugSettingsRoute: AuthedBusinessesSlugSettingsRoute,
-    AuthedBusinessesSlugSetupRoute: AuthedBusinessesSlugSetupRoute,
-    AuthedBusinessesSlugIndexRoute: AuthedBusinessesSlugIndexRoute,
+    AuthedBusinessesSlugShellRoute: AuthedBusinessesSlugShellRouteWithChildren,
     AuthedBusinessesSlugInvoicesInvoiceIdRoute:
       AuthedBusinessesSlugInvoicesInvoiceIdRoute,
-    AuthedBusinessesSlugCustomersIndexRoute:
-      AuthedBusinessesSlugCustomersIndexRoute,
-    AuthedBusinessesSlugProductsIndexRoute:
-      AuthedBusinessesSlugProductsIndexRoute,
+    AuthedBusinessesSlugInvoicesNewRoute: AuthedBusinessesSlugInvoicesNewRoute,
   }
 
 const AuthedBusinessesSlugRouteRouteWithChildren =

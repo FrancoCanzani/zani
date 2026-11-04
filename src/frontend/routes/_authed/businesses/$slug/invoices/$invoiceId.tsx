@@ -1,17 +1,17 @@
 import { createFileRoute } from "@tanstack/react-router"
 
 import { NotFoundScreen } from "@components/not-found-screen"
-import { pendingScreen } from "@components/pending-screen"
 
 import { customersQueryOptions } from "@features/customers/api"
 import { invoiceQueryOptions } from "@features/invoices/api"
 import { InvoiceBuilderPage } from "@features/invoices/invoice-builder-page"
+import { InvoiceBuilderSkeleton } from "@features/invoices/invoice-builder-skeleton"
 import { productsQueryOptions } from "@features/products/api"
 
 export const Route = createFileRoute(
   "/_authed/businesses/$slug/invoices/$invoiceId"
 )({
-  pendingComponent: pendingScreen("Loading invoice…"),
+  pendingComponent: InvoiceBuilderSkeleton,
   notFoundComponent: NotFoundScreen,
   loader: async ({ context, params }) => {
     await Promise.all([

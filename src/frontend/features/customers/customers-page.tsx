@@ -33,7 +33,7 @@ import {
   type Customer,
 } from "@features/customers/api"
 
-const routeApi = getRouteApi("/_authed/businesses/$slug/customers/")
+const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/customers/")
 
 type FormState = {
   name: string

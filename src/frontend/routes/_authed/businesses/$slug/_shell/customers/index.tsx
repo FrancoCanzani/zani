@@ -6,7 +6,9 @@ import { pendingScreen } from "@components/pending-screen"
 import { customersQueryOptions } from "@features/customers/api"
 import { CustomersPage } from "@features/customers/customers-page"
 
-export const Route = createFileRoute("/_authed/businesses/$slug/customers/")({
+export const Route = createFileRoute(
+  "/_authed/businesses/$slug/_shell/customers/"
+)({
   pendingComponent: pendingScreen("Loading customers…"),
   notFoundComponent: NotFoundScreen,
   loader: async ({ context, params }) => {
