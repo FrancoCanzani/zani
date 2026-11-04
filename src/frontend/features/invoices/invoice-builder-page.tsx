@@ -35,6 +35,10 @@ import {
 } from "@features/invoices/helpers"
 import { InvoicePaper } from "@features/invoices/invoice-paper"
 import { invoiceStatusLabel } from "@features/invoices/status-label"
+import {
+  useDraftAutosave,
+  type AutosaveStatus,
+} from "@features/invoices/use-draft-autosave"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/invoices/$invoiceId")
@@ -113,9 +117,20 @@ export function InvoiceBuilderPage() {
     },
   })
 
+  const body = buildBody()
+  const autosave = useDraftAutosave({
+    value: body,
+    enabled: isDraft,
+    persist: async (next: InvoiceInput) => {
+      const saved = await updateInvoice(slug, invoiceId, next)
+      queryClient.setQueryData(["invoice", slug, invoiceId], saved)
+      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
+    },
+  })
+
   const send = useMutation({
     mutationFn: async () => {
-      await updateInvoice(slug, invoiceId, buildBody())
+      await autosave.flush()
       return sendInvoice(slug, invoiceId)
     },
     onSuccess: async (body) => {
@@ -180,7 +195,11 @@ export function InvoiceBuilderPage() {
     send.isPending ||
     markPaid.isPending
   const actionError =
-    save.error ?? discard.error ?? send.error ?? markPaid.error
+    save.error ??
+    autosave.error ??
+    discard.error ??
+    send.error ??
+    markPaid.error
 
   function onBillToChange(next: BillToSnapshot) {
     setCustomerId(next.customerId)
@@ -306,13 +325,21 @@ export function InvoiceBuilderPage() {
                 </AlertDialogContent>
               </AlertDialog>
             ) : null}
-            {!readOnly ? (
+            {isDraft ? (
+              <span
+                className="px-1 text-xs text-muted-foreground"
+                aria-live="polite"
+              >
+                {autosaveLabel(autosave.status)}
+              </span>
+            ) : null}
+            {!readOnly && !isDraft ? (
               <Button
                 type="button"
                 variant="outline"
                 size="sm"
                 disabled={busy}
-                onClick={() => save.mutate(buildBody())}
+                onClick={() => save.mutate(body)}
               >
                 {save.isPending ? "Saving…" : savedFlash ? "Saved" : "Save"}
               </Button>
@@ -342,4 +369,20 @@ export function InvoiceBuilderPage() {
       </div>
     </div>
   )
+}
+
+function autosaveLabel(status: AutosaveStatus) {
+  switch (status) {
+    case "saved":
+      return "Draft saved"
+    case "unsaved":
+    case "saving":
+      return "Saving…"
+    case "error":
+      return "Not saved"
+    default: {
+      const exhaustive: never = status
+      return exhaustive
+    }
+  }
 }
