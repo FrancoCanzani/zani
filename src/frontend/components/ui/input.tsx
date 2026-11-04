@@ -8,7 +8,7 @@ const inputVariants = cva(
     variants: {
       size: {
         xs: "h-6 rounded-[min(var(--radius-md),10px)] px-2 text-xs",
-        sm: "h-7 rounded-[min(var(--radius-md),12px)] px-2.5 text-sm",
+        sm: "h-9 rounded-[min(var(--radius-md),12px)] px-3 text-sm",
       },
     },
     defaultVariants: {

@@ -87,7 +87,7 @@ export function EditorItemsSection({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-medium">Items</h2>
+      <h2 className="text-2xl font-light tracking-tight">Items</h2>
 
       {items.length > 0 ? (
         <ul className="divide-y divide-border rounded-lg border border-border">

@@ -61,7 +61,7 @@ export function CompleteNamePage() {
           Sign out
         </Button>
       </div>
-      <h1 className="mt-4 text-2xl font-normal tracking-tight sm:text-3xl">
+      <h1 className="mt-4 text-2xl font-light tracking-tight sm:text-4xl">
         What’s your name?
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

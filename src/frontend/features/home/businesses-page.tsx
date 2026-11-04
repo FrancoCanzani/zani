@@ -46,7 +46,7 @@ export function BusinessesPage() {
         <div className="mt-16 flex flex-1 flex-col gap-8">
           <div className="flex items-center justify-between gap-4">
             <div className="space-y-1">
-              <h1 className="text-2xl tracking-tight sm:text-3xl">
+              <h1 className="text-3xl font-light tracking-tight sm:text-4xl">
                 Businesses
               </h1>
               <p className="text-sm leading-relaxed text-muted-foreground">

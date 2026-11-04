@@ -67,7 +67,7 @@ export function EditorReview({
           <ArrowLeftIcon />
           Edit invoice
         </Button>
-        <h2 className="text-xl font-medium tracking-tight">Review invoice</h2>
+        <h2 className="text-3xl font-light tracking-tight">Review invoice</h2>
       </div>
 
       <div className="rounded-lg border border-border">

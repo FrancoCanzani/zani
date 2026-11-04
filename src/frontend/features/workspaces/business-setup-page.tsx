@@ -18,7 +18,7 @@ export function BusinessSetupPage() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-8">
       <div className="space-y-1">
-        <h1 className="text-2xl tracking-tight">Business details</h1>
+        <h1 className="text-4xl font-light tracking-tight">Business details</h1>
         <p className="text-sm text-muted-foreground">
           This shows on invoices you send. You can skip and finish it later in
           Manage.

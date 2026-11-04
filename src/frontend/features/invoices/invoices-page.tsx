@@ -6,6 +6,7 @@ import {
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router"
 import { toast } from "sonner"
 
+import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
 import {
   Empty,
@@ -72,6 +73,8 @@ export function InvoicesPage() {
           <EmptyContent>
             <Button
               type="button"
+              variant="default"
+              size="default"
               disabled={create.isPending}
               onClick={() => create.mutate()}
             >
@@ -88,13 +91,15 @@ export function InvoicesPage() {
       {detailsBanner}
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl tracking-tight">Invoices</h1>
+          <h1 className="text-4xl font-light tracking-tight">Invoices</h1>
           <p className="text-sm text-muted-foreground">
             Create, send, and track what’s outstanding.
           </p>
         </div>
         <Button
           type="button"
+          variant="default"
+          size="default"
           disabled={create.isPending}
           onClick={() => create.mutate()}
         >
@@ -113,7 +118,7 @@ export function InvoicesPage() {
               <th className="pb-3 text-right font-medium">Amount</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-border">
+          <tbody className="divide-y divide-dashed divide-border">
             {data.invoices.map((item) => (
               <tr key={item.id} className="group">
                 <td className="py-3.5 pr-4">
@@ -134,8 +139,12 @@ export function InvoicesPage() {
                     {item.customerName.trim() || "—"}
                   </Link>
                 </td>
-                <td className="py-3.5 pr-4 text-muted-foreground">
-                  {invoiceStatusLabel(item.status)}
+                <td className="py-3.5 pr-4">
+                  <Badge
+                    variant={item.status === "draft" ? "outline" : "secondary"}
+                  >
+                    {invoiceStatusLabel(item.status)}
+                  </Badge>
                 </td>
                 <td className="py-3.5 pr-4 text-muted-foreground tabular-nums">
                   {formatDisplayDate(item.dueDate) ?? "—"}

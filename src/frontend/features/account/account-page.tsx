@@ -25,7 +25,7 @@ export function AccountPage() {
           >
             Back
           </Link>
-          <h1 className="text-2xl tracking-tight sm:text-3xl">Settings</h1>
+          <h1 className="text-3xl font-light tracking-tight sm:text-4xl">Settings</h1>
           <p className="text-sm leading-relaxed text-muted-foreground">
             Your name and sign-in email.
           </p>

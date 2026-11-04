@@ -22,7 +22,7 @@ export function GuestHome() {
             <p className="text-muted-foreground">
               For solo trades and tiny crews
             </p>
-            <h1 className="max-w-xl text-3xl font-normal tracking-tight sm:text-4xl">
+            <h1 className="max-w-xl text-3xl font-light tracking-tight sm:text-4xl">
               Send invoices customers actually pay.
             </h1>
             <p className="max-w-lg text-muted-foreground leading-relaxed">

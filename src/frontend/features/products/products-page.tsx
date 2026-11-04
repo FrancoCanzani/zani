@@ -190,7 +190,7 @@ export function ProductsPage() {
     <div className="flex flex-1 flex-col gap-8">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <h1 className="text-2xl tracking-tight">Products</h1>
+          <h1 className="text-4xl font-light tracking-tight">Products</h1>
           <p className="text-sm text-muted-foreground">
             Reusable line items for your invoices.
           </p>
