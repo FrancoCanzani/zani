@@ -143,7 +143,7 @@ export function EditorCustomerSection({
               type="button"
               variant="outline"
               size="default"
-              className="w-full justify-start font-normal text-muted-foreground"
+              className="w-full justify-start rounded-none border-input px-3 font-normal text-muted-foreground"
             >
               <SearchIcon />
               Find or add a customer…
