@@ -39,13 +39,12 @@ export function WorkspaceShell() {
 
   const isInvoiceBuilder = /\/invoices\/[^/]+$/.test(pathname)
 
+  if (isInvoiceBuilder) {
+    return <Outlet />
+  }
+
   return (
-    <div
-      className={cn(
-        "flex flex-col",
-        isInvoiceBuilder ? "h-svh overflow-hidden" : "min-h-svh"
-      )}
-    >
+    <div className="flex min-h-svh flex-col">
       <header className="sticky top-0 z-40 shrink-0 bg-background/80 px-5 backdrop-blur-md">
         <div className="mx-auto flex h-12 w-full max-w-5xl items-center justify-between gap-4">
           <BrandMark to="/businesses" className="shrink-0" />
@@ -147,12 +146,7 @@ export function WorkspaceShell() {
           </DropdownMenu>
         </div>
       </header>
-      <div
-        className={cn(
-          "mx-auto flex w-full max-w-5xl flex-1 flex-col px-5",
-          isInvoiceBuilder ? "min-h-0 overflow-hidden pt-3" : "pt-4 pb-8"
-        )}
-      >
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 pt-4 pb-8">
         <Outlet />
       </div>
     </div>

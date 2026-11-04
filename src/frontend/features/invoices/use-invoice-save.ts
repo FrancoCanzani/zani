@@ -4,13 +4,15 @@ const AUTOSAVE_DELAY_MS = 800
 
 export type AutosaveStatus = "saved" | "unsaved" | "saving" | "error"
 
-export function useDraftAutosave<T>({
+export function useInvoiceSave<T>({
   value,
   enabled,
+  auto,
   persist,
 }: {
   value: T
   enabled: boolean
+  auto: boolean
   persist: (value: T) => Promise<unknown>
 }) {
   const json = JSON.stringify(value)
@@ -18,8 +20,8 @@ export function useDraftAutosave<T>({
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<Error | null>(null)
 
-  const latest = useRef({ json, value, persist, enabled })
-  latest.current = { json, value, persist, enabled }
+  const latest = useRef({ json, value, persist, auto: enabled && auto })
+  latest.current = { json, value, persist, auto: enabled && auto }
   const savedRef = useRef(savedJson)
   const inFlight = useRef<Promise<void> | null>(null)
 
@@ -58,14 +60,14 @@ export function useDraftAutosave<T>({
   flushRef.current = flush
 
   useEffect(() => {
-    if (!enabled || json === savedRef.current) {
+    if (!enabled || !auto || json === savedRef.current) {
       return
     }
     const timer = window.setTimeout(() => {
       flushRef.current().catch(() => undefined)
     }, AUTOSAVE_DELAY_MS)
     return () => window.clearTimeout(timer)
-  }, [enabled, json])
+  }, [enabled, auto, json])
 
   const dirty = enabled && json !== savedJson
 
@@ -83,10 +85,7 @@ export function useDraftAutosave<T>({
   // Leaving the page cancels the debounce timer; send what's pending anyway.
   useEffect(() => {
     return () => {
-      if (
-        latest.current.enabled &&
-        latest.current.json !== savedRef.current
-      ) {
+      if (latest.current.auto && latest.current.json !== savedRef.current) {
         latest.current.persist(latest.current.value).catch(() => undefined)
       }
     }

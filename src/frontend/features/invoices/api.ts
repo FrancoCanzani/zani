@@ -5,11 +5,7 @@ import { api, requireJson } from "@lib/api"
 import type { LineItem } from "./helpers"
 
 export type InvoiceStatus =
-  | "draft"
-  | "sent"
-  | "partially_paid"
-  | "paid"
-  | "void"
+  "draft" | "sent" | "partially_paid" | "paid" | "void"
 
 export type InvoiceSummary = {
   id: string
@@ -109,10 +105,10 @@ export function invoiceQueryOptions(slug: string, invoiceId: string) {
   })
 }
 
-export async function createInvoice(slug: string, customerId: string) {
+export async function createInvoice(slug: string) {
   const response = await api.workspaces[":slug"].invoices.$post({
     param: { slug },
-    json: { customerId },
+    json: {},
   })
   if (response.status === 404) {
     throw new Error("Customer not found.")
@@ -151,11 +147,11 @@ export async function updateInvoice(
 }
 
 export async function discardInvoice(slug: string, invoiceId: string) {
-  const response = await api.workspaces[":slug"].invoices[
-    ":invoiceId"
-  ].$delete({
-    param: { slug, invoiceId },
-  })
+  const response = await api.workspaces[":slug"].invoices[":invoiceId"].$delete(
+    {
+      param: { slug, invoiceId },
+    }
+  )
   if (response.status === 409) {
     throw new Error("Only draft invoices can be discarded.")
   }
@@ -186,9 +182,9 @@ export async function sendInvoice(slug: string, invoiceId: string) {
 }
 
 export async function markInvoicePaid(slug: string, invoiceId: string) {
-  const response = await api.workspaces[":slug"].invoices[
-    ":invoiceId"
-  ]["mark-paid"].$post({
+  const response = await api.workspaces[":slug"].invoices[":invoiceId"][
+    "mark-paid"
+  ].$post({
     param: { slug, invoiceId },
   })
   if (response.status === 409) {
