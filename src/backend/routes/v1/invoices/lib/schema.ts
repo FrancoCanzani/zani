@@ -33,9 +33,7 @@ export const updateInvoiceBodySchema = z.object({
     .trim()
     .length(3)
     .transform((value) => value.toLowerCase()),
-  issueDate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
+  issueDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date"),
   dueDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date")
@@ -51,5 +49,5 @@ export const updateInvoiceBodySchema = z.object({
 })
 
 export const createInvoiceBodySchema = z.object({
-  customerId: z.string().min(1),
+  customerId: z.string().min(1).optional(),
 })
