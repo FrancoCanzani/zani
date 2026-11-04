@@ -26,6 +26,7 @@ import { Input } from "@components/ui/input"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@components/ui/input-otp"
 
 import { authClient } from "@lib/auth/client"
+import { sessionQueryOptions } from "@lib/auth/session"
 import { fieldErrors } from "@lib/utils"
 
 const nameSchema = z.object({
@@ -65,6 +66,7 @@ export function AccountSettings({ name, email }: AccountSettingsProps) {
       }
       formApi.setFieldValue("name", nextName)
       toast.success("Name saved.")
+      queryClient.removeQueries({ queryKey: sessionQueryOptions.queryKey })
       await router.invalidate()
     },
   })

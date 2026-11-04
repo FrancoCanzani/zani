@@ -1,3 +1,4 @@
+import { useQueryClient } from "@tanstack/react-query"
 import { getRouteApi, useRouter } from "@tanstack/react-router"
 import { type SubmitEvent, useState } from "react"
 import { toast } from "sonner"
@@ -8,6 +9,7 @@ import { Input } from "@components/ui/input"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@components/ui/input-otp"
 
 import { authClient } from "@lib/auth/client"
+import { sessionQueryOptions } from "@lib/auth/session"
 import { safeInternalPath } from "@lib/safe-internal-path"
 
 const routeApi = getRouteApi("/sign-in")
@@ -16,6 +18,7 @@ type Step = "email" | "otp"
 
 export function SignInPage() {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { redirect: redirectTo } = routeApi.useSearch()
   const [step, setStep] = useState<Step>("email")
   const [email, setEmail] = useState("")
@@ -53,6 +56,7 @@ export function SignInPage() {
       toast.error(verifyError.message ?? "That code is invalid or expired.")
       return
     }
+    queryClient.removeQueries({ queryKey: sessionQueryOptions.queryKey })
     await router.invalidate()
     await router.navigate({ href: safeInternalPath(redirectTo) })
   }
