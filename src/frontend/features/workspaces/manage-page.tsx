@@ -32,7 +32,7 @@ import {
 import { api } from "@lib/api"
 import { fieldErrors } from "@lib/utils"
 
-const routeApi = getRouteApi("/_authed/businesses/$slug/manage")
+const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/manage")
 
 const inviteFormSchema = z.object({
   email: z.email(),

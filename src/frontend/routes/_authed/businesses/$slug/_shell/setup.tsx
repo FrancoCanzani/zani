@@ -6,7 +6,7 @@ import { pendingScreen } from "@components/pending-screen"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import { BusinessSetupPage } from "@features/workspaces/business-setup-page"
 
-export const Route = createFileRoute("/_authed/businesses/$slug/setup")({
+export const Route = createFileRoute("/_authed/businesses/$slug/_shell/setup")({
   pendingComponent: pendingScreen("Loading…"),
   notFoundComponent: NotFoundScreen,
   loader: async ({ context, params }) => {

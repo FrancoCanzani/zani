@@ -37,12 +37,6 @@ export function WorkspaceShell() {
   const { data: workspace } = useSuspenseQuery(workspaceQueryOptions(slug))
   const { data: workspaces } = useSuspenseQuery(workspacesQueryOptions())
 
-  const isInvoiceBuilder = /\/invoices\/[^/]+$/.test(pathname)
-
-  if (isInvoiceBuilder) {
-    return <Outlet />
-  }
-
   return (
     <div className="flex min-h-svh flex-col">
       <header className="sticky top-0 z-40 shrink-0 bg-background/80 px-5 backdrop-blur-md">

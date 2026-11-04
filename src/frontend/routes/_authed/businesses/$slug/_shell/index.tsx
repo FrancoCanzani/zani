@@ -7,7 +7,7 @@ import { customersQueryOptions } from "@features/customers/api"
 import { invoicesQueryOptions } from "@features/invoices/api"
 import { InvoicesPage } from "@features/invoices/invoices-page"
 
-export const Route = createFileRoute("/_authed/businesses/$slug/")({
+export const Route = createFileRoute("/_authed/businesses/$slug/_shell/")({
   pendingComponent: pendingScreen("Loading invoices…"),
   notFoundComponent: NotFoundScreen,
   loader: async ({ context, params }) => {

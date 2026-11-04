@@ -34,7 +34,7 @@ import {
 } from "@features/products/api"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 
-const routeApi = getRouteApi("/_authed/businesses/$slug/products/")
+const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/products/")
 
 export function ProductsPage() {
   const { slug } = routeApi.useParams()
