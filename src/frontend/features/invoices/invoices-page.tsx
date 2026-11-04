@@ -81,7 +81,7 @@ export function InvoicesPage() {
   return (
     <div className="flex flex-1 flex-col gap-8">
       {detailsSticker}
-      <div className="flex items-start justify-between gap-4">
+      <div className="flex items-center justify-between gap-4">
         <div className="space-y-1">
           <h1 className="text-4xl font-light tracking-tight">Invoices</h1>
           <p className="text-sm text-muted-foreground">
