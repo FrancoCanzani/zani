@@ -2,8 +2,9 @@ import { and, eq } from "drizzle-orm"
 
 import { customer } from "../../../../db/schema"
 import { createDb } from "../../../../lib/db"
-import { newId, nowMs } from "../../../../lib/utils"
 
+// Never write back to the customer: a stale draft would revert edits made on
+// the Customers page.
 export async function resolveInvoiceCustomer(
   env: Env,
   workspaceId: string,
@@ -28,14 +29,8 @@ export async function resolveInvoiceCustomer(
     }
   }
 
-  const db = createDb(env)
-  const now = nowMs()
-  const phone = input.customerPhone
-  const email = input.customerEmail
-  const address = input.customerAddress
-  const taxId = input.customerTaxId
-
   if (input.customerId) {
+    const db = createDb(env)
     const [existing] = await db
       .select({ id: customer.id })
       .from(customer)
@@ -50,49 +45,14 @@ export async function resolveInvoiceCustomer(
     if (!existing) {
       return { error: "customer_not_found" as const }
     }
-
-    await db
-      .update(customer)
-      .set({
-        name,
-        phone,
-        email,
-        address,
-        taxId,
-        updatedAt: now,
-      })
-      .where(eq(customer.id, input.customerId))
-
-    return {
-      customerId: input.customerId,
-      customerName: name,
-      customerPhone: phone,
-      customerEmail: email,
-      customerAddress: address,
-      customerTaxId: taxId,
-    }
   }
 
-  const id = newId()
-  await db.insert(customer).values({
-    id,
-    workspaceId,
-    name,
-    phone,
-    email,
-    address,
-    taxId,
-    notes: null,
-    createdAt: now,
-    updatedAt: now,
-  })
-
   return {
-    customerId: id,
+    customerId: input.customerId,
     customerName: name,
-    customerPhone: phone,
-    customerEmail: email,
-    customerAddress: address,
-    customerTaxId: taxId,
+    customerPhone: input.customerPhone,
+    customerEmail: input.customerEmail,
+    customerAddress: input.customerAddress,
+    customerTaxId: input.customerTaxId,
   }
 }
