@@ -140,7 +140,7 @@ export function WorkspaceShell() {
           </DropdownMenu>
         </div>
       </header>
-      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 pt-4 pb-8">
+      <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-5 pt-12 pb-8">
         <Outlet />
       </div>
     </div>

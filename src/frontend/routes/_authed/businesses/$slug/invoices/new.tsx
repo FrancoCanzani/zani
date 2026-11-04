@@ -1,14 +1,14 @@
 import { createFileRoute, redirect } from "@tanstack/react-router"
 import { toast } from "sonner"
 
+import { pendingScreen } from "@components/pending-screen"
+
 import { customersQueryOptions } from "@features/customers/api"
 import { createInvoice, invoiceQueryOptions } from "@features/invoices/api"
-import { InvoiceBuilderSkeleton } from "@features/invoices/invoice-builder-skeleton"
 import { productsQueryOptions } from "@features/products/api"
 
 export const Route = createFileRoute("/_authed/businesses/$slug/invoices/new")({
-  pendingMs: 0,
-  pendingComponent: InvoiceBuilderSkeleton,
+  pendingComponent: pendingScreen("Loading…"),
   loader: async ({ context, params, preload }) => {
     // Loading this route creates a draft, so hover preloads must not run it.
     if (preload) return
