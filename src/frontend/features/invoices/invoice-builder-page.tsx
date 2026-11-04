@@ -4,6 +4,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router"
+import { MoreHorizontalIcon, XIcon } from "lucide-react"
 import { useState } from "react"
 
 import {
@@ -15,9 +16,16 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from "@components/ui/alert-dialog"
+import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@components/ui/dropdown-menu"
+import { Separator } from "@components/ui/separator"
 
 import {
   discardInvoice,
@@ -27,18 +35,25 @@ import {
   updateInvoice,
   type InvoiceInput,
 } from "@features/invoices/api"
-import type { BillToSnapshot } from "@features/invoices/invoice-bill-to"
+import { EditorCustomerSection } from "@features/invoices/editor-customer-section"
 import {
-  formatCents,
-  invoiceTotals,
-  type LineItem,
-} from "@features/invoices/helpers"
-import { InvoicePaper } from "@features/invoices/invoice-paper"
+  EditorAdditionalSection,
+  EditorCurrencySection,
+  EditorPaymentSection,
+} from "@features/invoices/editor-detail-sections"
+import { EditorItemsSection } from "@features/invoices/editor-items-section"
+import { EditorReview } from "@features/invoices/editor-review"
+import {
+  draftFromInvoice,
+  inputFromDraft,
+  type InvoiceDraft,
+} from "@features/invoices/invoice-draft"
+import { InvoiceDocument } from "@features/invoices/invoice-document"
 import { invoiceStatusLabel } from "@features/invoices/status-label"
 import {
-  useDraftAutosave,
+  useInvoiceSave,
   type AutosaveStatus,
-} from "@features/invoices/use-draft-autosave"
+} from "@features/invoices/use-invoice-save"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/invoices/$invoiceId")
@@ -49,80 +64,33 @@ export function InvoiceBuilderPage() {
   const queryClient = useQueryClient()
   const { data } = useSuspenseQuery(invoiceQueryOptions(slug, invoiceId))
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
+  const workspace = workspaceData.workspace
 
-  const [number, setNumber] = useState(data.invoice.number)
-  const [customerId, setCustomerId] = useState(data.invoice.customerId)
-  const [customerName, setCustomerName] = useState(data.invoice.customerName)
-  const [customerPhone, setCustomerPhone] = useState(
-    data.invoice.customerPhone ?? ""
+  const [draft, setDraft] = useState<InvoiceDraft>(() =>
+    draftFromInvoice(data.invoice)
   )
-  const [customerEmail, setCustomerEmail] = useState(
-    data.invoice.customerEmail ?? ""
-  )
-  const [customerAddress, setCustomerAddress] = useState(
-    data.invoice.customerAddress ?? ""
-  )
-  const [customerTaxId, setCustomerTaxId] = useState(
-    data.invoice.customerTaxId ?? ""
-  )
-  const [currency, setCurrency] = useState(data.invoice.currency)
-  const [issueDate, setIssueDate] = useState(data.invoice.issueDate)
-  const [dueDate, setDueDate] = useState(data.invoice.dueDate ?? "")
-  const [notes, setNotes] = useState(data.invoice.notes ?? "")
-  const [bankDetails, setBankDetails] = useState(
-    data.invoice.bankDetails ?? ""
-  )
-  const [taxName, setTaxName] = useState(data.invoice.taxName ?? "")
-  const [taxRateBps, setTaxRateBps] = useState(data.invoice.taxRateBps)
-  const [taxInclusive, setTaxInclusive] = useState(data.invoice.taxInclusive)
-  const [lineItems, setLineItems] = useState<LineItem[]>(
-    data.invoice.lineItems
-  )
-  const [savedFlash, setSavedFlash] = useState(false)
   const [status, setStatus] = useState(data.invoice.status)
   const [amountPaidCents, setAmountPaidCents] = useState(
     data.invoice.amountPaidCents
   )
+  const [reviewing, setReviewing] = useState(false)
+  const [showPreview, setShowPreview] = useState(true)
+  const [confirmDelete, setConfirmDelete] = useState(false)
 
-  const readOnly = status === "paid" || status === "void"
   const isDraft = status === "draft"
+  const readOnly = status === "paid" || status === "void"
   const canMarkPaid = status === "sent" || status === "partially_paid"
-  const totals = invoiceTotals(
-    lineItems,
-    taxRateBps,
-    taxInclusive,
-    amountPaidCents
-  )
 
-  const save = useMutation({
-    mutationFn: (body: InvoiceInput) => updateInvoice(slug, invoiceId, body),
-    onSuccess: async (body) => {
-      setNumber(body.invoice.number)
-      setCustomerId(body.invoice.customerId)
-      setStatus(body.invoice.status)
-      setAmountPaidCents(body.invoice.amountPaidCents)
-      queryClient.setQueryData(["invoice", slug, invoiceId], body)
-      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
-      setSavedFlash(true)
-      window.setTimeout(() => setSavedFlash(false), 1500)
-    },
-  })
+  function patch(next: Partial<InvoiceDraft>) {
+    setDraft((current) => ({ ...current, ...next }))
+  }
 
-  const discard = useMutation({
-    mutationFn: () => discardInvoice(slug, invoiceId),
-    onSuccess: async () => {
-      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
-      queryClient.removeQueries({ queryKey: ["invoice", slug, invoiceId] })
-      await navigate({ to: "/businesses/$slug", params: { slug } })
-    },
-  })
-
-  const body = buildBody()
-  const autosave = useDraftAutosave({
-    value: body,
-    enabled: isDraft,
-    persist: async (next: InvoiceInput) => {
-      const saved = await updateInvoice(slug, invoiceId, next)
+  const saver = useInvoiceSave({
+    value: inputFromDraft(draft, data.invoice.paymentTerms),
+    enabled: !readOnly,
+    auto: isDraft,
+    persist: async (body: InvoiceInput) => {
+      const saved = await updateInvoice(slug, invoiceId, body)
       queryClient.setQueryData(["invoice", slug, invoiceId], saved)
       await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
     },
@@ -130,18 +98,22 @@ export function InvoiceBuilderPage() {
 
   const send = useMutation({
     mutationFn: async () => {
-      await autosave.flush()
+      await saver.flush()
       return sendInvoice(slug, invoiceId)
     },
     onSuccess: async (body) => {
       setStatus(body.invoice.status)
+      setReviewing(false)
       queryClient.setQueryData(["invoice", slug, invoiceId], body)
       await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
     },
   })
 
   const markPaid = useMutation({
-    mutationFn: () => markInvoicePaid(slug, invoiceId),
+    mutationFn: async () => {
+      await saver.flush()
+      return markInvoicePaid(slug, invoiceId)
+    },
     onSuccess: async (body) => {
       setStatus(body.invoice.status)
       setAmountPaidCents(body.invoice.amountPaidCents)
@@ -150,232 +122,211 @@ export function InvoiceBuilderPage() {
     },
   })
 
-  function buildBody(): InvoiceInput {
-    const lines =
-      lineItems.length > 0
-        ? lineItems
-        : []
-    return {
-      number: number.trim(),
-      customerId,
-      customerName: customerName.trim(),
-      customerPhone: customerPhone.trim() || null,
-      customerEmail: customerEmail.trim() || null,
-      customerAddress: customerAddress.trim() || null,
-      customerTaxId: customerTaxId.trim() || null,
-      currency,
-      issueDate,
-      dueDate: dueDate || null,
-      paymentTerms: data.invoice.paymentTerms,
-      notes: notes.trim() || null,
-      bankDetails: bankDetails.trim() || null,
-      taxName: taxName.trim() || null,
-      taxRateBps,
-      taxInclusive,
-      lineItems: lines
-        .filter(
-          (item) =>
-            item.name.trim() ||
-            item.description.trim() ||
-            item.unitAmountCents > 0
-        )
-        .map((item) => ({
-          ...item,
-          name: item.name.trim(),
-          description: item.description.trim(),
-          quantity: item.quantity > 0 ? item.quantity : 1,
-          unitAmountCents: Math.max(0, Math.round(item.unitAmountCents)),
-        })),
-    }
-  }
+  const discard = useMutation({
+    mutationFn: () => discardInvoice(slug, invoiceId),
+    onSuccess: async () => {
+      queryClient.removeQueries({ queryKey: ["invoice", slug, invoiceId] })
+      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
+      await navigate({ to: "/businesses/$slug", params: { slug } })
+    },
+  })
 
-  const busy =
-    save.isPending ||
-    discard.isPending ||
-    send.isPending ||
-    markPaid.isPending
-  const actionError =
-    save.error ??
-    autosave.error ??
-    discard.error ??
-    send.error ??
-    markPaid.error
-
-  function onBillToChange(next: BillToSnapshot) {
-    setCustomerId(next.customerId)
-    setCustomerName(next.customerName)
-    setCustomerPhone(next.customerPhone)
-    setCustomerEmail(next.customerEmail)
-    setCustomerAddress(next.customerAddress)
-    setCustomerTaxId(next.customerTaxId)
-  }
-
-  const needsDetails = !workspaceData.workspace.detailsComplete
+  const actionError = saver.error ?? markPaid.error ?? discard.error
+  const title = isDraft ? "Edit invoice" : `Invoice ${draft.number}`
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
-      {actionError ? (
-        <p className="shrink-0 pb-3 text-sm text-destructive" role="alert">
-          {actionError.message}
-        </p>
-      ) : null}
-
-      {needsDetails ? (
-        <div className="mb-3 flex flex-wrap items-center justify-between gap-3 border border-border bg-muted/40 px-4 py-3 text-sm">
-          <p className="text-muted-foreground">
-            Add your business details so the From block is complete.
-          </p>
-          <Button type="button" variant="outline" size="sm" asChild>
-            <Link to="/businesses/$slug/manage" params={{ slug }}>
-              Complete details
+    <div className="flex h-svh flex-col bg-background">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-4 border-b border-border px-3 sm:px-4">
+        <div className="flex min-w-0 items-center gap-3">
+          <Button variant="ghost" size="icon-sm" aria-label="Close" asChild>
+            <Link to="/businesses/$slug" params={{ slug }}>
+              <XIcon />
             </Link>
           </Button>
+          <Separator orientation="vertical" className="h-5!" />
+          <h1 className="truncate text-sm font-medium">{title}</h1>
+          <Badge variant="secondary">{invoiceStatusLabel(status)}</Badge>
+          {!readOnly ? (
+            <span
+              className="hidden text-xs text-muted-foreground sm:inline"
+              aria-live="polite"
+            >
+              {saveLabel(saver.status, isDraft)}
+            </span>
+          ) : null}
         </div>
-      ) : null}
 
-      <div className="min-h-0 flex-1 overflow-y-auto bg-neutral-100/90 px-0 pb-28 pt-2 sm:px-2">
-        <InvoicePaper
-          slug={slug}
-          businessName={workspaceData.workspace.name}
-          businessEmail={workspaceData.workspace.email}
-          businessPhone={workspaceData.workspace.phone}
-          businessAddress={workspaceData.workspace.address}
-          businessTaxId={workspaceData.workspace.taxId}
-          readOnly={readOnly}
-          values={{
-            number,
-            issueDate,
-            dueDate,
-            currency,
-            notes,
-            bankDetails,
-            taxName,
-            taxRateBps,
-            taxInclusive,
-            lineItems,
-            amountPaidCents,
-            billTo: {
-              customerId,
-              customerName,
-              customerPhone,
-              customerEmail,
-              customerAddress,
-              customerTaxId,
-            },
-          }}
-          onChange={(patch) => {
-            if (patch.number !== undefined) setNumber(patch.number)
-            if (patch.issueDate !== undefined) setIssueDate(patch.issueDate)
-            if (patch.dueDate !== undefined) setDueDate(patch.dueDate)
-            if (patch.currency !== undefined) setCurrency(patch.currency)
-            if (patch.notes !== undefined) setNotes(patch.notes)
-            if (patch.bankDetails !== undefined)
-              setBankDetails(patch.bankDetails)
-            if (patch.taxName !== undefined) setTaxName(patch.taxName)
-            if (patch.taxRateBps !== undefined) setTaxRateBps(patch.taxRateBps)
-            if (patch.taxInclusive !== undefined)
-              setTaxInclusive(patch.taxInclusive)
-          }}
-          onBillToChange={onBillToChange}
-          onLineItemsChange={setLineItems}
-        />
-      </div>
+        <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            className="hidden lg:inline-flex"
+            onClick={() => setShowPreview((current) => !current)}
+          >
+            {showPreview ? "Hide preview" : "Show preview"}
+          </Button>
+          {isDraft ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="More actions"
+                >
+                  <MoreHorizontalIcon />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  variant="destructive"
+                  onSelect={() => setConfirmDelete(true)}
+                >
+                  Delete draft
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+          {!isDraft && !readOnly && saver.status !== "saved" ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={saver.status === "saving"}
+              onClick={() => saver.flush().catch(() => undefined)}
+            >
+              {saver.status === "saving" ? "Saving…" : "Save changes"}
+            </Button>
+          ) : null}
+          {canMarkPaid ? (
+            <Button
+              type="button"
+              variant="default"
+              disabled={markPaid.isPending}
+              onClick={() => markPaid.mutate()}
+            >
+              {markPaid.isPending ? "Updating…" : "Mark as paid"}
+            </Button>
+          ) : null}
+          {isDraft && !reviewing ? (
+            <Button
+              type="button"
+              variant="default"
+              onClick={() => setReviewing(true)}
+            >
+              Review invoice
+            </Button>
+          ) : null}
+        </div>
+      </header>
 
-      <div className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-background/95 px-5 backdrop-blur supports-backdrop-filter:bg-background/80">
-        <div className="mx-auto flex w-full max-w-5xl items-center justify-between gap-3 py-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
-          <div className="min-w-0">
-            <p className="truncate font-mono text-sm tabular-nums">
-              {formatCents(totals.totalCents, currency)}
-              <span className="ml-2 font-normal text-muted-foreground">
-                {invoiceStatusLabel(status)}
-              </span>
-            </p>
-          </div>
-          <div className="flex shrink-0 items-center gap-2">
-            {isDraft ? (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="destructive"
-                    size="sm"
-                    disabled={busy}
-                  >
-                    Discard
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Discard this draft?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      This permanently deletes the invoice. This cannot be
-                      undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Keep editing</AlertDialogCancel>
-                    <AlertDialogAction
-                      variant="destructive"
-                      disabled={discard.isPending}
-                      onClick={() => discard.mutate()}
-                    >
-                      {discard.isPending ? "Discarding…" : "Discard"}
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
+      <div className="flex min-h-0 flex-1">
+        <div
+          className={
+            showPreview
+              ? "min-w-0 flex-1 overflow-y-auto lg:max-w-[40rem] lg:flex-none lg:basis-[44%] lg:border-r lg:border-border"
+              : "min-w-0 flex-1 overflow-y-auto"
+          }
+        >
+          <div className="mx-auto w-full max-w-xl px-6 py-8 sm:px-8">
+            {actionError ? (
+              <p className="mb-6 text-sm text-destructive" role="alert">
+                {actionError.message}
+              </p>
             ) : null}
-            {isDraft ? (
-              <span
-                className="px-1 text-xs text-muted-foreground"
-                aria-live="polite"
-              >
-                {autosaveLabel(autosave.status)}
-              </span>
-            ) : null}
-            {!readOnly && !isDraft ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                disabled={busy}
-                onClick={() => save.mutate(body)}
-              >
-                {save.isPending ? "Saving…" : savedFlash ? "Saved" : "Save"}
-              </Button>
-            ) : null}
-            {isDraft ? (
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={() => send.mutate()}
-              >
-                {send.isPending ? "Sending…" : "Send"}
-              </Button>
-            ) : null}
-            {canMarkPaid ? (
-              <Button
-                type="button"
-                size="sm"
-                disabled={busy}
-                onClick={() => markPaid.mutate()}
-              >
-                {markPaid.isPending ? "Updating…" : "Mark paid"}
-              </Button>
-            ) : null}
+            {reviewing && isDraft ? (
+              <EditorReview
+                draft={draft}
+                businessDetailsComplete={workspace.detailsComplete}
+                sending={send.isPending}
+                error={send.error}
+                onBack={() => setReviewing(false)}
+                onSend={() => send.mutate()}
+              />
+            ) : (
+              <fieldset disabled={readOnly} className="min-w-0 space-y-10">
+                <EditorCustomerSection
+                  slug={slug}
+                  value={draft.billTo}
+                  onChange={(billTo) => patch({ billTo })}
+                />
+                <EditorCurrencySection
+                  currency={draft.currency}
+                  onChange={patch}
+                />
+                <EditorItemsSection
+                  slug={slug}
+                  draft={draft}
+                  amountPaidCents={amountPaidCents}
+                  onChange={patch}
+                />
+                <EditorPaymentSection draft={draft} onChange={patch} />
+                <EditorAdditionalSection draft={draft} onChange={patch} />
+              </fieldset>
+            )}
           </div>
         </div>
+
+        {showPreview ? (
+          <aside className="hidden min-w-0 flex-1 flex-col overflow-y-auto bg-muted/60 lg:flex">
+            <div className="flex items-center justify-between px-8 pt-6 text-sm">
+              <p className="font-medium">Preview</p>
+              {!workspace.detailsComplete ? (
+                <Link
+                  to="/businesses/$slug/manage"
+                  params={{ slug }}
+                  className="text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
+                >
+                  Complete business details
+                </Link>
+              ) : null}
+            </div>
+            <div className="mx-auto w-full max-w-[42rem] px-8 py-6">
+              <InvoiceDocument
+                draft={draft}
+                amountPaidCents={amountPaidCents}
+                business={{
+                  name: workspace.name,
+                  email: workspace.email,
+                  phone: workspace.phone,
+                  address: workspace.address,
+                  taxId: workspace.taxId,
+                }}
+              />
+            </div>
+          </aside>
+        ) : null}
       </div>
+
+      <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete this draft?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The invoice is permanently deleted. This can’t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={discard.isPending}
+              onClick={() => discard.mutate()}
+            >
+              {discard.isPending ? "Deleting…" : "Delete draft"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
 
-function autosaveLabel(status: AutosaveStatus) {
+function saveLabel(status: AutosaveStatus, isDraft: boolean) {
   switch (status) {
     case "saved":
-      return "Draft saved"
+      return isDraft ? "Draft saved" : "All changes saved"
     case "unsaved":
+      return isDraft ? "Saving…" : "Unsaved changes"
     case "saving":
       return "Saving…"
     case "error":

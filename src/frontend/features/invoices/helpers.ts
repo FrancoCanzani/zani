@@ -140,6 +140,27 @@ export function matchingDuePreset(issueDate: string, dueDate: string) {
   return DUE_PRESET_DAYS.find((preset) => preset === days) ?? null
 }
 
+export function formatLongDate(iso: string | null) {
+  if (!iso) {
+    return null
+  }
+  const date = new Date(`${iso}T12:00:00`)
+  if (Number.isNaN(date.getTime())) {
+    return iso
+  }
+  return new Intl.DateTimeFormat(undefined, {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(date)
+}
+
+export function formatQuantity(quantity: number) {
+  return new Intl.NumberFormat(undefined, { maximumFractionDigits: 3 }).format(
+    quantity
+  )
+}
+
 export function formatDisplayDate(iso: string | null) {
   if (!iso) {
     return null
@@ -154,4 +175,3 @@ export function formatDisplayDate(iso: string | null) {
     year: "numeric",
   }).format(date)
 }
-
