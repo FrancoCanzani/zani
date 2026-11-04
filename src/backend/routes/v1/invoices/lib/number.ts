@@ -13,6 +13,10 @@ export function todayIsoDate(now = Date.now()) {
   return new Date(now).toISOString().slice(0, 10)
 }
 
+export function isoDateInDays(days: number, now = Date.now()) {
+  return todayIsoDate(now + days * 86_400_000)
+}
+
 // Increment-and-return in one statement so concurrent creates never share a
 // sequence. Numbers can still be taken by a draft renamed by hand, so skip those.
 export async function claimInvoiceNumber(env: Env, workspaceId: string) {
