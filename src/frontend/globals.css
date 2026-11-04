@@ -1,9 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/source-sans-3";
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/source-code-pro";
-@import "@fontsource-variable/instrument-sans";
 
 @custom-variant dark (&:is(.dark *));
 @source "./**/*.{ts,tsx}";
@@ -41,16 +40,16 @@
   --color-card: var(--card);
   --color-foreground: var(--foreground);
   --color-background: var(--background);
-  --radius-sm: 0.5rem;
-  --radius-md: 0.75rem;
-  --radius-lg: var(--radius);
-  --radius-xl: 1rem;
-  --radius-2xl: 2rem;
-  --radius-3xl: 2rem;
-  --radius-4xl: 2rem;
-  --font-sans: "Source Sans 3 Variable", sans-serif;
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+  --radius-2xl: 0;
+  --radius-3xl: 0;
+  --radius-4xl: 9999px;
+  --font-sans: "Inter Variable", sans-serif;
   --font-mono: "Source Code Pro Variable", ui-monospace, monospace;
-  --font-brand: "Instrument Sans Variable", "Source Sans 3 Variable", sans-serif;
+  --font-brand: "Inter Variable", sans-serif;
   --text-xl: 1.125rem;
   --text-xl--line-height: 1.5rem;
   --text-2xl: 1.25rem;
@@ -60,24 +59,24 @@
 }
 
 :root {
-  --background: #ffffff;
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --background: #fdfcfc;
+  --foreground: #000000;
+  --card: #ffffff;
+  --card-foreground: #000000;
+  --popover: #ffffff;
+  --popover-foreground: #000000;
+  --primary: #000000;
+  --primary-foreground: #ffffff;
+  --secondary: #f3f1ee;
+  --secondary-foreground: #000000;
+  --muted: #f3f1ee;
+  --muted-foreground: #6e6a66;
+  --accent: #f3f1ee;
+  --accent-foreground: #000000;
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --border: #e7e4e0;
+  --input: #dcd8d3;
+  --ring: #000000;
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
@@ -134,5 +133,9 @@
   }
   body {
     @apply bg-background font-sans text-sm text-foreground antialiased;
+  }
+  h1,
+  h2 {
+    @apply font-light tracking-tight;
   }
 }

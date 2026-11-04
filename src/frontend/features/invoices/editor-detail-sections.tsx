@@ -53,7 +53,7 @@ export function EditorCurrencySection({
 }) {
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-medium">Currency</h2>
+      <h2 className="text-2xl font-light tracking-tight">Currency</h2>
       <Select
         value={currency}
         onValueChange={(next) => next && onChange({ currency: next })}
@@ -88,7 +88,7 @@ export function EditorPaymentSection({
 
   return (
     <section className="space-y-5">
-      <h2 className="text-base font-medium">Payment</h2>
+      <h2 className="text-2xl font-light tracking-tight">Payment</h2>
       <Field>
         <FieldLabel htmlFor="payment-due">Payment due</FieldLabel>
         <Select
@@ -162,7 +162,7 @@ export function EditorAdditionalSection({
 
   return (
     <section className="space-y-5">
-      <h2 className="text-base font-medium">Additional options</h2>
+      <h2 className="text-2xl font-light tracking-tight">Additional options</h2>
       <div className="grid grid-cols-2 gap-3">
         <Field>
           <FieldLabel htmlFor="invoice-number">Invoice number</FieldLabel>

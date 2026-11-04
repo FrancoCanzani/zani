@@ -267,7 +267,7 @@ export function InvoiceBuilderPage() {
         </div>
 
         {showPreview ? (
-          <aside className="hidden min-w-0 flex-1 flex-col overflow-y-auto bg-muted/60 lg:flex">
+          <aside className="hidden min-w-0 flex-1 flex-col overflow-y-auto bg-secondary lg:flex">
             <div className="flex items-center justify-between px-8 pt-6 text-sm">
               <p className="font-medium">Preview</p>
               {!workspace.detailsComplete ? (

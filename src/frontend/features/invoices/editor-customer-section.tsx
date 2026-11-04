@@ -81,7 +81,7 @@ export function EditorCustomerSection({
 
   return (
     <section className="space-y-3">
-      <h2 className="text-base font-medium">Customer</h2>
+      <h2 className="text-2xl font-light tracking-tight">Customer</h2>
 
       {hasCustomer ? (
         <div className="flex items-start justify-between gap-3 rounded-lg border border-border p-4">

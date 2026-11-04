@@ -78,7 +78,7 @@ export function NewBusinessPage() {
         >
           Back
         </Link>
-        <h1 className="text-2xl font-normal tracking-tight sm:text-3xl">
+        <h1 className="text-2xl font-light tracking-tight sm:text-4xl">
           Set up your business
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

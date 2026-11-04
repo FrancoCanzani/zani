@@ -97,7 +97,7 @@ export function ManagePage() {
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-10">
       <div className="space-y-1">
-        <h1 className="text-2xl tracking-tight">Manage</h1>
+        <h1 className="text-4xl font-light tracking-tight">Manage</h1>
         <p className="text-sm text-muted-foreground">
           Business details, people, and invites.
         </p>
