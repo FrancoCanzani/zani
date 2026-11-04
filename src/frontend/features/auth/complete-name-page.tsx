@@ -9,6 +9,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
 import { authClient } from "@lib/auth/client"
+import { sessionQueryOptions } from "@lib/auth/session"
 import { fieldErrors } from "@lib/utils"
 
 const nameSchema = z.object({
@@ -34,6 +35,7 @@ export function CompleteNamePage() {
         toast.error(updateError.message ?? "Could not save your name.")
         return
       }
+      queryClient.removeQueries({ queryKey: sessionQueryOptions.queryKey })
       await router.invalidate()
       await router.navigate({ to: "/businesses" })
     },
