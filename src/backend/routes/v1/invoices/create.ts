@@ -2,12 +2,7 @@ import { zValidator } from "@hono/zod-validator"
 import { and, eq } from "drizzle-orm"
 import { Hono } from "hono"
 
-import {
-  customer,
-  invoice,
-  workspace,
-  type InvoiceLineItem,
-} from "../../../db/schema"
+import { customer, invoice, type InvoiceLineItem } from "../../../db/schema"
 import { createDb } from "../../../lib/db"
 import { newId, nowMs } from "../../../lib/utils"
 import { requireSession } from "../../../middleware/session"
@@ -16,7 +11,7 @@ import type { AppEnv } from "../../../types"
 import { workspaceFromContext } from "../workspaces/lib/context"
 
 import { createInvoiceBodySchema } from "./lib/schema"
-import { formatInvoiceNumber, todayIsoDate } from "./lib/number"
+import { claimInvoiceNumber, todayIsoDate } from "./lib/number"
 import { serializeInvoice } from "./lib/serialize"
 
 export const createInvoice = new Hono<AppEnv>().post(
@@ -30,11 +25,6 @@ export const createInvoice = new Hono<AppEnv>().post(
     const db = createDb(c.env)
     const now = nowMs()
     const id = newId()
-    const sequence = current.workspace.nextInvoiceNumber
-    const number = formatInvoiceNumber(
-      current.workspace.invoiceNumberPrefix,
-      sequence
-    )
 
     const [selected] = await db
       .select()
@@ -49,6 +39,11 @@ export const createInvoice = new Hono<AppEnv>().post(
 
     if (!selected) {
       return c.json({ error: "customer_not_found" as const }, 404)
+    }
+
+    const number = await claimInvoiceNumber(c.env, current.workspace.id)
+    if (!number) {
+      return c.json({ error: "number_unavailable" as const }, 409)
     }
 
     const created = {
@@ -83,13 +78,6 @@ export const createInvoice = new Hono<AppEnv>().post(
     }
 
     await db.insert(invoice).values(created)
-    await db
-      .update(workspace)
-      .set({
-        nextInvoiceNumber: sequence + 1,
-        updatedAt: now,
-      })
-      .where(eq(workspace.id, current.workspace.id))
 
     return c.json({ invoice: serializeInvoice(created) }, 201)
   }
