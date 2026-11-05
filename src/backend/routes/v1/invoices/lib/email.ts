@@ -19,7 +19,7 @@ export async function sendInvoiceMail(
   business: Business
 ) {
   const to = row.customerEmail?.trim() ?? ""
-  const bytes = await renderInvoicePdf(row, business)
+  const bytes = await renderInvoicePdf(env, row, business, "en-US")
   const copy = messageCopy(kind, row, business.name)
   const replyTo = business.email?.trim()
 
