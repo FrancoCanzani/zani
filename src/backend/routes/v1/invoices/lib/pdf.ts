@@ -81,17 +81,18 @@ export async function renderInvoicePdf(row: InvoiceRow, business: Business) {
   layout.gap(18)
   layout.table(row.lineItems, money)
   layout.gap(8)
-  layout.totals([
+  const totalRows: [string, string][] = [
     ["Subtotal", money(totals.subtotalCents)],
-    ...(row.taxRateBps > 0
-      ? [[taxLabel(row), money(totals.taxCents)] as const]
-      : []),
-    ["Total", money(totals.totalCents)],
-    ...(row.amountPaidCents > 0
-      ? [["Amount paid", `-${money(row.amountPaidCents)}`] as const]
-      : []),
-    ["Amount due", `${money(totals.balanceCents)} ${currency}`],
-  ])
+  ]
+  if (row.taxRateBps > 0) {
+    totalRows.push([taxLabel(row), money(totals.taxCents)])
+  }
+  totalRows.push(["Total", money(totals.totalCents)])
+  if (row.amountPaidCents > 0) {
+    totalRows.push(["Amount paid", `-${money(row.amountPaidCents)}`])
+  }
+  totalRows.push(["Amount due", `${money(totals.balanceCents)} ${currency}`])
+  layout.totals(totalRows)
   if (row.bankDetails?.trim()) {
     layout.gap(22)
     layout.paragraph("Pay by bank transfer", 11, bold, ink, 14)
@@ -171,7 +172,7 @@ class Layout {
     const columnWidth = CONTENT_WIDTH / 2 - 12
     const leftHeight = this.blockHeight(left, columnWidth)
     const rightHeight = this.blockHeight(right, columnWidth)
-    this.ensure(Math.min(leftHeight, rightHeight))
+    this.ensure(Math.max(leftHeight, rightHeight))
     const top = this.y
     this.drawBlock(left, MARGIN, top, columnWidth)
     this.drawBlock(right, MARGIN + CONTENT_WIDTH / 2, top, columnWidth)

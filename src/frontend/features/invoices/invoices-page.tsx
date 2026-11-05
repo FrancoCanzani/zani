@@ -34,7 +34,7 @@ import {
 } from "@components/ui/empty"
 
 import {
-  discardInvoice,
+  deleteInvoice,
   invoicesQueryOptions,
   type InvoiceSummary,
 } from "@features/invoices/api"
@@ -182,7 +182,7 @@ function InvoiceActions({
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
   const remove = useMutation({
-    mutationFn: () => discardInvoice(slug, invoice.id),
+    mutationFn: () => deleteInvoice(slug, invoice.id),
     onSuccess: async () => {
       setConfirming(false)
       await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })

@@ -165,7 +165,7 @@ export async function downloadInvoicePdf(slug: string, invoiceId: string) {
   const link = document.createElement("a")
   link.href = url
   link.download = filename
-  document.body.append(link)
+  document.body.appendChild(link)
   link.click()
   link.remove()
   window.setTimeout(() => URL.revokeObjectURL(url), 1000)
@@ -176,7 +176,7 @@ function filenameFromDisposition(header: string | null) {
   return match?.[1] || "invoice.pdf"
 }
 
-export async function discardInvoice(slug: string, invoiceId: string) {
+export async function deleteInvoice(slug: string, invoiceId: string) {
   const response = await api.workspaces[":slug"].invoices[":invoiceId"].$delete(
     {
       param: { slug, invoiceId },

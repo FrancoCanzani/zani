@@ -28,7 +28,7 @@ import {
 import { Separator } from "@components/ui/separator"
 
 import {
-  discardInvoice,
+  deleteInvoice,
   downloadInvoicePdf,
   invoiceQueryOptions,
   markInvoicePaid,
@@ -131,7 +131,7 @@ export function InvoiceBuilderPage() {
   })
 
   const discard = useMutation({
-    mutationFn: () => discardInvoice(slug, invoiceId),
+    mutationFn: () => deleteInvoice(slug, invoiceId),
     onSuccess: async () => {
       queryClient.removeQueries({ queryKey: ["invoice", slug, invoiceId] })
       await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
