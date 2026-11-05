@@ -161,6 +161,14 @@ export function formatQuantity(quantity: number) {
   )
 }
 
+export function formatTimestampDate(ms: number) {
+  return new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(ms))
+}
+
 export function formatDisplayDate(iso: string | null) {
   if (!iso) {
     return null

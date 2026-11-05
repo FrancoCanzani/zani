@@ -28,6 +28,7 @@ export function serializeInvoice(row: {
   amountPaidCents: number
   createdByUserId: string | null
   sentAt: number | null
+  lastRemindedAt: number | null
   paidAt: number | null
   createdAt: number
   updatedAt: number
@@ -69,6 +70,7 @@ export function serializeInvoice(row: {
     ...totals,
     createdByUserId: row.createdByUserId,
     sentAt: row.sentAt,
+    lastRemindedAt: row.lastRemindedAt,
     paidAt: row.paidAt,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -88,6 +90,8 @@ export function serializeInvoiceSummary(row: {
   taxRateBps: number
   taxInclusive: boolean
   amountPaidCents: number
+  customerEmail: string | null
+  lastRemindedAt: number | null
   updatedAt: number
   createdAt: number
 }) {
@@ -109,6 +113,8 @@ export function serializeInvoiceSummary(row: {
     dueDate: row.dueDate,
     ...totals,
     amountPaidCents: row.amountPaidCents,
+    customerEmail: row.customerEmail,
+    lastRemindedAt: row.lastRemindedAt,
     updatedAt: row.updatedAt,
     createdAt: row.createdAt,
   }

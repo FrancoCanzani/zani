@@ -13,6 +13,7 @@ import type { InvoiceDraft } from "@features/invoices/invoice-draft"
 export function EditorReview({
   draft,
   businessDetailsComplete,
+  businessEmail,
   sending,
   error,
   onBack,
@@ -20,6 +21,7 @@ export function EditorReview({
 }: {
   draft: InvoiceDraft
   businessDetailsComplete: boolean
+  businessEmail: string | null
   sending: boolean
   error: Error | null
   onBack: () => void
@@ -32,6 +34,7 @@ export function EditorReview({
     0
   )
   const hasCustomer = draft.billTo.name.trim().length > 0
+  const hasEmail = draft.billTo.email.trim().length > 0
   const hasItems = draft.lineItems.some(
     (item) => item.name.trim() || item.unitAmountCents > 0
   )
@@ -92,6 +95,11 @@ export function EditorReview({
           <CircleAlertIcon />
           <AlertTitle>Add a customer before sending</AlertTitle>
         </Alert>
+      ) : !hasEmail ? (
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>Add a customer email before sending</AlertTitle>
+        </Alert>
       ) : null}
 
       {warnings.length > 0 ? (
@@ -110,9 +118,13 @@ export function EditorReview({
 
       <div className="space-y-3">
         <p className="text-sm text-muted-foreground">
-          Sending finalizes the invoice and marks it as sent. Email delivery
-          isn’t set up yet, so share the invoice with your customer yourself.
+          Sending emails the invoice to the customer and marks it as sent.
         </p>
+        {!businessEmail ? (
+          <p className="text-sm text-muted-foreground">
+            Replies will not reach you until you add a business email.
+          </p>
+        ) : null}
         {error ? (
           <p className="text-sm text-destructive" role="alert">
             {error.message}
@@ -123,7 +135,7 @@ export function EditorReview({
           variant="default"
           size="lg"
           className="w-full"
-          disabled={!hasCustomer || sending}
+          disabled={!hasCustomer || !hasEmail || sending}
           onClick={onSend}
         >
           {sending ? "Sending…" : "Send invoice"}

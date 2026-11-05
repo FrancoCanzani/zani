@@ -21,6 +21,8 @@ export type InvoiceSummary = {
   totalCents: number
   balanceCents: number
   amountPaidCents: number
+  customerEmail: string | null
+  lastRemindedAt: number | null
   updatedAt: number
   createdAt: number
 }
@@ -54,6 +56,7 @@ export type Invoice = {
   balanceCents: number
   createdByUserId: string | null
   sentAt: number | null
+  lastRemindedAt: number | null
   paidAt: number | null
   createdAt: number
   updatedAt: number
@@ -190,22 +193,76 @@ export async function deleteInvoice(slug: string, invoiceId: string) {
   }
 }
 
+export type InvoiceEmailResult = {
+  invoice: Invoice
+  delivered: boolean
+}
+
+export function invoiceEmailMessage(delivered: boolean, email: string) {
+  if (delivered) {
+    return `Emailed ${email}.`
+  }
+  return "Logged the email in development."
+}
+
 export async function sendInvoice(slug: string, invoiceId: string) {
   const response = await api.workspaces[":slug"].invoices[
     ":invoiceId"
   ].send.$post({
     param: { slug, invoiceId },
   })
-  if (response.status === 400) {
-    throw new Error("Add a customer before sending.")
-  }
-  if (response.status === 409) {
-    throw new Error("Only draft invoices can be sent.")
+  return readInvoiceEmail(response, "Could not send the invoice.")
+}
+
+export async function remindInvoice(slug: string, invoiceId: string) {
+  const response = await api.workspaces[":slug"].invoices[
+    ":invoiceId"
+  ].remind.$post({
+    param: { slug, invoiceId },
+  })
+  return readInvoiceEmail(response, "Could not send the reminder.")
+}
+
+async function readInvoiceEmail(
+  response: {
+    ok: boolean
+    status: number
+    json: () => Promise<unknown>
+  },
+  fallback: string
+) {
+  if (response.status === 401) {
+    return requireJson<InvoiceEmailResult>(response, "invoice")
   }
   if (!response.ok) {
-    throw new Error("Could not send the invoice.")
+    throw new Error(await invoiceEmailError(response, fallback))
   }
-  return requireJson<{ invoice: Invoice }>(response, "invoice")
+  return requireJson<InvoiceEmailResult>(response, "invoice")
+}
+
+async function invoiceEmailError(
+  response: { json: () => Promise<unknown> },
+  fallback: string
+) {
+  const body = (await response.json().catch(() => null)) as {
+    error?: string
+  } | null
+  switch (body?.error) {
+    case "customer_email_required":
+      return "Add a customer email before sending."
+    case "customer_required":
+      return "Add a customer before sending."
+    case "not_draft":
+      return "Only draft invoices can be sent."
+    case "not_outstanding":
+      return "This invoice has nothing left to remind about."
+    case "email_failed":
+      return "Could not send the email."
+    case "not_found":
+      return "Invoice not found."
+    default:
+      return fallback
+  }
 }
 
 export async function markInvoicePaid(slug: string, invoiceId: string) {

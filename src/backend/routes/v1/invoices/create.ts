@@ -88,6 +88,7 @@ export const createInvoice = new Hono<AppEnv>().post(
       amountPaidCents: 0,
       createdByUserId: c.var.user.id,
       sentAt: null as number | null,
+      lastRemindedAt: null as number | null,
       paidAt: null as number | null,
       createdAt: now,
       updatedAt: now,

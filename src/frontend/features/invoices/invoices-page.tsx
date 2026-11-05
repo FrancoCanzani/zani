@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query"
 import { Link, getRouteApi, useRouter } from "@tanstack/react-router"
 import { MoreHorizontalIcon } from "lucide-react"
+import { toast } from "sonner"
 import { useEffect, useState } from "react"
 
 import {
@@ -35,10 +36,17 @@ import {
 
 import {
   deleteInvoice,
+  invoiceEmailMessage,
   invoicesQueryOptions,
+  remindInvoice,
+  sendInvoice,
   type InvoiceSummary,
 } from "@features/invoices/api"
-import { formatCents, formatDisplayDate } from "@features/invoices/helpers"
+import {
+  formatCents,
+  formatDisplayDate,
+  formatTimestampDate,
+} from "@features/invoices/helpers"
 import { invoiceStatusLabel } from "@features/invoices/status-label"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 
@@ -161,7 +169,11 @@ export function InvoicesPage() {
                   {formatCents(item.totalCents, item.currency)}
                 </td>
                 <td className="relative z-10 py-3.5 text-right">
-                  <InvoiceActions slug={slug} invoice={item} />
+                  <InvoiceActions
+                    slug={slug}
+                    invoice={item}
+                    businessEmail={workspaceData.workspace.email}
+                  />
                 </td>
               </tr>
             ))}
@@ -175,12 +187,15 @@ export function InvoicesPage() {
 function InvoiceActions({
   slug,
   invoice,
+  businessEmail,
 }: {
   slug: string
   invoice: InvoiceSummary
+  businessEmail: string | null
 }) {
   const queryClient = useQueryClient()
   const [confirming, setConfirming] = useState(false)
+  const [emailAction, setEmailAction] = useState<null | "send" | "remind">(null)
   const remove = useMutation({
     mutationFn: () => deleteInvoice(slug, invoice.id),
     onSuccess: async () => {
@@ -191,6 +206,23 @@ function InvoiceActions({
       })
     },
   })
+  const email = useMutation({
+    mutationFn: () =>
+      emailAction === "remind"
+        ? remindInvoice(slug, invoice.id)
+        : sendInvoice(slug, invoice.id),
+    onSuccess: async (body) => {
+      setEmailAction(null)
+      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
+      await queryClient.invalidateQueries({
+        queryKey: ["invoice", slug, invoice.id],
+      })
+      toast.success(
+        invoiceEmailMessage(body.delivered, invoice.customerEmail ?? "")
+      )
+    },
+  })
+  const actions = rowEmailActions(invoice)
 
   return (
     <>
@@ -214,6 +246,17 @@ function InvoiceActions({
               View
             </Link>
           </DropdownMenuItem>
+          {actions.map((action) => (
+            <DropdownMenuItem
+              key={action}
+              onSelect={() => {
+                email.reset()
+                setEmailAction(action)
+              }}
+            >
+              {emailActionLabel(action)}
+            </DropdownMenuItem>
+          ))}
           <DropdownMenuItem
             variant="destructive"
             onSelect={() => setConfirming(true)}
@@ -222,6 +265,50 @@ function InvoiceActions({
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
+      <AlertDialog
+        open={emailAction !== null}
+        onOpenChange={(open) => {
+          if (!email.isPending && !open) setEmailAction(null)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              {emailAction === "remind"
+                ? `Remind about ${invoice.number}?`
+                : `Send ${invoice.number}?`}
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {emailAction
+                ? emailConfirmCopy(emailAction, invoice, businessEmail)
+                : ""}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {email.error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {email.error.message}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={email.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={email.isPending || !invoice.customerEmail}
+              onClick={(event) => {
+                event.preventDefault()
+                email.mutate()
+              }}
+            >
+              {email.isPending
+                ? "Sending…"
+                : emailAction
+                  ? emailActionLabel(emailAction)
+                  : "Send"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog
         open={confirming}
         onOpenChange={(open) => {
@@ -259,4 +346,72 @@ function InvoiceActions({
       </AlertDialog>
     </>
   )
+}
+
+function rowEmailActions(invoice: InvoiceSummary) {
+  switch (invoice.status) {
+    case "draft":
+      return ["send"] as const
+    case "sent":
+    case "partially_paid":
+      return invoice.balanceCents > 0 ? (["remind"] as const) : []
+    case "paid":
+    case "void":
+      return []
+    default: {
+      const exhaustive: never = invoice.status
+      return exhaustive
+    }
+  }
+}
+
+function emailActionLabel(action: "send" | "remind") {
+  switch (action) {
+    case "send":
+      return "Send to customer"
+    case "remind":
+      return "Send reminder"
+    default: {
+      const exhaustive: never = action
+      return exhaustive
+    }
+  }
+}
+
+function emailConfirmCopy(
+  action: "send" | "remind",
+  invoice: InvoiceSummary,
+  businessEmail: string | null
+) {
+  if (!invoice.customerEmail) {
+    switch (action) {
+      case "send":
+        return "Add a customer email on the invoice, then send."
+      case "remind":
+        return "Add a customer email on the invoice, then send a reminder."
+      default: {
+        const exhaustive: never = action
+        return exhaustive
+      }
+    }
+  }
+
+  const replies = businessEmail
+    ? ""
+    : " Replies will not reach you until you add a business email."
+
+  switch (action) {
+    case "send":
+      return `Email ${invoice.number} to ${invoice.customerEmail}.${replies}`
+    case "remind": {
+      const reminded = invoice.lastRemindedAt
+        ? ` Last reminded ${formatTimestampDate(invoice.lastRemindedAt)}.`
+        : ""
+      return `Email a payment reminder for ${invoice.number} to ${invoice.customerEmail}.${reminded}${replies}`
+    }
+    default: {
+      const exhaustive: never = action
+      return exhaustive
+    }
+  }
 }

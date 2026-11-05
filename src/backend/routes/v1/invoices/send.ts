@@ -9,6 +9,7 @@ import { requireWorkspaceMember } from "../../../middleware/workspace"
 import type { AppEnv } from "../../../types"
 import { workspaceFromContext } from "../workspaces/lib/context"
 
+import { sendInvoiceMail } from "./lib/email"
 import { serializeInvoice } from "./lib/serialize"
 
 export const sendInvoice = new Hono<AppEnv>().post(
@@ -43,6 +44,26 @@ export const sendInvoice = new Hono<AppEnv>().post(
       return c.json({ error: "customer_required" as const }, 400)
     }
 
+    if (!existing.customerEmail?.trim()) {
+      return c.json({ error: "customer_email_required" as const }, 400)
+    }
+
+    let delivered: boolean
+    try {
+      const result = await sendInvoiceMail(
+        c.env,
+        "invoice",
+        existing,
+        current.workspace
+      )
+      delivered = result.delivered
+    } catch (error) {
+      console.error(
+        error instanceof Error ? error.message : "invoice email failed"
+      )
+      return c.json({ error: "email_failed" as const }, 502)
+    }
+
     const now = nowMs()
     await db
       .update(invoice)
@@ -63,6 +84,6 @@ export const sendInvoice = new Hono<AppEnv>().post(
       return c.json({ error: "not_found" as const }, 404)
     }
 
-    return c.json({ invoice: serializeInvoice(row) }, 200)
+    return c.json({ invoice: serializeInvoice(row), delivered }, 200)
   }
 )

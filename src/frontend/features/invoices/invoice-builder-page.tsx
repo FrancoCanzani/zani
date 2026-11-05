@@ -5,6 +5,7 @@ import {
 } from "@tanstack/react-query"
 import { Link, getRouteApi, useNavigate } from "@tanstack/react-router"
 import { MoreHorizontalIcon, XIcon } from "lucide-react"
+import { toast } from "sonner"
 import { useState } from "react"
 
 import {
@@ -30,8 +31,10 @@ import { Separator } from "@components/ui/separator"
 import {
   deleteInvoice,
   downloadInvoicePdf,
+  invoiceEmailMessage,
   invoiceQueryOptions,
   markInvoicePaid,
+  remindInvoice,
   sendInvoice,
   updateInvoice,
   type InvoiceInput,
@@ -44,6 +47,7 @@ import {
 } from "@features/invoices/editor-detail-sections"
 import { EditorItemsSection } from "@features/invoices/editor-items-section"
 import { EditorReview } from "@features/invoices/editor-review"
+import { formatTimestampDate, invoiceTotals } from "@features/invoices/helpers"
 import {
   draftFromInvoice,
   inputFromDraft,
@@ -77,10 +81,18 @@ export function InvoiceBuilderPage() {
   const [reviewing, setReviewing] = useState(false)
   const [showPreview, setShowPreview] = useState(true)
   const [confirmDelete, setConfirmDelete] = useState(false)
+  const [confirmRemind, setConfirmRemind] = useState(false)
 
   const isDraft = status === "draft"
   const readOnly = status === "paid" || status === "void"
   const canMarkPaid = status === "sent" || status === "partially_paid"
+  const balanceCents = invoiceTotals(
+    draft.lineItems,
+    draft.taxRateBps,
+    draft.taxInclusive,
+    amountPaidCents
+  ).balanceCents
+  const canRemind = canMarkPaid && balanceCents > 0
 
   function patch(next: Partial<InvoiceDraft>) {
     setDraft((current) => ({ ...current, ...next }))
@@ -105,8 +117,36 @@ export function InvoiceBuilderPage() {
     onSuccess: async (body) => {
       setStatus(body.invoice.status)
       setReviewing(false)
-      queryClient.setQueryData(["invoice", slug, invoiceId], body)
+      queryClient.setQueryData(["invoice", slug, invoiceId], {
+        invoice: body.invoice,
+      })
       await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
+      toast.success(
+        invoiceEmailMessage(
+          body.delivered,
+          body.invoice.customerEmail ?? draft.billTo.email
+        )
+      )
+    },
+  })
+
+  const remind = useMutation({
+    mutationFn: async () => {
+      await saver.flush()
+      return remindInvoice(slug, invoiceId)
+    },
+    onSuccess: async (body) => {
+      setConfirmRemind(false)
+      queryClient.setQueryData(["invoice", slug, invoiceId], {
+        invoice: body.invoice,
+      })
+      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
+      toast.success(
+        invoiceEmailMessage(
+          body.delivered,
+          body.invoice.customerEmail ?? draft.billTo.email
+        )
+      )
     },
   })
 
@@ -214,6 +254,18 @@ export function InvoiceBuilderPage() {
               {saver.status === "saving" ? "Saving…" : "Save changes"}
             </Button>
           ) : null}
+          {canRemind ? (
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                remind.reset()
+                setConfirmRemind(true)
+              }}
+            >
+              Send reminder
+            </Button>
+          ) : null}
           {canMarkPaid ? (
             <Button
               type="button"
@@ -254,6 +306,7 @@ export function InvoiceBuilderPage() {
               <EditorReview
                 draft={draft}
                 businessDetailsComplete={workspace.detailsComplete}
+                businessEmail={workspace.email}
                 sending={send.isPending}
                 error={send.error}
                 onBack={() => setReviewing(false)}
@@ -314,6 +367,45 @@ export function InvoiceBuilderPage() {
         ) : null}
       </div>
 
+      <AlertDialog
+        open={confirmRemind}
+        onOpenChange={(open) => {
+          if (!remind.isPending) setConfirmRemind(open)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remind about {draft.number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {remindCopy(
+                draft.billTo.email.trim(),
+                draft.number,
+                data.invoice.lastRemindedAt,
+                workspace.email
+              )}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {remind.error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {remind.error.message}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remind.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={remind.isPending || !draft.billTo.email.trim()}
+              onClick={(event) => {
+                event.preventDefault()
+                remind.mutate()
+              }}
+            >
+              {remind.isPending ? "Sending…" : "Send reminder"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
       <AlertDialog open={confirmDelete} onOpenChange={setConfirmDelete}>
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -336,6 +428,24 @@ export function InvoiceBuilderPage() {
       </AlertDialog>
     </div>
   )
+}
+
+function remindCopy(
+  email: string,
+  number: string,
+  lastRemindedAt: number | null,
+  businessEmail: string | null
+) {
+  if (!email) {
+    return "Add a customer email on the invoice, then send a reminder."
+  }
+  const reminded = lastRemindedAt
+    ? ` Last reminded ${formatTimestampDate(lastRemindedAt)}.`
+    : ""
+  const replies = businessEmail
+    ? ""
+    : " Replies will not reach you until you add a business email."
+  return `Email a payment reminder for ${number} to ${email}.${reminded}${replies}`
 }
 
 function saveLabel(status: AutosaveStatus, isDraft: boolean) {

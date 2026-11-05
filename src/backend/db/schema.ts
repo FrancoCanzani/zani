@@ -1,4 +1,10 @@
-import { index, integer, sqliteTable, text, uniqueIndex } from "drizzle-orm/sqlite-core"
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core"
 
 export const user = sqliteTable("user", {
   id: text("id").primaryKey(),
@@ -239,6 +245,7 @@ export const invoice = sqliteTable(
       onDelete: "set null",
     }),
     sentAt: integer("sent_at"),
+    lastRemindedAt: integer("last_reminded_at"),
     paidAt: integer("paid_at"),
     createdAt: integer("created_at").notNull(),
     updatedAt: integer("updated_at").notNull(),
