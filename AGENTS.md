@@ -14,6 +14,12 @@ v1 money model: invoices with optional tax; customer confirmation and collection
 
 Authentication is Better Auth email OTP on `/api/v1/auth`. Do not add passwords, OAuth, or extra auth providers unless asked.
 
+## Attribution
+
+Do not add attribution.
+
+No `Co-authored-by` trailers, generated-by lines, or tool credits in commits, source, comments, UI, or docs. Do not author commits as Cursor Agent. If a hook appends a trailer, delete it before pushing.
+
 ## Comments
 
 Never add JSDoc. Never add comments that narrate what the next lines do. Names, types, and signatures are the docs.
