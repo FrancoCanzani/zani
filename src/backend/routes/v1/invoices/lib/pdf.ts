@@ -1,11 +1,3 @@
-import {
-  PDFDocument,
-  StandardFonts,
-  rgb,
-  type PDFFont,
-  type PDFPage,
-} from "pdf-lib"
-
 import type { InvoiceLineItem, invoice, workspace } from "../../../../db/schema"
 
 import { invoiceTotals, lineTotalCents } from "./helpers"
@@ -16,93 +8,37 @@ type Business = Pick<
   "name" | "email" | "phone" | "address" | "taxId"
 >
 
-const PAGE_WIDTH = 612
-const PAGE_HEIGHT = 792
-const MARGIN = 48
-const CONTENT_BOTTOM = 64
-const CONTENT_WIDTH = PAGE_WIDTH - MARGIN * 2
+export async function renderInvoicePdf(
+  env: Env,
+  row: InvoiceRow,
+  business: Business,
+  locale: string
+) {
+  const response = await env.BROWSER.quickAction("pdf", {
+    html: invoiceHtml(row, business, locale),
+    // The default cache would reuse a PDF for five seconds after an edit.
+    cacheTTL: 0,
+    gotoOptions: { waitUntil: "load", timeout: 20_000 },
+    pdfOptions: {
+      format: "letter",
+      printBackground: true,
+      displayHeaderFooter: true,
+      headerTemplate: "<div></div>",
+      footerTemplate: footerTemplate(row, locale),
+      margin: {
+        top: "0.55in",
+        right: "0.65in",
+        bottom: "0.6in",
+        left: "0.65in",
+      },
+    },
+  })
 
-const ink = rgb(0.09, 0.09, 0.09)
-const muted = rgb(0.38, 0.38, 0.38)
-const rule = rgb(0.82, 0.82, 0.82)
-
-export async function renderInvoicePdf(row: InvoiceRow, business: Business) {
-  const doc = await PDFDocument.create()
-  const font = await doc.embedFont(StandardFonts.Helvetica)
-  const bold = await doc.embedFont(StandardFonts.HelveticaBold)
-  const layout = new Layout(doc, font, bold)
-  const totals = invoiceTotals(
-    row.lineItems,
-    row.taxRateBps,
-    row.taxInclusive,
-    row.amountPaidCents
-  )
-  const money = (cents: number) => formatMoney(cents, row.currency)
-  const due = formatLongDate(row.dueDate)
-  const currency = row.currency.toUpperCase()
-  const notes = [row.notes, row.terms]
-    .map((part) => part?.trim())
-    .filter((part): part is string => Boolean(part))
-    .join("\n\n")
-
-  layout.heading("Invoice")
-  layout.gap(14)
-  layout.meta("Invoice number", row.number || "—")
-  layout.meta("Date of issue", formatLongDate(row.issueDate) ?? "—")
-  layout.meta("Date due", due ?? "—")
-  layout.gap(22)
-  layout.columns(
-    contactLines(business.name, [
-      business.address,
-      business.phone,
-      business.email,
-      business.taxId ? `Tax ID ${business.taxId}` : null,
-    ]),
-    contactLines(
-      "Bill to",
-      [
-        row.customerName,
-        row.customerAddress,
-        row.customerPhone,
-        row.customerEmail,
-        row.customerTaxId ? `Tax ID ${row.customerTaxId}` : null,
-      ],
-      "No customer selected"
-    )
-  )
-  layout.gap(22)
-  layout.dueLine(
-    `${money(totals.balanceCents)} ${currency} ${due ? `due ${due}` : "due on receipt"}`
-  )
-  if (notes) {
-    layout.gap(8)
-    layout.paragraph(notes, 10, font, muted, 14)
-  }
-  layout.gap(18)
-  layout.table(row.lineItems, money)
-  layout.gap(8)
-  const totalRows: [string, string][] = [
-    ["Subtotal", money(totals.subtotalCents)],
-  ]
-  if (row.taxRateBps > 0) {
-    totalRows.push([taxLabel(row), money(totals.taxCents)])
-  }
-  totalRows.push(["Total", money(totals.totalCents)])
-  if (row.amountPaidCents > 0) {
-    totalRows.push(["Amount paid", `-${money(row.amountPaidCents)}`])
-  }
-  totalRows.push(["Amount due", `${money(totals.balanceCents)} ${currency}`])
-  layout.totals(totalRows)
-  if (row.bankDetails?.trim()) {
-    layout.gap(22)
-    layout.paragraph("Pay by bank transfer", 11, bold, ink, 14)
-    layout.gap(4)
-    layout.paragraph(row.bankDetails.trim(), 10, font, muted, 14)
+  if (!response.ok) {
+    throw new Error("pdf failed")
   }
 
-  const footer = `${row.number} · ${money(totals.balanceCents)}${due ? ` due ${due}` : ""}`
-  layout.stampFooters(footer)
-  return doc.save()
+  return new Uint8Array(await response.arrayBuffer())
 }
 
 export function invoicePdfFilename(number: string) {
@@ -112,322 +48,107 @@ export function invoicePdfFilename(number: string) {
   return `${cleaned || "invoice"}.pdf`
 }
 
-class Layout {
-  private readonly pages: PDFPage[] = []
-  private y = MARGIN
-  private inTable = false
-
-  constructor(
-    private readonly doc: PDFDocument,
-    private readonly font: PDFFont,
-    private readonly bold: PDFFont
-  ) {
-    this.addPage()
+export function requestLocale(header: string | undefined) {
+  const tag = header?.split(",")[0]?.split(";")[0]?.trim()
+  if (!tag || !/^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(tag)) {
+    return "en"
   }
-
-  heading(text: string) {
-    this.draw(text, MARGIN, 22, this.bold, ink)
-    this.y += 28
-  }
-
-  gap(amount: number) {
-    this.y += amount
-  }
-
-  meta(label: string, value: string) {
-    this.ensure(14)
-    const top = this.y
-    this.draw(label, MARGIN, 10, this.font, muted, top)
-    this.draw(value, MARGIN + 108, 10, this.bold, ink, top)
-    this.y += 14
-  }
-
-  dueLine(text: string) {
-    this.ensure(22)
-    this.draw(text, MARGIN, 14, this.bold, ink)
-    this.y += 18
-  }
-
-  paragraph(
-    text: string,
-    size: number,
-    font: PDFFont,
-    color: ReturnType<typeof rgb>,
-    leading: number
-  ) {
-    for (const block of text.split("\n")) {
-      const lines = wrap(this.safe(block), font, size, CONTENT_WIDTH)
-      for (const line of lines.length > 0 ? lines : [""]) {
-        this.ensure(leading)
-        this.draw(line, MARGIN, size, font, color)
-        this.y += leading
-      }
-    }
-  }
-
-  columns(
-    left: { heading: string; lines: string[] },
-    right: { heading: string; lines: string[] }
-  ) {
-    const columnWidth = CONTENT_WIDTH / 2 - 12
-    const leftHeight = this.blockHeight(left, columnWidth)
-    const rightHeight = this.blockHeight(right, columnWidth)
-    this.ensure(Math.max(leftHeight, rightHeight))
-    const top = this.y
-    this.drawBlock(left, MARGIN, top, columnWidth)
-    this.drawBlock(right, MARGIN + CONTENT_WIDTH / 2, top, columnWidth)
-    this.y = top + Math.max(leftHeight, rightHeight)
-  }
-
-  table(items: InvoiceLineItem[], money: (cents: number) => string) {
-    const columns = tableColumns()
-    this.drawTableHeader(columns)
-    const visible = items.filter(
-      (item) => item.name.trim() || item.unitAmountCents > 0
-    )
-    if (visible.length === 0) {
-      this.ensure(18)
-      this.draw("No items yet", MARGIN, 10, this.font, muted)
-      this.y += 18
-      this.inTable = false
-      return
-    }
-    for (const item of visible) {
-      this.drawItem(item, columns, money)
-    }
-    this.inTable = false
-  }
-
-  totals(rows: readonly (readonly [string, string])[]) {
-    const left = MARGIN + CONTENT_WIDTH / 2
-    const right = PAGE_WIDTH - MARGIN
-    this.ensure(8)
-    this.ruleAt(this.y, left, right)
-    this.y += 6
-    rows.forEach(([label, value], index) => {
-      const last = index === rows.length - 1
-      const font = last ? this.bold : this.font
-      this.ensure(16)
-      const top = this.y
-      this.draw(label, left, 10, font, ink, top)
-      const width = font.widthOfTextAtSize(this.safe(value), 10)
-      this.draw(value, right - width, 10, font, ink, top)
-      this.y += 16
-      if (!last) {
-        this.ruleAt(this.y - 4, left, right)
-      }
-    })
-  }
-
-  stampFooters(summary: string) {
-    const count = this.pages.length
-    this.pages.forEach((page, index) => {
-      const lineY = CONTENT_BOTTOM - 12
-      page.drawLine({
-        start: { x: MARGIN, y: lineY },
-        end: { x: PAGE_WIDTH - MARGIN, y: lineY },
-        thickness: 0.5,
-        color: rule,
-      })
-      const label = this.safe(`Page ${index + 1} of ${count}`)
-      page.drawText(this.safe(summary), {
-        x: MARGIN,
-        y: 28,
-        size: 8,
-        font: this.font,
-        color: muted,
-      })
-      page.drawText(label, {
-        x: PAGE_WIDTH - MARGIN - this.font.widthOfTextAtSize(label, 8),
-        y: 28,
-        size: 8,
-        font: this.font,
-        color: muted,
-      })
-    })
-  }
-
-  private addPage() {
-    this.pages.push(this.doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]))
-    this.y = MARGIN
-    if (this.inTable) {
-      this.drawTableHeader(tableColumns())
-    }
-  }
-
-  private page() {
-    return this.pages[this.pages.length - 1]!
-  }
-
-  private ensure(height: number) {
-    if (this.y + height > PAGE_HEIGHT - CONTENT_BOTTOM) {
-      this.addPage()
-    }
-  }
-
-  private draw(
-    text: string,
-    x: number,
-    size: number,
-    font: PDFFont,
-    color: ReturnType<typeof rgb>,
-    top = this.y
-  ) {
-    const value = this.safe(text)
-    if (!value) return
-    this.page().drawText(value, {
-      x,
-      y: PAGE_HEIGHT - top - size,
-      size,
-      font,
-      color,
-    })
-  }
-
-  private ruleAt(top: number, x1: number, x2: number) {
-    this.page().drawLine({
-      start: { x: x1, y: PAGE_HEIGHT - top },
-      end: { x: x2, y: PAGE_HEIGHT - top },
-      thickness: 0.5,
-      color: rule,
-    })
-  }
-
-  private safe(text: string) {
-    return toWinAnsi(text, this.font)
-  }
-
-  private blockHeight(
-    block: { heading: string; lines: string[] },
-    width: number
-  ) {
-    const body = block.lines.flatMap((line) =>
-      wrap(this.safe(line), this.font, 10, width)
-    )
-    return 16 + Math.max(body.length, 1) * 13
-  }
-
-  private drawBlock(
-    block: { heading: string; lines: string[] },
-    x: number,
-    top: number,
-    width: number
-  ) {
-    this.draw(block.heading, x, 11, this.bold, ink, top)
-    let cursor = top + 16
-    const lines = block.lines.flatMap((line) =>
-      wrap(this.safe(line), this.font, 10, width)
-    )
-    for (const line of lines.length > 0 ? lines : [""]) {
-      this.draw(line, x, 10, this.font, ink, cursor)
-      cursor += 13
-    }
-  }
-
-  private drawTableHeader(columns: ReturnType<typeof tableColumns>) {
-    this.ensure(20)
-    const top = this.y
-    this.draw("Description", columns.description, 9, this.font, muted, top)
-    this.drawRight("Qty", columns.qtyRight, 9, this.font, muted, top)
-    this.drawRight("Unit price", columns.priceRight, 9, this.font, muted, top)
-    this.drawRight("Amount", columns.amountRight, 9, this.font, muted, top)
-    this.y += 14
-    this.ruleAt(this.y, MARGIN, PAGE_WIDTH - MARGIN)
-    this.y += 8
-    this.inTable = true
-  }
-
-  private drawItem(
-    item: InvoiceLineItem,
-    columns: ReturnType<typeof tableColumns>,
-    money: (cents: number) => string
-  ) {
-    const descriptionWidth = columns.qtyRight - 36 - MARGIN
-    const nameLines = wrap(
-      this.safe(item.name.trim() || "Untitled item"),
-      this.font,
-      10,
-      descriptionWidth
-    )
-    const detailLines = item.description.trim()
-      ? wrap(this.safe(item.description.trim()), this.font, 9, descriptionWidth)
-      : []
-    const height = nameLines.length * 13 + detailLines.length * 12 + 6
-    this.ensure(height)
-    const top = this.y
-    nameLines.forEach((line, index) => {
-      this.draw(line, MARGIN, 10, this.font, ink, top + index * 13)
-    })
-    detailLines.forEach((line, index) => {
-      this.draw(
-        line,
-        MARGIN,
-        9,
-        this.font,
-        muted,
-        top + nameLines.length * 13 + index * 12
-      )
-    })
-    this.drawRight(
-      formatQuantity(item.quantity),
-      columns.qtyRight,
-      10,
-      this.font,
-      ink,
-      top
-    )
-    this.drawRight(
-      money(item.unitAmountCents),
-      columns.priceRight,
-      10,
-      this.font,
-      ink,
-      top
-    )
-    this.drawRight(
-      money(lineTotalCents(item)),
-      columns.amountRight,
-      10,
-      this.font,
-      ink,
-      top
-    )
-    this.y += height
-  }
-
-  private drawRight(
-    text: string,
-    right: number,
-    size: number,
-    font: PDFFont,
-    color: ReturnType<typeof rgb>,
-    top: number
-  ) {
-    const value = this.safe(text)
-    this.draw(
-      value,
-      right - font.widthOfTextAtSize(value, size),
-      size,
-      font,
-      color,
-      top
-    )
-  }
+  return tag
 }
 
-function tableColumns() {
-  const amountRight = PAGE_WIDTH - MARGIN
-  const priceRight = amountRight - 78
-  const qtyRight = priceRight - 78
-  return {
-    description: MARGIN,
-    qtyRight,
-    priceRight,
-    amountRight,
+function invoiceHtml(row: InvoiceRow, business: Business, locale: string) {
+  const totals = invoiceTotals(
+    row.lineItems,
+    row.taxRateBps,
+    row.taxInclusive,
+    row.amountPaidCents
+  )
+  const money = (cents: number) => formatMoney(cents, row.currency, locale)
+  const due = formatLongDate(row.dueDate, locale)
+  const currency = row.currency.toUpperCase()
+  const notes = [row.notes, row.terms]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+    .join("\n\n")
+  const items = row.lineItems.filter(
+    (item) => item.name.trim() || item.unitAmountCents > 0
+  )
+  const dueLine = `${money(totals.balanceCents)} ${currency} ${due ? `due ${due}` : "due on receipt"}`
+
+  return `<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>
+  body { margin: 0; color: #171717; font-family: Inter, ui-sans-serif, system-ui, sans-serif; font-size: 11px; line-height: 1.45; }
+  h1 { margin: 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+  h2 { margin: 0; font-size: 11px; font-weight: 600; }
+  p { margin: 0; }
+  .meta { display: grid; grid-template-columns: auto auto; gap: 2px 24px; width: fit-content; margin-top: 20px; }
+  .meta dt { color: #737373; }
+  .meta dd { margin: 0; font-weight: 500; }
+  .parties { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 28px; }
+  .pre { white-space: pre-line; }
+  .muted { color: #404040; }
+  .faint { color: #a3a3a3; }
+  .due { margin-top: 32px; font-size: 17px; font-weight: 600; letter-spacing: -0.02em; }
+  .notes { margin-top: 8px; }
+  table { width: 100%; margin-top: 28px; border-collapse: collapse; }
+  thead { display: table-header-group; }
+  th { padding: 0 16px 6px 0; border-bottom: 1px solid #d4d4d4; color: #737373; font-weight: 400; text-align: left; }
+  td { padding: 8px 16px 0 0; vertical-align: top; }
+  .num { text-align: right; font-variant-numeric: tabular-nums; }
+  tr { break-inside: avoid; }
+  .totals { width: 50%; margin: 8px 0 0 auto; border-top: 1px solid #d4d4d4; }
+  .totals div { display: flex; justify-content: space-between; gap: 24px; padding: 6px 0; border-bottom: 1px solid #e5e5e5; }
+  .totals .strong { font-weight: 600; }
+  .bank { margin-top: 32px; break-inside: avoid; }
+  .bank p + p { margin-top: 4px; }
+</style>
+</head>
+<body>
+  <h1>Invoice</h1>
+  <dl class="meta">
+    <dt>Invoice number</dt><dd>${text(row.number || "—")}</dd>
+    <dt>Date of issue</dt><dd>${text(formatLongDate(row.issueDate, locale) ?? "—")}</dd>
+    <dt>Date due</dt><dd>${text(due ?? "—")}</dd>
+  </dl>
+  <div class="parties">
+    ${party(business.name, [business.address, business.phone, business.email, business.taxId ? `Tax ID ${business.taxId}` : null])}
+    ${party("Bill to", [row.customerName, row.customerAddress, row.customerPhone, row.customerEmail, row.customerTaxId ? `Tax ID ${row.customerTaxId}` : null], "No customer selected")}
+  </div>
+  <p class="due">${text(dueLine)}</p>
+  ${notes ? `<p class="notes pre muted">${text(notes)}</p>` : ""}
+  <table>
+    <thead>
+      <tr>
+        <th>Description</th>
+        <th class="num">Qty</th>
+        <th class="num">Unit price</th>
+        <th class="num">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${items.length === 0 ? `<tr><td class="faint" colspan="4">No items yet</td></tr>` : items.map((item) => itemRow(item, money, locale)).join("")}
+    </tbody>
+  </table>
+  <div class="totals">
+    ${totalRow("Subtotal", money(totals.subtotalCents))}
+    ${row.taxRateBps > 0 ? totalRow(taxLabel(row), money(totals.taxCents)) : ""}
+    ${totalRow("Total", money(totals.totalCents))}
+    ${row.amountPaidCents > 0 ? totalRow("Amount paid", `−${money(row.amountPaidCents)}`) : ""}
+    ${totalRow("Amount due", `${money(totals.balanceCents)} ${currency}`, true)}
+  </div>
+  ${
+    row.bankDetails?.trim()
+      ? `<section class="bank"><p>Pay by bank transfer</p><p class="pre muted">${text(row.bankDetails.trim())}</p></section>`
+      : ""
   }
+</body>
+</html>`
 }
 
-function contactLines(
+function party(
   heading: string,
   lines: (string | null | undefined)[],
   placeholder?: string
@@ -436,10 +157,48 @@ function contactLines(
     .flatMap((line) => line?.split("\n") ?? [])
     .map((line) => line.trim())
     .filter(Boolean)
-  return {
-    heading,
-    lines: visible.length > 0 ? visible : placeholder ? [placeholder] : [],
-  }
+  const body =
+    visible.length > 0
+      ? `<p class="pre">${text(visible.join("\n"))}</p>`
+      : placeholder
+        ? `<p class="faint">${text(placeholder)}</p>`
+        : ""
+  return `<section><h2>${text(heading)}</h2>${body}</section>`
+}
+
+function itemRow(
+  item: InvoiceLineItem,
+  money: (cents: number) => string,
+  locale: string
+) {
+  const description = item.description.trim()
+    ? `<p class="pre muted">${text(item.description.trim())}</p>`
+    : ""
+  return `<tr>
+    <td><p>${text(item.name.trim() || "Untitled item")}</p>${description}</td>
+    <td class="num">${text(formatQuantity(item.quantity, locale))}</td>
+    <td class="num">${text(money(item.unitAmountCents))}</td>
+    <td class="num">${text(money(lineTotalCents(item)))}</td>
+  </tr>`
+}
+
+function totalRow(label: string, value: string, strong = false) {
+  return `<div class="${strong ? "strong" : ""}"><span>${text(label)}</span><span class="num">${text(value)}</span></div>`
+}
+
+function footerTemplate(row: InvoiceRow, locale: string) {
+  const totals = invoiceTotals(
+    row.lineItems,
+    row.taxRateBps,
+    row.taxInclusive,
+    row.amountPaidCents
+  )
+  const due = formatLongDate(row.dueDate, locale)
+  const summary = `${row.number} · ${formatMoney(totals.balanceCents, row.currency, locale)}${due ? ` due ${due}` : ""}`
+  return `<div style="width:100%;font-size:10px;font-family:Inter,ui-sans-serif,system-ui,sans-serif;color:#737373;padding:0 8px;display:flex;justify-content:space-between;">
+    <span>${text(summary)}</span>
+    <span>Page <span class="pageNumber"></span> of <span class="totalPages"></span></span>
+  </div>`
 }
 
 function taxLabel(row: InvoiceRow) {
@@ -451,9 +210,9 @@ function taxLabel(row: InvoiceRow) {
   return `${name} (${rate}${row.taxInclusive ? " included" : ""})`
 }
 
-function formatMoney(cents: number, currency: string) {
+function formatMoney(cents: number, currency: string, locale: string) {
   try {
-    return new Intl.NumberFormat("en-US", {
+    return new Intl.NumberFormat(locale, {
       style: "currency",
       currency: currency.toUpperCase(),
     }).format(cents / 100)
@@ -462,86 +221,35 @@ function formatMoney(cents: number, currency: string) {
   }
 }
 
-function formatLongDate(iso: string | null) {
+function formatLongDate(iso: string | null, locale: string) {
   if (!iso) return null
-  const date = new Date(`${iso}T12:00:00Z`)
+  const date = new Date(`${iso}T12:00:00`)
   if (Number.isNaN(date.getTime())) return iso
-  return new Intl.DateTimeFormat("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date)
-}
-
-function formatQuantity(quantity: number) {
-  return new Intl.NumberFormat("en-US", { maximumFractionDigits: 3 }).format(
-    quantity
-  )
-}
-
-function wrap(text: string, font: PDFFont, size: number, maxWidth: number) {
-  if (!text) return [""]
-  const lines: string[] = []
-  let current = ""
-  for (const word of text.split(" ")) {
-    if (!word) continue
-    const next = current ? `${current} ${word}` : word
-    if (font.widthOfTextAtSize(next, size) <= maxWidth) {
-      current = next
-      continue
-    }
-    if (current) lines.push(current)
-    current = breakWord(word, font, size, maxWidth, lines)
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(date)
+  } catch {
+    return iso
   }
-  if (current) lines.push(current)
-  return lines
 }
 
-function breakWord(
-  word: string,
-  font: PDFFont,
-  size: number,
-  maxWidth: number,
-  lines: string[]
-) {
-  if (font.widthOfTextAtSize(word, size) <= maxWidth) return word
-  let chunk = ""
-  for (const char of word) {
-    const next = chunk + char
-    if (font.widthOfTextAtSize(next, size) <= maxWidth) {
-      chunk = next
-      continue
-    }
-    if (chunk) lines.push(chunk)
-    chunk = char
+function formatQuantity(quantity: number, locale: string) {
+  try {
+    return new Intl.NumberFormat(locale, {
+      maximumFractionDigits: 3,
+    }).format(quantity)
+  } catch {
+    return String(quantity)
   }
-  return chunk
 }
 
-function toWinAnsi(value: string, font: PDFFont) {
-  const mapped = value
-    .replaceAll("\u2018", "'")
-    .replaceAll("\u2019", "'")
-    .replaceAll("\u201C", '"')
-    .replaceAll("\u201D", '"')
-    .replaceAll("\u2013", "-")
-    .replaceAll("\u2014", "-")
-    .replaceAll("\u2026", "...")
-    .replaceAll("\u00A0", " ")
-    .replaceAll("\u2212", "-")
-  let out = ""
-  for (const char of mapped) {
-    if (char === "\n" || char === "\t") {
-      out += " "
-      continue
-    }
-    try {
-      font.encodeText(char)
-      out += char
-    } catch {
-      out += " "
-    }
-  }
-  return out
+function text(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
 }
