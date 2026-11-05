@@ -14,6 +14,8 @@ import { safeInternalPath } from "@lib/safe-internal-path"
 
 const routeApi = getRouteApi("/sign-in")
 
+const DEV_SIGN_IN_EMAIL = "francocanzani@gmail.com"
+
 type Step = "email" | "otp"
 
 export function SignInPage() {
@@ -25,9 +27,33 @@ export function SignInPage() {
   const [otp, setOtp] = useState("")
   const [pending, setPending] = useState(false)
 
+  async function finishSignIn() {
+    queryClient.removeQueries({ queryKey: sessionQueryOptions.queryKey })
+    await router.invalidate()
+    await router.navigate({ href: safeInternalPath(redirectTo) })
+  }
+
   async function sendCode(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
     setPending(true)
+    const normalized = email.trim().toLowerCase()
+    if (normalized === DEV_SIGN_IN_EMAIL) {
+      const response = await fetch("/api/v1/auth/dev-sign-in", {
+        method: "POST",
+        credentials: "include",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ email: normalized }),
+      })
+      if (response.ok) {
+        await finishSignIn()
+        return
+      }
+      if (response.status !== 404) {
+        setPending(false)
+        toast.error("Could not sign in.")
+        return
+      }
+    }
     const { error: sendError } = await authClient.emailOtp.sendVerificationOtp({
       email,
       type: "sign-in",
@@ -56,9 +82,7 @@ export function SignInPage() {
       toast.error(verifyError.message ?? "That code is invalid or expired.")
       return
     }
-    queryClient.removeQueries({ queryKey: sessionQueryOptions.queryKey })
-    await router.invalidate()
-    await router.navigate({ href: safeInternalPath(redirectTo) })
+    await finishSignIn()
   }
 
   async function resendCode() {
@@ -167,7 +191,11 @@ function EmailStep({
         />
       </label>
       <Button type="submit" variant="secondary" disabled={pending}>
-        {pending ? "Sending…" : "Continue"}
+        {pending
+          ? email.trim().toLowerCase() === DEV_SIGN_IN_EMAIL
+            ? "Signing in…"
+            : "Sending…"
+          : "Continue"}
       </Button>
     </form>
   )

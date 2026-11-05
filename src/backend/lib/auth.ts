@@ -5,6 +5,7 @@ import { and, eq, inArray } from "drizzle-orm"
 
 import * as schema from "../db/schema"
 import { createDb } from "./db"
+import { devSignInPlugin } from "./dev-sign-in"
 import { deliverOtp } from "./otp"
 import { AUTH_BASE_PATH } from "./paths"
 
@@ -63,6 +64,8 @@ export function createAuth(env: Env, ctx?: WaitUntilCtx) {
           await deliverOtp(env, ctx, { email, otp, type })
         },
       }),
+      // The route is absent outside development, so production still requires a code.
+      ...(env.ENVIRONMENT === "development" ? [devSignInPlugin()] : []),
     ],
   })
 }
