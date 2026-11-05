@@ -4,6 +4,7 @@ import {
   formatQuantity,
   formatTaxRate,
   invoiceTotals,
+  lineHasContent,
   lineTotalCents,
 } from "@features/invoices/helpers"
 import type { InvoiceDraft } from "@features/invoices/invoice-draft"
@@ -70,17 +71,15 @@ export function InvoiceDocument({
   business: DocumentBusiness
   amountPaidCents: number
 }) {
+  const items = draft.lineItems.filter(lineHasContent)
   const totals = invoiceTotals(
-    draft.lineItems,
+    items,
     draft.taxRateBps,
     draft.taxInclusive,
     amountPaidCents
   )
   const money = (cents: number) => formatCents(cents, draft.currency)
   const dueLong = formatLongDate(draft.dueDate || null)
-  const items = draft.lineItems.filter(
-    (item) => item.name.trim() || item.unitAmountCents > 0
-  )
   const taxLabel = `${draft.taxName.trim() || "Tax"} (${formatTaxRate(draft.taxRateBps)}${draft.taxInclusive ? " included" : ""})`
 
   return (

@@ -7,6 +7,7 @@ import {
   formatCents,
   formatLongDate,
   invoiceTotals,
+  lineHasContent,
 } from "@features/invoices/helpers"
 import type { InvoiceDraft } from "@features/invoices/invoice-draft"
 
@@ -25,16 +26,10 @@ export function EditorReview({
   onBack: () => void
   onSend: () => void
 }) {
-  const totals = invoiceTotals(
-    draft.lineItems,
-    draft.taxRateBps,
-    draft.taxInclusive,
-    0
-  )
+  const items = draft.lineItems.filter(lineHasContent)
+  const totals = invoiceTotals(items, draft.taxRateBps, draft.taxInclusive, 0)
   const hasCustomer = draft.billTo.name.trim().length > 0
-  const hasItems = draft.lineItems.some(
-    (item) => item.name.trim() || item.unitAmountCents > 0
-  )
+  const hasItems = items.length > 0
 
   const warnings = [
     !hasItems ? "This invoice has no items." : null,

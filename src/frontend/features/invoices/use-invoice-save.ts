@@ -21,50 +21,57 @@ export function useInvoiceSave<T>({
   const [error, setError] = useState<Error | null>(null)
 
   const latest = useRef({ json, value, persist, auto: enabled && auto })
-  latest.current = { json, value, persist, auto: enabled && auto }
   const savedRef = useRef(savedJson)
-  const inFlight = useRef<Promise<void> | null>(null)
+  const mounted = useRef(true)
+  const tail = useRef<Promise<void>>(Promise.resolve())
 
-  async function flush(): Promise<void> {
-    if (inFlight.current) {
-      await inFlight.current
-      return flush()
-    }
-    const { json: target, value: body } = latest.current
-    if (target === savedRef.current) {
-      return
-    }
-    const run = (async () => {
-      setSaving(true)
+  function enqueue(): Promise<void> {
+    const job = tail.current.then(async () => {
+      const { json: target, value: body, persist: write } = latest.current
+      if (target === savedRef.current) return
+      if (mounted.current) setSaving(true)
       try {
-        await latest.current.persist(body)
+        await write(body)
         savedRef.current = target
+        if (!mounted.current) return
         setSavedJson(target)
         setError(null)
       } catch (caught) {
-        setError(caught instanceof Error ? caught : new Error("Save failed"))
-        throw caught
+        const err = caught instanceof Error ? caught : new Error("Save failed")
+        if (mounted.current) setError(err)
+        throw err
       } finally {
-        setSaving(false)
+        if (mounted.current) setSaving(false)
       }
-    })()
-    inFlight.current = run
-    try {
-      await run
-    } finally {
-      inFlight.current = null
-    }
+    })
+    tail.current = job.then(
+      () => undefined,
+      () => undefined
+    )
+    return job
+  }
+
+  const enqueueRef = useRef(enqueue)
+
+  async function flush(): Promise<void> {
+    do {
+      await enqueueRef.current()
+    } while (latest.current.json !== savedRef.current)
   }
 
   const flushRef = useRef(flush)
-  flushRef.current = flush
+
+  // Saves run after commit, so the queue has to see this render's draft.
+  useEffect(() => {
+    latest.current = { json, value, persist, auto: enabled && auto }
+    enqueueRef.current = enqueue
+    flushRef.current = flush
+  })
 
   useEffect(() => {
-    if (!enabled || !auto || json === savedRef.current) {
-      return
-    }
+    if (!enabled || !auto || json === savedRef.current) return
     const timer = window.setTimeout(() => {
-      flushRef.current().catch(() => undefined)
+      enqueueRef.current().catch(() => undefined)
     }, AUTOSAVE_DELAY_MS)
     return () => window.clearTimeout(timer)
   }, [enabled, auto, json])
@@ -72,9 +79,7 @@ export function useInvoiceSave<T>({
   const dirty = enabled && json !== savedJson
 
   useEffect(() => {
-    if (!dirty) {
-      return
-    }
+    if (!dirty) return
     function warn(event: BeforeUnloadEvent) {
       event.preventDefault()
     }
@@ -82,11 +87,14 @@ export function useInvoiceSave<T>({
     return () => window.removeEventListener("beforeunload", warn)
   }, [dirty])
 
-  // Leaving the page cancels the debounce timer; send what's pending anyway.
+  // Leaving clears the debounce timer, so the pending draft joins the same queue.
   useEffect(() => {
+    mounted.current = true
     return () => {
-      if (latest.current.auto && latest.current.json !== savedRef.current) {
-        latest.current.persist(latest.current.value).catch(() => undefined)
+      mounted.current = false
+      const snap = latest.current
+      if (snap.auto && snap.json !== savedRef.current) {
+        enqueueRef.current().catch(() => undefined)
       }
     }
   }, [])

@@ -39,7 +39,6 @@ export const updateInvoiceBodySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/, "Invalid date")
     .nullish()
     .transform((value) => value || null),
-  paymentTerms: nullableTrimmed(500),
   notes: nullableTrimmed(4000),
   bankDetails: nullableTrimmed(2000),
   taxName: nullableTrimmed(80),

@@ -7,6 +7,12 @@ export type LineItem = {
   unitAmountCents: number
 }
 
+export function lineHasContent(item: LineItem) {
+  return Boolean(
+    item.name.trim() || item.description.trim() || item.unitAmountCents > 0
+  )
+}
+
 export function lineTotalCents(item: LineItem) {
   return Math.round(item.quantity * item.unitAmountCents)
 }
@@ -113,10 +119,6 @@ export function newLineItem(): LineItem {
 }
 
 export const DUE_PRESET_DAYS = [0, 7, 14, 30, 60] as const
-
-export function duePresetLabel(days: number) {
-  return days === 0 ? "Due on receipt" : `Net ${days}`
-}
 
 function isoToUtcMs(iso: string) {
   return Date.parse(`${iso}T00:00:00Z`)

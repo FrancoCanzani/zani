@@ -1,5 +1,5 @@
 import type { Invoice, InvoiceInput } from "./api"
-import type { LineItem } from "./helpers"
+import { lineHasContent, type LineItem } from "./helpers"
 
 export type BillTo = {
   customerId: string | null
@@ -47,10 +47,7 @@ export function draftFromInvoice(invoice: Invoice): InvoiceDraft {
   }
 }
 
-export function inputFromDraft(
-  draft: InvoiceDraft,
-  paymentTerms: string | null
-): InvoiceInput {
+export function inputFromDraft(draft: InvoiceDraft): InvoiceInput {
   return {
     number: draft.number.trim(),
     customerId: draft.billTo.customerId,
@@ -62,25 +59,17 @@ export function inputFromDraft(
     currency: draft.currency,
     issueDate: draft.issueDate,
     dueDate: draft.dueDate || null,
-    paymentTerms,
     notes: draft.notes.trim() || null,
     bankDetails: draft.bankDetails.trim() || null,
     taxName: draft.taxName.trim() || null,
     taxRateBps: draft.taxRateBps,
     taxInclusive: draft.taxInclusive,
-    lineItems: draft.lineItems
-      .filter(
-        (item) =>
-          item.name.trim() ||
-          item.description.trim() ||
-          item.unitAmountCents > 0
-      )
-      .map((item) => ({
-        ...item,
-        name: item.name.trim(),
-        description: item.description.trim(),
-        quantity: item.quantity > 0 ? item.quantity : 1,
-        unitAmountCents: Math.max(0, Math.round(item.unitAmountCents)),
-      })),
+    lineItems: draft.lineItems.filter(lineHasContent).map((item) => ({
+      ...item,
+      name: item.name.trim(),
+      description: item.description.trim(),
+      quantity: item.quantity > 0 ? item.quantity : 1,
+      unitAmountCents: Math.max(0, Math.round(item.unitAmountCents)),
+    })),
   }
 }

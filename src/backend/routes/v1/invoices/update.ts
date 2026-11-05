@@ -92,8 +92,8 @@ export const updateInvoice = new Hono<AppEnv>().patch(
         currency: body.currency,
         issueDate: body.issueDate,
         dueDate: body.dueDate,
-        paymentTerms: body.paymentTerms ?? null,
         notes: body.notes ?? null,
+        // Joined into notes on read; writing it back would append it twice.
         terms: null,
         bankDetails: body.bankDetails ?? null,
         taxName: body.taxName ?? null,

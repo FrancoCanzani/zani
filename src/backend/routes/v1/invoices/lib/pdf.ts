@@ -8,7 +8,8 @@ import {
 
 import type { InvoiceLineItem, invoice, workspace } from "../../../../db/schema"
 
-import { invoiceTotals, lineTotalCents } from "./helpers"
+import { invoiceTotals, lineHasContent, lineTotalCents } from "./helpers"
+import { notesForDisplay } from "./serialize"
 
 type InvoiceRow = typeof invoice.$inferSelect
 type Business = Pick<
@@ -31,8 +32,9 @@ export async function renderInvoicePdf(row: InvoiceRow, business: Business) {
   const font = await doc.embedFont(StandardFonts.Helvetica)
   const bold = await doc.embedFont(StandardFonts.HelveticaBold)
   const layout = new Layout(doc, font, bold)
+  const items = row.lineItems.filter(lineHasContent)
   const totals = invoiceTotals(
-    row.lineItems,
+    items,
     row.taxRateBps,
     row.taxInclusive,
     row.amountPaidCents
@@ -40,10 +42,7 @@ export async function renderInvoicePdf(row: InvoiceRow, business: Business) {
   const money = (cents: number) => formatMoney(cents, row.currency)
   const due = formatLongDate(row.dueDate)
   const currency = row.currency.toUpperCase()
-  const notes = [row.notes, row.terms]
-    .map((part) => part?.trim())
-    .filter((part): part is string => Boolean(part))
-    .join("\n\n")
+  const notes = notesForDisplay(row)
 
   layout.heading("Invoice")
   layout.gap(14)
@@ -79,7 +78,7 @@ export async function renderInvoicePdf(row: InvoiceRow, business: Business) {
     layout.paragraph(notes, 10, font, muted, 14)
   }
   layout.gap(18)
-  layout.table(row.lineItems, money)
+  layout.table(items, money)
   layout.gap(8)
   const totalRows: [string, string][] = [
     ["Subtotal", money(totals.subtotalCents)],
@@ -182,17 +181,14 @@ class Layout {
   table(items: InvoiceLineItem[], money: (cents: number) => string) {
     const columns = tableColumns()
     this.drawTableHeader(columns)
-    const visible = items.filter(
-      (item) => item.name.trim() || item.unitAmountCents > 0
-    )
-    if (visible.length === 0) {
+    if (items.length === 0) {
       this.ensure(18)
       this.draw("No items yet", MARGIN, 10, this.font, muted)
       this.y += 18
       this.inTable = false
       return
     }
-    for (const item of visible) {
+    for (const item of items) {
       this.drawItem(item, columns, money)
     }
     this.inTable = false
