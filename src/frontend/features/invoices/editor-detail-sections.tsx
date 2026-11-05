@@ -188,13 +188,13 @@ export function EditorAdditionalSection({
         </Field>
       </div>
       <Field>
-        <FieldLabel htmlFor="invoice-memo">Memo</FieldLabel>
+        <FieldLabel htmlFor="invoice-notes">Notes</FieldLabel>
         <Textarea
-          id="invoice-memo"
-          value={draft.memo}
+          id="invoice-notes"
+          value={draft.notes}
           rows={3}
           placeholder="Thanks for your business!"
-          onChange={(event) => onChange({ memo: event.target.value })}
+          onChange={(event) => onChange({ notes: event.target.value })}
         />
       </Field>
     </section>

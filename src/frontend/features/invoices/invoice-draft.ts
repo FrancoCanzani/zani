@@ -15,7 +15,7 @@ export type InvoiceDraft = {
   issueDate: string
   dueDate: string
   currency: string
-  memo: string
+  notes: string
   bankDetails: string
   taxName: string
   taxRateBps: number
@@ -30,7 +30,7 @@ export function draftFromInvoice(invoice: Invoice): InvoiceDraft {
     issueDate: invoice.issueDate,
     dueDate: invoice.dueDate ?? "",
     currency: invoice.currency,
-    memo: invoice.notes ?? "",
+    notes: invoice.notes ?? "",
     bankDetails: invoice.bankDetails ?? "",
     taxName: invoice.taxName ?? "",
     taxRateBps: invoice.taxRateBps,
@@ -63,7 +63,7 @@ export function inputFromDraft(
     issueDate: draft.issueDate,
     dueDate: draft.dueDate || null,
     paymentTerms,
-    notes: draft.memo.trim() || null,
+    notes: draft.notes.trim() || null,
     bankDetails: draft.bankDetails.trim() || null,
     taxName: draft.taxName.trim() || null,
     taxRateBps: draft.taxRateBps,

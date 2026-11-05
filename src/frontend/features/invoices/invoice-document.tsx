@@ -124,9 +124,9 @@ export function InvoiceDocument({
         {money(totals.balanceCents)} {draft.currency.toUpperCase()}
         {dueLong ? ` due ${dueLong}` : " due on receipt"}
       </p>
-      {draft.memo.trim() ? (
+      {draft.notes.trim() ? (
         <p className="mt-2 whitespace-pre-line text-neutral-700">
-          {draft.memo}
+          {draft.notes}
         </p>
       ) : null}
 

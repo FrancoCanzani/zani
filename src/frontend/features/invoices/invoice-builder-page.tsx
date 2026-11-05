@@ -29,6 +29,7 @@ import { Separator } from "@components/ui/separator"
 
 import {
   discardInvoice,
+  downloadInvoicePdf,
   invoiceQueryOptions,
   markInvoicePaid,
   sendInvoice,
@@ -122,6 +123,13 @@ export function InvoiceBuilderPage() {
     },
   })
 
+  const download = useMutation({
+    mutationFn: async () => {
+      if (!readOnly) await saver.flush()
+      await downloadInvoicePdf(slug, invoiceId)
+    },
+  })
+
   const discard = useMutation({
     mutationFn: () => discardInvoice(slug, invoiceId),
     onSuccess: async () => {
@@ -131,7 +139,8 @@ export function InvoiceBuilderPage() {
     },
   })
 
-  const actionError = saver.error ?? markPaid.error ?? discard.error
+  const actionError =
+    saver.error ?? download.error ?? markPaid.error ?? discard.error
   const title = isDraft ? "Edit invoice" : `Invoice ${draft.number}`
 
   return (
@@ -157,6 +166,14 @@ export function InvoiceBuilderPage() {
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            disabled={download.isPending}
+            onClick={() => download.mutate()}
+          >
+            {download.isPending ? "Preparing…" : "Download PDF"}
+          </Button>
           <Button
             type="button"
             variant="ghost"

@@ -146,6 +146,36 @@ export async function updateInvoice(
   return requireJson<{ invoice: Invoice }>(response, "invoice")
 }
 
+export async function downloadInvoicePdf(slug: string, invoiceId: string) {
+  const response = await api.workspaces[":slug"].invoices[
+    ":invoiceId"
+  ].pdf.$get({
+    param: { slug, invoiceId },
+  })
+  if (response.status === 404) {
+    throw new Error("Invoice not found.")
+  }
+  if (!response.ok) {
+    throw new Error("Could not download the PDF.")
+  }
+  const filename = filenameFromDisposition(
+    response.headers.get("content-disposition")
+  )
+  const url = URL.createObjectURL(await response.blob())
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  document.body.append(link)
+  link.click()
+  link.remove()
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000)
+}
+
+function filenameFromDisposition(header: string | null) {
+  const match = /filename="([^"]+)"/.exec(header ?? "")
+  return match?.[1] || "invoice.pdf"
+}
+
 export async function discardInvoice(slug: string, invoiceId: string) {
   const response = await api.workspaces[":slug"].invoices[":invoiceId"].$delete(
     {
