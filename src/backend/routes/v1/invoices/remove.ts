@@ -18,7 +18,7 @@ export const removeInvoice = new Hono<AppEnv>().delete(
     const invoiceId = c.req.param("invoiceId")
 
     const [existing] = await db
-      .select({ id: invoice.id, status: invoice.status })
+      .select({ id: invoice.id })
       .from(invoice)
       .where(
         and(
@@ -30,10 +30,6 @@ export const removeInvoice = new Hono<AppEnv>().delete(
 
     if (!existing) {
       return c.json({ error: "not_found" as const }, 404)
-    }
-
-    if (existing.status !== "draft") {
-      return c.json({ error: "not_draft" as const }, 409)
     }
 
     await db.delete(invoice).where(eq(invoice.id, invoiceId))

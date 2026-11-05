@@ -1,9 +1,7 @@
 import { useState } from "react"
 
-import { Checkbox } from "@components/ui/checkbox"
 import { Field, FieldDescription, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
-import { Label } from "@components/ui/label"
 import {
   Select,
   SelectContent,
@@ -157,7 +155,6 @@ export function EditorAdditionalSection({
   draft: InvoiceDraft
   onChange: (patch: DraftPatch) => void
 }) {
-  const [memoOpen, setMemoOpen] = useState(draft.memo.trim().length > 0)
   const preset = matchingDuePreset(draft.issueDate, draft.dueDate)
 
   return (
@@ -190,31 +187,16 @@ export function EditorAdditionalSection({
           />
         </Field>
       </div>
-      <div className="space-y-3">
-        <div className="flex items-center gap-2">
-          <Checkbox
-            id="memo-toggle"
-            checked={memoOpen}
-            onCheckedChange={(checked) => {
-              setMemoOpen(checked === true)
-              if (checked !== true) onChange({ memo: "" })
-            }}
-          />
-          <Label htmlFor="memo-toggle" className="font-normal">
-            Memo
-          </Label>
-        </div>
-        {memoOpen ? (
-          <Textarea
-            aria-label="Memo"
-            value={draft.memo}
-            rows={3}
-            autoFocus={!draft.memo}
-            placeholder="Thanks for your business!"
-            onChange={(event) => onChange({ memo: event.target.value })}
-          />
-        ) : null}
-      </div>
+      <Field>
+        <FieldLabel htmlFor="invoice-memo">Memo</FieldLabel>
+        <Textarea
+          id="invoice-memo"
+          value={draft.memo}
+          rows={3}
+          placeholder="Thanks for your business!"
+          onChange={(event) => onChange({ memo: event.target.value })}
+        />
+      </Field>
     </section>
   )
 }

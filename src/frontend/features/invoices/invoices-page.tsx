@@ -1,9 +1,30 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
+import {
+  useMutation,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
 import { Link, getRouteApi, useRouter } from "@tanstack/react-router"
-import { useEffect } from "react"
+import { MoreHorizontalIcon } from "lucide-react"
+import { useEffect, useState } from "react"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@components/ui/alert-dialog"
 import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@components/ui/dropdown-menu"
 import {
   Empty,
   EmptyContent,
@@ -12,7 +33,11 @@ import {
   EmptyTitle,
 } from "@components/ui/empty"
 
-import { invoicesQueryOptions } from "@features/invoices/api"
+import {
+  discardInvoice,
+  invoicesQueryOptions,
+  type InvoiceSummary,
+} from "@features/invoices/api"
 import { formatCents, formatDisplayDate } from "@features/invoices/helpers"
 import { invoiceStatusLabel } from "@features/invoices/status-label"
 import { workspaceQueryOptions } from "@features/workspaces/api"
@@ -99,7 +124,8 @@ export function InvoicesPage() {
               <th className="pr-4 pb-3 font-medium">Customer</th>
               <th className="pr-4 pb-3 font-medium">Status</th>
               <th className="pr-4 pb-3 font-medium">Due</th>
-              <th className="pb-3 text-right font-medium">Amount</th>
+              <th className="pr-4 pb-3 text-right font-medium">Amount</th>
+              <th className="pb-3 text-right font-medium">Actions</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-dashed divide-border">
@@ -133,8 +159,11 @@ export function InvoicesPage() {
                 <td className="py-3.5 pr-4 text-muted-foreground tabular-nums">
                   {formatDisplayDate(item.dueDate) ?? "—"}
                 </td>
-                <td className="py-3.5 text-right tabular-nums">
+                <td className="py-3.5 pr-4 text-right tabular-nums">
                   {formatCents(item.totalCents, item.currency)}
+                </td>
+                <td className="py-3.5 text-right">
+                  <InvoiceActions slug={slug} invoice={item} />
                 </td>
               </tr>
             ))}
@@ -142,5 +171,86 @@ export function InvoicesPage() {
         </table>
       </div>
     </div>
+  )
+}
+
+function InvoiceActions({
+  slug,
+  invoice,
+}: {
+  slug: string
+  invoice: InvoiceSummary
+}) {
+  const queryClient = useQueryClient()
+  const [confirming, setConfirming] = useState(false)
+  const remove = useMutation({
+    mutationFn: () => discardInvoice(slug, invoice.id),
+    onSuccess: async () => {
+      setConfirming(false)
+      await queryClient.invalidateQueries({ queryKey: ["invoices", slug] })
+      await queryClient.removeQueries({
+        queryKey: ["invoice", slug, invoice.id],
+      })
+    },
+  })
+
+  return (
+    <>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Actions for ${invoice.number}`}
+          >
+            <MoreHorizontalIcon />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          <DropdownMenuItem
+            variant="destructive"
+            onSelect={() => setConfirming(true)}
+          >
+            Delete invoice
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+      <AlertDialog
+        open={confirming}
+        onOpenChange={(open) => {
+          if (!remove.isPending) setConfirming(open)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete {invoice.number}?</AlertDialogTitle>
+            <AlertDialogDescription>
+              The invoice is permanently deleted. This can’t be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {remove.error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {remove.error.message}
+            </p>
+          ) : null}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={remove.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={remove.isPending}
+              onClick={(event) => {
+                event.preventDefault()
+                remove.mutate()
+              }}
+            >
+              {remove.isPending ? "Deleting…" : "Delete invoice"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   )
 }

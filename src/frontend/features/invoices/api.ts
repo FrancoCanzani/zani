@@ -152,14 +152,11 @@ export async function discardInvoice(slug: string, invoiceId: string) {
       param: { slug, invoiceId },
     }
   )
-  if (response.status === 409) {
-    throw new Error("Only draft invoices can be discarded.")
-  }
   if (response.status === 404) {
     throw new Error("Invoice not found.")
   }
   if (!response.ok) {
-    throw new Error("Could not discard the invoice.")
+    throw new Error("Could not delete the invoice.")
   }
 }
 
