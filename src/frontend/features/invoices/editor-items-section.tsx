@@ -1,6 +1,6 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { PlusIcon, Trash2Icon } from "lucide-react"
-import { useState } from "react"
+import { useState, type SubmitEvent } from "react"
 
 import { Button } from "@components/ui/button"
 import {
@@ -12,6 +12,14 @@ import {
   CommandList,
   CommandSeparator,
 } from "@components/ui/command"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@components/ui/dialog"
 import { Field, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 import {
@@ -25,7 +33,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@components/ui/popover"
 import { Switch } from "@components/ui/switch"
 import { Textarea } from "@components/ui/textarea"
 
-import { productsQueryOptions, type Product } from "@features/products/api"
+import {
+  createProduct,
+  productsQueryOptions,
+  type Product,
+} from "@features/products/api"
 import {
   bpsToPercentInput,
   centsToInput,
@@ -130,6 +142,7 @@ export function EditorItemsSection({
 
       <AddItemButton
         slug={slug}
+        currency={draft.currency}
         onAddProduct={(product) => {
           const item = newLineItem()
           item.productId = product.id
@@ -250,15 +263,18 @@ export function EditorItemsSection({
 
 function AddItemButton({
   slug,
+  currency,
   onAddProduct,
   onAddOneTime,
 }: {
   slug: string
+  currency: string
   onAddProduct: (product: Product) => void
   onAddOneTime: (name: string) => void
 }) {
   const [open, setOpen] = useState(false)
   const [search, setSearch] = useState("")
+  const [creating, setCreating] = useState<string | null>(null)
   const { data } = useQuery(productsQueryOptions(slug))
   const products = (data?.products ?? []).filter(
     (product) => !product.archivedAt
@@ -270,64 +286,213 @@ function AddItemButton({
   }
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => (next ? setOpen(true) : close())}
-    >
-      <PopoverTrigger asChild>
-        <Button type="button" variant="outline">
-          <PlusIcon />
-          Add item
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 p-0">
-        <Command>
-          <CommandInput
-            placeholder="Find or add an item…"
-            value={search}
-            onValueChange={setSearch}
-          />
-          <CommandList>
-            <CommandEmpty>No saved products match.</CommandEmpty>
-            {products.length > 0 ? (
-              <CommandGroup heading="Products">
-                {products.map((product) => (
-                  <CommandItem
-                    key={product.id}
-                    value={`${product.name} ${product.id}`}
-                    onSelect={() => {
-                      onAddProduct(product)
-                      close()
-                    }}
-                  >
-                    <span className="truncate">{product.name}</span>
-                    <span className="ml-auto text-xs text-muted-foreground tabular-nums">
-                      {formatCents(product.unitAmountCents, product.currency)}
-                    </span>
-                  </CommandItem>
-                ))}
+    <>
+      <Popover
+        open={open}
+        onOpenChange={(next) => (next ? setOpen(true) : close())}
+      >
+        <PopoverTrigger asChild>
+          <Button type="button" variant="outline">
+            <PlusIcon />
+            Add item
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent align="start" className="w-80 p-0">
+          <Command>
+            <CommandInput
+              placeholder="Find or add an item…"
+              value={search}
+              onValueChange={setSearch}
+            />
+            <CommandList>
+              <CommandEmpty>No saved products match.</CommandEmpty>
+              {products.length > 0 ? (
+                <CommandGroup heading="Products">
+                  {products.map((product) => (
+                    <CommandItem
+                      key={product.id}
+                      value={`${product.name} ${product.id}`}
+                      onSelect={() => {
+                        onAddProduct(product)
+                        close()
+                      }}
+                    >
+                      <span className="truncate">{product.name}</span>
+                      <span className="ml-auto text-xs text-muted-foreground tabular-nums">
+                        {formatCents(product.unitAmountCents, product.currency)}
+                      </span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              ) : null}
+              <CommandSeparator alwaysRender />
+              <CommandGroup forceMount>
+                <CommandItem
+                  forceMount
+                  value="__one_time__"
+                  onSelect={() => {
+                    onAddOneTime(search.trim())
+                    close()
+                  }}
+                >
+                  <PlusIcon />
+                  {search.trim()
+                    ? `Add “${search.trim()}” as a one-time item`
+                    : "Add a one-time item"}
+                </CommandItem>
+                <CommandItem
+                  forceMount
+                  value="__new_product__"
+                  onSelect={() => {
+                    setCreating(search.trim())
+                    close()
+                  }}
+                >
+                  <PlusIcon />
+                  {search.trim()
+                    ? `Set up “${search.trim()}” as a new product`
+                    : "Set up a new product"}
+                </CommandItem>
               </CommandGroup>
-            ) : null}
-            <CommandSeparator alwaysRender />
-            <CommandGroup forceMount>
-              <CommandItem
-                forceMount
-                value="__one_time__"
-                onSelect={() => {
-                  onAddOneTime(search.trim())
-                  close()
-                }}
-              >
-                <PlusIcon />
-                {search.trim()
-                  ? `Add “${search.trim()}” as a one-time item`
-                  : "Add a one-time item"}
-              </CommandItem>
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+            </CommandList>
+          </Command>
+        </PopoverContent>
+        <NewProductDialog
+          slug={slug}
+          currency={currency}
+          initialName={creating}
+          onClose={() => setCreating(null)}
+          onCreated={(product) => {
+            onAddProduct(product)
+            setCreating(null)
+          }}
+        />
+      </Popover>
+    </>
+  )
+}
+
+function NewProductDialog({
+  slug,
+  currency,
+  initialName,
+  onClose,
+  onCreated,
+}: {
+  slug: string
+  currency: string
+  initialName: string | null
+  onClose: () => void
+  onCreated: (product: Product) => void
+}) {
+  const open = initialName !== null
+  return (
+    <Dialog open={open} onOpenChange={(next) => (next ? null : onClose())}>
+      <DialogContent>
+        {open ? (
+          <NewProductForm
+            slug={slug}
+            currency={currency}
+            initialName={initialName}
+            onCancel={onClose}
+            onCreated={onCreated}
+          />
+        ) : null}
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function NewProductForm({
+  slug,
+  currency,
+  initialName,
+  onCancel,
+  onCreated,
+}: {
+  slug: string
+  currency: string
+  initialName: string
+  onCancel: () => void
+  onCreated: (product: Product) => void
+}) {
+  const queryClient = useQueryClient()
+  const [name, setName] = useState(initialName)
+  const [description, setDescription] = useState("")
+  const [price, setPrice] = useState("0.00")
+
+  const create = useMutation({
+    mutationFn: () =>
+      createProduct(slug, {
+        name: name.trim(),
+        description: description.trim() || null,
+        unitAmountCents: inputToCents(price),
+        currency,
+      }),
+    onSuccess: async (body) => {
+      await queryClient.invalidateQueries({ queryKey: ["products", slug] })
+      onCreated(body.product)
+    },
+  })
+
+  function onSubmit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault()
+    if (name.trim()) create.mutate()
+  }
+
+  return (
+    <form className="grid gap-5" onSubmit={onSubmit}>
+      <DialogHeader>
+        <DialogTitle>Set up product</DialogTitle>
+        <DialogDescription>
+          Saved to this business so the next invoice can reuse it.
+        </DialogDescription>
+      </DialogHeader>
+      <Field>
+        <FieldLabel htmlFor="new-product-name">Name</FieldLabel>
+        <Input
+          id="new-product-name"
+          value={name}
+          autoFocus
+          required
+          onChange={(event) => setName(event.target.value)}
+        />
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="new-product-description">Description</FieldLabel>
+        <Textarea
+          id="new-product-description"
+          value={description}
+          rows={2}
+          placeholder="Optional"
+          onChange={(event) => setDescription(event.target.value)}
+        />
+      </Field>
+      <Field>
+        <FieldLabel htmlFor="new-product-price">Price</FieldLabel>
+        <Input
+          id="new-product-price"
+          inputMode="decimal"
+          value={price}
+          className="tabular-nums"
+          onChange={(event) => setPrice(event.target.value)}
+          onBlur={() => setPrice(centsToInput(inputToCents(price)))}
+        />
+      </Field>
+      {create.error ? (
+        <p className="text-sm text-destructive" role="alert">
+          {create.error.message}
+        </p>
+      ) : null}
+      <DialogFooter>
+        <Button type="button" variant="outline" onClick={onCancel}>
+          Cancel
+        </Button>
+        <Button type="submit" disabled={create.isPending || !name.trim()}>
+          {create.isPending ? "Saving…" : "Save product"}
+        </Button>
+      </DialogFooter>
+    </form>
   )
 }
 
