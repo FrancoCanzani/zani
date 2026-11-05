@@ -1,3 +1,4 @@
+import puppeteer from "@cloudflare/puppeteer"
 import type { InvoiceLineItem, invoice, workspace } from "../../../../db/schema"
 
 import { invoiceTotals, lineTotalCents } from "./helpers"
@@ -14,12 +15,14 @@ export async function renderInvoicePdf(
   business: Business,
   locale: string
 ) {
-  const response = await env.BROWSER.quickAction("pdf", {
-    html: invoiceHtml(row, business, locale),
-    // The default cache would reuse a PDF for five seconds after an edit.
-    cacheTTL: 0,
-    gotoOptions: { waitUntil: "load", timeout: 20_000 },
-    pdfOptions: {
+  const browser = await puppeteer.launch(env.BROWSER)
+  try {
+    const page = await browser.newPage()
+    await page.setContent(invoiceHtml(row, business, locale), {
+      waitUntil: "load",
+      timeout: 20_000,
+    })
+    const pdf = await page.pdf({
       format: "letter",
       printBackground: true,
       displayHeaderFooter: true,
@@ -31,14 +34,11 @@ export async function renderInvoicePdf(
         bottom: "0.6in",
         left: "0.65in",
       },
-    },
-  })
-
-  if (!response.ok) {
-    throw new Error("pdf failed")
+    })
+    return new Uint8Array(pdf)
+  } finally {
+    await browser.close()
   }
-
-  return new Uint8Array(await response.arrayBuffer())
 }
 
 export function invoicePdfFilename(number: string) {
