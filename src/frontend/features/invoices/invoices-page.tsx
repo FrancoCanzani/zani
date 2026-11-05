@@ -125,7 +125,9 @@ export function InvoicesPage() {
               <th className="pr-4 pb-3 font-medium">Status</th>
               <th className="pr-4 pb-3 font-medium">Due</th>
               <th className="pr-4 pb-3 text-right font-medium">Amount</th>
-              <th className="pb-3 text-right font-medium">Actions</th>
+              <th className="pb-3">
+                <span className="sr-only">Actions</span>
+              </th>
             </tr>
           </thead>
           <tbody className="divide-y divide-dashed divide-border">
