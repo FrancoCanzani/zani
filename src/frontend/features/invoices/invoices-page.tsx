@@ -132,24 +132,20 @@ export function InvoicesPage() {
           </thead>
           <tbody className="divide-y divide-dashed divide-border">
             {data.invoices.map((item) => (
-              <tr key={item.id} className="group">
+              <tr key={item.id} className="group relative">
                 <td className="py-3.5 pr-4">
                   <Link
                     to="/businesses/$slug/invoices/$invoiceId"
                     params={{ slug, invoiceId: item.id }}
-                    className="font-mono text-[13px] tracking-tight transition-colors group-hover:text-muted-foreground"
-                  >
+                    aria-label={`View ${item.number}`}
+                    className="absolute inset-0"
+                  />
+                  <span className="font-mono text-[13px] tracking-tight transition-colors group-hover:text-muted-foreground">
                     {item.number}
-                  </Link>
+                  </span>
                 </td>
-                <td className="max-w-[12rem] truncate py-3.5 pr-4">
-                  <Link
-                    to="/businesses/$slug/invoices/$invoiceId"
-                    params={{ slug, invoiceId: item.id }}
-                    className="transition-colors group-hover:text-muted-foreground"
-                  >
-                    {item.customerName.trim() || "—"}
-                  </Link>
+                <td className="max-w-[12rem] truncate py-3.5 pr-4 transition-colors group-hover:text-muted-foreground">
+                  {item.customerName.trim() || "—"}
                 </td>
                 <td className="py-3.5 pr-4">
                   <Badge
@@ -164,7 +160,7 @@ export function InvoicesPage() {
                 <td className="py-3.5 pr-4 text-right tabular-nums">
                   {formatCents(item.totalCents, item.currency)}
                 </td>
-                <td className="py-3.5 text-right">
+                <td className="relative z-10 py-3.5 text-right">
                   <InvoiceActions slug={slug} invoice={item} />
                 </td>
               </tr>
@@ -210,6 +206,14 @@ function InvoiceActions({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
+          <DropdownMenuItem asChild>
+            <Link
+              to="/businesses/$slug/invoices/$invoiceId"
+              params={{ slug, invoiceId: invoice.id }}
+            >
+              View
+            </Link>
+          </DropdownMenuItem>
           <DropdownMenuItem
             variant="destructive"
             onSelect={() => setConfirming(true)}
