@@ -2,6 +2,16 @@ import type { InvoiceLineItem, InvoiceStatus } from "../../../../db/schema"
 
 import { invoiceTotals } from "./helpers"
 
+export function notesForDisplay(row: {
+  notes: string | null
+  terms: string | null
+}) {
+  const parts = [row.notes, row.terms]
+    .map((part) => part?.trim())
+    .filter((part): part is string => Boolean(part))
+  return parts.length > 0 ? parts.join("\n\n") : null
+}
+
 export function serializeInvoice(row: {
   id: string
   workspaceId: string
@@ -40,10 +50,6 @@ export function serializeInvoice(row: {
     row.amountPaidCents
   )
 
-  const notesParts = [row.notes, row.terms]
-    .map((part) => part?.trim())
-    .filter((part): part is string => Boolean(part))
-
   return {
     id: row.id,
     workspaceId: row.workspaceId,
@@ -60,7 +66,7 @@ export function serializeInvoice(row: {
     issueDate: row.issueDate,
     dueDate: row.dueDate,
     paymentTerms: row.paymentTerms,
-    notes: notesParts.length > 0 ? notesParts.join("\n\n") : null,
+    notes: notesForDisplay(row),
     bankDetails: row.bankDetails,
     taxName: row.taxName,
     taxRateBps: row.taxRateBps,

@@ -99,7 +99,7 @@ export function InvoiceBuilderPage() {
   }
 
   const saver = useInvoiceSave({
-    value: inputFromDraft(draft, data.invoice.paymentTerms),
+    value: inputFromDraft(draft),
     enabled: !readOnly,
     auto: isDraft,
     persist: async (body: InvoiceInput) => {

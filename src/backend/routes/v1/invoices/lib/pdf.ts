@@ -1,7 +1,8 @@
 import puppeteer from "@cloudflare/puppeteer"
 import type { InvoiceLineItem, invoice, workspace } from "../../../../db/schema"
 
-import { invoiceTotals, lineTotalCents } from "./helpers"
+import { invoiceTotals, lineHasContent, lineTotalCents } from "./helpers"
+import { notesForDisplay } from "./serialize"
 
 type InvoiceRow = typeof invoice.$inferSelect
 type Business = Pick<
@@ -57,8 +58,9 @@ export function requestLocale(header: string | undefined) {
 }
 
 function invoiceHtml(row: InvoiceRow, business: Business, locale: string) {
+  const items = row.lineItems.filter(lineHasContent)
   const totals = invoiceTotals(
-    row.lineItems,
+    items,
     row.taxRateBps,
     row.taxInclusive,
     row.amountPaidCents
@@ -66,13 +68,7 @@ function invoiceHtml(row: InvoiceRow, business: Business, locale: string) {
   const money = (cents: number) => formatMoney(cents, row.currency, locale)
   const due = formatLongDate(row.dueDate, locale)
   const currency = row.currency.toUpperCase()
-  const notes = [row.notes, row.terms]
-    .map((part) => part?.trim())
-    .filter((part): part is string => Boolean(part))
-    .join("\n\n")
-  const items = row.lineItems.filter(
-    (item) => item.name.trim() || item.unitAmountCents > 0
-  )
+  const notes = notesForDisplay(row)
   const dueLine = `${money(totals.balanceCents)} ${currency} ${due ? `due ${due}` : "due on receipt"}`
 
   return `<!doctype html>
@@ -188,7 +184,7 @@ function totalRow(label: string, value: string, strong = false) {
 
 function footerTemplate(row: InvoiceRow, locale: string) {
   const totals = invoiceTotals(
-    row.lineItems,
+    row.lineItems.filter(lineHasContent),
     row.taxRateBps,
     row.taxInclusive,
     row.amountPaidCents

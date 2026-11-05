@@ -73,7 +73,6 @@ export type InvoiceInput = {
   currency: string
   issueDate: string
   dueDate: string | null
-  paymentTerms: string | null
   notes: string | null
   bankDetails: string | null
   taxName: string | null

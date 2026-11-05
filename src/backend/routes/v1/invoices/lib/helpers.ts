@@ -1,5 +1,11 @@
 import type { InvoiceLineItem } from "../../../../db/schema"
 
+export function lineHasContent(item: InvoiceLineItem) {
+  return Boolean(
+    item.name.trim() || item.description.trim() || item.unitAmountCents > 0
+  )
+}
+
 export function lineTotalCents(item: InvoiceLineItem) {
   return Math.round(item.quantity * item.unitAmountCents)
 }
