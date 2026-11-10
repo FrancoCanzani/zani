@@ -4,7 +4,6 @@
 interface __BaseEnv_Env {
 	DB: D1Database;
 	EMAIL: SendEmail;
-	BROWSER: BrowserRun;
 	ASSETS: Fetcher;
 	ENVIRONMENT: string;
 	BETTER_AUTH_URL: string;

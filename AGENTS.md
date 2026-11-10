@@ -2,15 +2,15 @@
 
 ## Scope
 
-This repository is a development foundation for an invoicing-and-collections SaaS (Recover direction).
+This repository is a development foundation for an analytics SaaS.
 
-One-line product: send invoices and get unpaid ones paid.
+One-line product: pageviews for a site you own.
 
 Do not implement product features unless the current task asks for them.
 
-Do not add URL shortening, link redirects, click analytics, campaigns, escrow, marketplaces, dispute resolution, or dashboards unless explicitly requested.
+Do not add URL shortening, link redirects, click maps, session replay, campaigns, escrow, marketplaces, dispute resolution, or dashboards unless explicitly requested.
 
-v1 money model: invoices with optional tax; customer confirmation and collections automation come later. Prefer a **subscription** (free tier then ~$12–15/mo) over taking a cut of payments. Do not build full-job escrow.
+v1 is sites and pageviews stored in D1. Prefer a subscription later. Do not take a cut of payments. Do not build invoicing.
 
 Authentication is Better Auth email OTP on `/api/v1/auth`. Do not add passwords, OAuth, or extra auth providers unless asked.
 
@@ -48,7 +48,7 @@ Hono on the Worker is native — no HTTP adapter. Keep these trees:
 
 Each resource lives in `backend/routes/v1/<resource>/` and exports a chained `new Hono<AppEnv>().get(...)` (or `.post`, …) mounted with `.route()`. Helpers for that resource live in its `lib` folder. Auth, email, and other cross-cutting helpers stay in `backend/lib`. Do not mutate routers with `registerX(app)` helpers — that drops RPC inference.
 
-Validate `json` / `query` / `param` with `@hono/zod-validator`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, public invoice pages, Stripe webhooks) must not use it.
+Validate `json` / `query` / `param` with `@hono/zod-validator`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, collect, `/script.js`) must not use it.
 
 The SPA talks to the versioned API through `hc<V1Api>` in `frontend/lib/api.ts`. Auth cookies still go through the Better Auth client.
 
@@ -71,9 +71,9 @@ Agents may edit `src/backend/db/schema.ts` only. Do not generate, edit, apply, o
 
 Never run remote DB commands (`wrangler d1 … --remote`) unless the user explicitly asks.
 
-Auth, workspace, customer, product, and invoice tables are the v1 domain. Do not create payment / Stripe Connect / collection tables unless the task asks.
+Auth, workspace, site, and event tables are the v1 domain. Do not create payment, subscription, or invoice tables unless the task asks.
 
-Do not implement public invoice pages, Stripe Connect, PDF export, collections automation, or subscriptions unless the current task asks for them.
+Do not implement Stripe, PDF export, or subscriptions unless the current task asks for them.
 
 Workspace is the tenant (the trade business). UI copy says **business**; code/API may still say workspace. Business URLs are `/businesses/$slug` where `slug` is an opaque UUID (same as workspace id on create). Auth flow: sign in → `/welcome` if display name empty → `/businesses` → create business → `/businesses/$slug`. Load session, workspace lists, and membership through TanStack Router `beforeLoad` / `loader` plus `queryClient.query({ ...options, staleTime: "static" })` — do not fetch with `useEffect`.
 
@@ -99,4 +99,4 @@ Install shadcn/ui components with the CLI. Do not copy component source by hand.
 
 Prefer shadcn primitives over custom markup. Keep `globals.css` to theme tokens + base only.
 
-Invoice builder is desktop-first with a live preview; keep customer-facing confirmation pages phone-first when built.
+The site page is a raw list of numbers. Do not add charts or extra chrome unless asked.

@@ -23,6 +23,7 @@ export type SiteStats = {
     id: string
     name: string
     domain: string
+    revokedAt: number | null
   }
   views: number
   visitors: number
@@ -102,4 +103,22 @@ export async function createSite(
     throw new Error("Could not add the site.")
   }
   return requireJson<{ site: Site; writeKey: string }>(response, "site")
+}
+
+export async function replaceWriteKey(slug: string, siteId: string) {
+  const response = await api.workspaces[":slug"].sites[":siteId"][
+    "write-key"
+  ].$post({
+    param: { slug, siteId },
+  })
+  if (response.status === 403) {
+    throw new Error("You cannot replace this write key.")
+  }
+  if (response.status === 409) {
+    throw new Error("This site is revoked.")
+  }
+  if (!response.ok) {
+    throw new Error("Could not replace the write key.")
+  }
+  return requireJson<{ site: Site; writeKey: string }>(response, "writeKey")
 }

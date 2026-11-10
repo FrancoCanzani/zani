@@ -5,6 +5,7 @@ import { pendingScreen } from "@components/pending-screen"
 
 import { siteStatsQueryOptions, statsRange } from "@features/sites/api"
 import { SitePage } from "@features/sites/site-page"
+import { workspaceQueryOptions } from "@features/workspaces/api"
 
 export const Route = createFileRoute(
   "/_authed/businesses/$slug/_shell/sites/$siteId"
@@ -14,6 +15,10 @@ export const Route = createFileRoute(
   loader: async ({ context, params }) => {
     const range = statsRange()
     await Promise.all([
+      context.queryClient.query({
+        ...workspaceQueryOptions(params.slug),
+        staleTime: "static",
+      }),
       context.queryClient.query({
         ...siteStatsQueryOptions(params.slug, params.siteId, undefined, range),
         staleTime: "static",

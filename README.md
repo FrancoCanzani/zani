@@ -1,12 +1,12 @@
-# Invoices (foundation)
+# Analytics
 
-Development foundation for a SaaS that helps solo tradespeople and tiny crews send invoices and get paid.
+Development foundation for a SaaS that records pageviews for a site you own.
 
-Product line: **Send invoices customers actually pay.**
+Product line: **Pageviews for a site you own.**
 
-The first product slice is versioned HTTP APIs, email OTP sign-in, display-name completion, businesses, customers, products, and an invoice builder. Public share links, collections automation, Stripe, and subscriptions are not implemented yet.
+The first slice is versioned HTTP APIs, email OTP sign-in, display-name completion, businesses, sites, `/script.js`, and raw pageview numbers. Subscriptions are not implemented yet.
 
-Flow: sign in → `/welcome` (name) → `/businesses` → set up business → `/businesses/$slug` (business view; slug is a UUID). Invite links are `/invites/$token`.
+Flow: sign in → `/welcome` (name) → `/businesses` → create a business → `/businesses/$slug` (sites; slug is a UUID). A site page is `/businesses/$slug/sites/$siteId`. Invite links are `/invites/$token`.
 
 ## Stack
 
@@ -71,5 +71,7 @@ Bindings are declared in `wrangler.jsonc`:
 
 - `DB` — D1
 - `EMAIL` — Cloudflare Email sending
+
+`/script.js` is served by the Worker. A site accepts a pageview only when the browser origin matches its domain. The write key is returned once, on create or when it is replaced.
 
 Replace the local placeholder IDs with real resource IDs before deploying. Do not enable `remote: true` on `EMAIL` for local development.

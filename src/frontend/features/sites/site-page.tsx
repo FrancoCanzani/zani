@@ -1,7 +1,21 @@
-import { useSuspenseQuery } from "@tanstack/react-query"
+import { useMutation, useSuspenseQuery } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
+import { useState } from "react"
 
-import { siteStatsQueryOptions, statsRange, type Breakdown } from "./api"
+import { Button } from "@components/ui/button"
+
+import { workspaceQueryOptions } from "@features/workspaces/api"
+import {
+  canManageBusiness,
+  parseWorkspaceRole,
+} from "@features/workspaces/role"
+
+import {
+  replaceWriteKey,
+  siteStatsQueryOptions,
+  statsRange,
+  type Breakdown,
+} from "./api"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
 
@@ -23,6 +37,23 @@ export function SitePage() {
     siteStatsQueryOptions(slug, siteId, "country", range)
   )
   const tables = { path, referrer, country }
+  const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
+  const role = parseWorkspaceRole(workspaceData.workspace.role)
+  const canReplace =
+    role !== null &&
+    canManageBusiness(role) &&
+    totals.data.site.revokedAt === null
+  const [writeKey, setWriteKey] = useState<string | null>(null)
+  const replace = useMutation({
+    mutationFn: () => replaceWriteKey(slug, siteId),
+    onSuccess: (result) => {
+      setWriteKey(result.writeKey)
+    },
+  })
+  const script =
+    writeKey === null
+      ? ""
+      : `<script defer data-key="${writeKey}" src="${window.location.origin}/script.js"></script>`
 
   return (
     <div className="flex flex-col gap-10">
@@ -37,6 +68,37 @@ export function SitePage() {
           {range.start} – {range.end}
         </p>
       </div>
+
+      {writeKey ? (
+        <section className="space-y-2 text-sm">
+          <h2 className="text-muted-foreground">Write key</h2>
+          <pre className="overflow-x-auto whitespace-pre-wrap">{writeKey}</pre>
+          <pre className="overflow-x-auto whitespace-pre-wrap">{script}</pre>
+          <p className="text-muted-foreground">
+            Shown once. The previous key no longer works.
+          </p>
+        </section>
+      ) : null}
+
+      {canReplace ? (
+        <div className="space-y-2">
+          <Button
+            type="button"
+            disabled={replace.isPending}
+            onClick={() => {
+              replace.reset()
+              void replace.mutate()
+            }}
+          >
+            {replace.isPending ? "Replacing…" : "New write key"}
+          </Button>
+          {replace.error ? (
+            <p className="text-sm text-muted-foreground">
+              {replace.error.message}
+            </p>
+          ) : null}
+        </div>
+      ) : null}
 
       <dl className="grid grid-cols-2 gap-4 text-sm">
         <div>

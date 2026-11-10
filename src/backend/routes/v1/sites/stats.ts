@@ -81,6 +81,7 @@ export const siteStats = new Hono<AppEnv>().get(
           id: matched.id,
           name: matched.name,
           domain: matched.domain,
+          revokedAt: matched.revokedAt,
         },
         views: asNumber(totals?.views),
         visitors: asNumber(totals?.visitors),
