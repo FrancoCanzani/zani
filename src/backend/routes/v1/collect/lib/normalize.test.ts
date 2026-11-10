@@ -11,6 +11,7 @@ import {
 import type { CollectBody } from "./schema"
 
 const body: CollectBody = {
+  visitorId: "visitor-1",
   sessionId: "session-1",
   path: "/pricing?plan=pro#buy",
   referrer: "https://www.google.com/search?q=zani",
@@ -28,6 +29,7 @@ describe("normalizeEvent", () => {
 
     expect(event).toEqual({
       name: "pageview",
+      visitorId: "visitor-1",
       sessionId: "session-1",
       path: "/pricing",
       referrerHost: "www.google.com",

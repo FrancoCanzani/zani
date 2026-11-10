@@ -3,9 +3,12 @@ import { Hono } from "hono"
 import { api } from "./api"
 import { createAuth } from "./lib/auth"
 import { AUTH_BASE_PATH } from "./lib/paths"
+import { scriptResponse } from "./routes/script"
 import type { AppEnv } from "./types"
 
 const worker = new Hono<AppEnv>()
+
+worker.get("/script.js", () => scriptResponse())
 
 worker.on(["GET", "POST"], `${AUTH_BASE_PATH}/*`, (c) => {
   return createAuth(c.env, c.executionCtx).handler(c.req.raw)

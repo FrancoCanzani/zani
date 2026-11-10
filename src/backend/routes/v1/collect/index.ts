@@ -9,6 +9,7 @@ import { newId, sha256Hex } from "../../../lib/utils"
 import type { AppEnv } from "../../../types"
 
 import { countryFromRequest, normalizeEvent } from "./lib/normalize"
+import { originAllowed, originHost } from "./lib/origin"
 import { collectBodySchema } from "./lib/schema"
 
 export const collect = new Hono<AppEnv>()
@@ -35,6 +36,10 @@ export const collect = new Hono<AppEnv>()
 
     if (!matched || matched.revokedAt !== null) {
       return c.json({ error: "unauthorized" as const }, 401)
+    }
+
+    if (!originAllowed(originHost(c.req.header("origin")), matched.domain)) {
+      return c.json({ error: "origin" as const }, 403)
     }
 
     const normalized = normalizeEvent(c.req.valid("json"), {

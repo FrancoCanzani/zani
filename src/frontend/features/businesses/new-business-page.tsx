@@ -6,12 +6,7 @@ import { z } from "zod"
 
 import { BrandMark } from "@components/brand-mark"
 import { Button } from "@components/ui/button"
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
 import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
@@ -42,7 +37,7 @@ export function NewBusinessPage() {
       writeLastWorkspaceSlug(body.workspace.slug)
       await queryClient.invalidateQueries({ queryKey: ["workspaces"] })
       await navigate({
-        to: "/businesses/$slug/setup",
+        to: "/businesses/$slug",
         params: { slug: body.workspace.slug },
       })
     },
@@ -82,7 +77,7 @@ export function NewBusinessPage() {
           Set up your business
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          This name shows on invoices you send.
+          This is the name of the business.
         </p>
 
         <form

@@ -33,55 +33,12 @@ export const updateWorkspace = new Hono<AppEnv>().patch(
     const db = createDb(c.env)
     const updatedAt = nowMs()
 
-    const patch: {
-      name?: string
-      email?: string | null
-      phone?: string | null
-      address?: string | null
-      taxId?: string | null
-      detailsSkippedAt?: number | null
-      updatedAt: number
-    } = { updatedAt }
-
     if (body.name !== undefined) {
-      patch.name = body.name
+      await db
+        .update(workspace)
+        .set({ name: body.name, updatedAt })
+        .where(eq(workspace.id, current.workspace.id))
     }
-    if (body.email !== undefined) {
-      patch.email = body.email
-    }
-    if (body.phone !== undefined) {
-      patch.phone = body.phone
-    }
-    if (body.address !== undefined) {
-      patch.address = body.address
-    }
-    if (body.taxId !== undefined) {
-      patch.taxId = body.taxId
-    }
-    if (body.skipDetails === true) {
-      patch.detailsSkippedAt = updatedAt
-    }
-    if (
-      body.email !== undefined ||
-      body.phone !== undefined ||
-      body.address !== undefined ||
-      body.taxId !== undefined
-    ) {
-      const nextEmail =
-        body.email !== undefined ? body.email : current.workspace.email
-      const nextPhone =
-        body.phone !== undefined ? body.phone : current.workspace.phone
-      const nextAddress =
-        body.address !== undefined ? body.address : current.workspace.address
-      if (nextEmail?.trim() || nextPhone?.trim() || nextAddress?.trim()) {
-        patch.detailsSkippedAt = null
-      }
-    }
-
-    await db
-      .update(workspace)
-      .set(patch)
-      .where(eq(workspace.id, current.workspace.id))
 
     const [row] = await db
       .select()

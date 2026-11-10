@@ -54,31 +54,7 @@ export function WorkspaceShell() {
                   : "text-muted-foreground"
               )}
             >
-              Invoices
-            </Link>
-            <Link
-              to="/businesses/$slug/customers"
-              params={{ slug }}
-              className={cn(
-                "rounded-md px-2.5 py-1.5 transition-colors hover:text-foreground",
-                pathname.startsWith(`/businesses/${slug}/customers`)
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              Customers
-            </Link>
-            <Link
-              to="/businesses/$slug/products"
-              params={{ slug }}
-              className={cn(
-                "rounded-md px-2.5 py-1.5 transition-colors hover:text-foreground",
-                pathname.startsWith(`/businesses/${slug}/products`)
-                  ? "text-foreground"
-                  : "text-muted-foreground"
-              )}
-            >
-              Products
+              Sites
             </Link>
           </nav>
           <DropdownMenu>

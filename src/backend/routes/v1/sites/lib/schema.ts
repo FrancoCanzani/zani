@@ -1,7 +1,7 @@
 import { z } from "zod"
 
 const hostnamePattern =
-  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/
+  /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/
 
 export const breakdowns = [
   "path",
@@ -22,16 +22,10 @@ export const createSiteBodySchema = z.object({
   domain: z
     .string()
     .trim()
+    .min(1)
     .max(253)
-    .nullish()
-    .transform((value) => {
-      const host = value?.trim().toLowerCase().replace(/\.$/, "") ?? ""
-      return host || null
-    })
-    .refine(
-      (value) => value === null || hostnamePattern.test(value),
-      "Invalid domain"
-    ),
+    .transform((value) => value.toLowerCase().replace(/\.$/, ""))
+    .refine((value) => hostnamePattern.test(value), "Invalid domain"),
 })
 
 export const statsQuerySchema = z.object({

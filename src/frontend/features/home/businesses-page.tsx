@@ -36,7 +36,7 @@ export function BusinessesPage() {
             <EmptyHeader>
               <EmptyTitle>No businesses yet</EmptyTitle>
               <EmptyDescription>
-                You don’t have a business yet. Set one up to start invoicing.
+                You don’t have a business yet.
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
@@ -53,7 +53,7 @@ export function BusinessesPage() {
                   Businesses
                 </h1>
                 <p className="text-sm text-muted-foreground">
-                  Open a business to manage invoices.
+                  Open a business to see its sites.
                 </p>
               </div>
               <Button asChild className="shrink-0">

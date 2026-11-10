@@ -67,7 +67,7 @@ export function CompleteNamePage() {
         What’s your name?
       </h1>
       <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-        So customers and your crew know who you are.
+        This is the name on your account.
       </p>
 
       <form

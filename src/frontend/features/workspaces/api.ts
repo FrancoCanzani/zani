@@ -25,28 +25,11 @@ export type Workspace = {
   slug: string
   plan: string
   role: string
-  email: string | null
-  phone: string | null
-  address: string | null
-  taxId: string | null
-  defaultCurrency: string
-  invoiceNumberPrefix: string
-  defaultPaymentTerms: string | null
-  defaultTaxName: string | null
-  defaultTaxRateBps: number
-  taxInclusive: boolean
-  detailsSkippedAt: number | null
-  detailsComplete: boolean
   createdAt: number
 }
 
 export type WorkspaceDetailsInput = {
   name?: string
-  email?: string | null
-  phone?: string | null
-  address?: string | null
-  taxId?: string | null
-  skipDetails?: boolean
 }
 
 export function workspaceQueryOptions(slug: string) {
@@ -62,7 +45,10 @@ export function workspaceQueryOptions(slug: string) {
   })
 }
 
-export async function updateWorkspace(slug: string, body: WorkspaceDetailsInput) {
+export async function updateWorkspace(
+  slug: string,
+  body: WorkspaceDetailsInput
+) {
   const response = await api.workspaces[":slug"].$patch({
     param: { slug },
     json: body,

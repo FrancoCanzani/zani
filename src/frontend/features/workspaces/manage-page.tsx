@@ -18,14 +18,12 @@ import {
 } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
-import { BusinessDetailsFields } from "@features/workspaces/business-details-fields"
 import {
   workspaceMembersQueryOptions,
   workspaceQueryOptions,
 } from "@features/workspaces/api"
 import {
   canInvite,
-  canManageBusiness,
   parseWorkspaceRole,
   roleLabel,
 } from "@features/workspaces/role"
@@ -48,7 +46,6 @@ export function ManagePage() {
 
   const workspace = workspaceData.workspace
   const role = parseWorkspaceRole(workspace.role)
-  const manageBusiness = role ? canManageBusiness(role) : false
   const inviteAllowed = role ? canInvite(role) : false
 
   const invite = useMutation({
@@ -98,36 +95,12 @@ export function ManagePage() {
     <div className="mx-auto flex w-full max-w-lg flex-col gap-10">
       <div className="space-y-1">
         <h1 className="text-4xl font-light tracking-tight">Manage</h1>
-        <p className="text-sm text-muted-foreground">
-          Business details, people, and invites.
-        </p>
+        <p className="text-sm text-muted-foreground">People and invites.</p>
       </div>
 
       <section className="space-y-3">
         <h2 className="text-sm text-muted-foreground">Business</h2>
-        {!workspace.detailsComplete ? (
-          <p className="text-sm text-muted-foreground">
-            Add contact details so they show on invoices.
-          </p>
-        ) : null}
-        {manageBusiness ? (
-          <BusinessDetailsFields slug={slug} workspace={workspace} />
-        ) : (
-          <div className="space-y-1 text-sm">
-            <p className="font-medium">{workspace.name}</p>
-            {workspace.email ? (
-              <p className="text-muted-foreground">{workspace.email}</p>
-            ) : null}
-            {workspace.phone ? (
-              <p className="text-muted-foreground">{workspace.phone}</p>
-            ) : null}
-            {workspace.address ? (
-              <p className="whitespace-pre-line text-muted-foreground">
-                {workspace.address}
-              </p>
-            ) : null}
-          </div>
-        )}
+        <p className="text-sm">{workspace.name}</p>
       </section>
 
       <section className="space-y-3">

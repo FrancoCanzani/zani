@@ -50,37 +50,47 @@ export const siteStats = new Hono<AppEnv>().get(
     const bucket = bucketSql(range.grain)
     const column = seriesColumn(query.breakdown)
     const series = column ? sql<string>`${column}` : sql<string>`''`
+    const views = sql<number>`count(*)`
+    const visitors = sql<number>`count(distinct ${event.visitorId})`
+    const sessions = sql<number>`count(distinct ${event.sessionId})`
 
     const [totals] = await db
-      .select({
-        views: sql<number>`count(*)`,
-        sessions: sql<number>`count(distinct ${event.sessionId})`,
-      })
+      .select({ views, visitors, sessions })
       .from(event)
       .where(where)
 
-    const rows = await db
-      .select({
-        bucket,
-        series,
-        views: sql<number>`count(*)`,
-        sessions: sql<number>`count(distinct ${event.sessionId})`,
-      })
-      .from(event)
-      .where(where)
-      .groupBy(bucket, series)
-      .orderBy(asc(bucket), desc(sql`count(*)`))
-      .limit(pointLimit)
+    const rows = query.breakdown
+      ? await db
+          .select({ series, views, visitors, sessions })
+          .from(event)
+          .where(where)
+          .groupBy(series)
+          .orderBy(desc(views))
+          .limit(pointLimit)
+      : await db
+          .select({ bucket, series, views, visitors, sessions })
+          .from(event)
+          .where(where)
+          .groupBy(bucket, series)
+          .orderBy(asc(bucket))
+          .limit(pointLimit)
 
     return c.json(
       {
+        site: {
+          id: matched.id,
+          name: matched.name,
+          domain: matched.domain,
+        },
         views: asNumber(totals?.views),
+        visitors: asNumber(totals?.visitors),
         sessions: asNumber(totals?.sessions),
         truncated: rows.length >= pointLimit,
         points: rows.map((row) => ({
-          bucket: asNumber(row.bucket),
+          bucket: "bucket" in row ? asNumber(row.bucket) : null,
           series: typeof row.series === "string" ? row.series : "",
           views: asNumber(row.views),
+          visitors: asNumber(row.visitors),
           sessions: asNumber(row.sessions),
         })),
       },

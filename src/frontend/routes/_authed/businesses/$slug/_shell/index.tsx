@@ -3,24 +3,24 @@ import { createFileRoute } from "@tanstack/react-router"
 import { NotFoundScreen } from "@components/not-found-screen"
 import { pendingScreen } from "@components/pending-screen"
 
-import { customersQueryOptions } from "@features/customers/api"
-import { invoicesQueryOptions } from "@features/invoices/api"
-import { InvoicesPage } from "@features/invoices/invoices-page"
+import { SitesPage } from "@features/sites/sites-page"
+import { sitesQueryOptions } from "@features/sites/api"
+import { workspaceQueryOptions } from "@features/workspaces/api"
 
 export const Route = createFileRoute("/_authed/businesses/$slug/_shell/")({
-  pendingComponent: pendingScreen("Loading invoices…"),
+  pendingComponent: pendingScreen("Loading sites…"),
   notFoundComponent: NotFoundScreen,
   loader: async ({ context, params }) => {
     await Promise.all([
       context.queryClient.query({
-        ...invoicesQueryOptions(params.slug),
+        ...sitesQueryOptions(params.slug),
         staleTime: "static",
       }),
       context.queryClient.query({
-        ...customersQueryOptions(params.slug),
+        ...workspaceQueryOptions(params.slug),
         staleTime: "static",
       }),
     ])
   },
-  component: InvoicesPage,
+  component: SitesPage,
 })

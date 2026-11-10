@@ -5,6 +5,7 @@ const sessionPattern = /^[A-Za-z0-9_-]{8,64}$/
 
 export type NormalizedEvent = {
   name: string
+  visitorId: string
   sessionId: string
   path: string
   referrerHost: string
@@ -18,16 +19,18 @@ export type NormalizedEvent = {
 
 export function normalizeEvent(
   body: CollectBody,
-  input: { siteDomain: string | null; userAgent: string; country: string }
+  input: { siteDomain: string; userAgent: string; country: string }
 ): NormalizedEvent | null {
   const name = normalizeName(body.name)
+  const visitorId = normalizeSessionId(body.visitorId)
   const sessionId = normalizeSessionId(body.sessionId)
   const path = normalizePath(body.path)
-  if (!name || !sessionId || !path) return null
+  if (!name || !visitorId || !sessionId || !path) return null
 
   const agent = classifyAgent(input.userAgent)
   return {
     name,
+    visitorId,
     sessionId,
     path,
     referrerHost: referrerHost(body.referrer, input.siteDomain),
