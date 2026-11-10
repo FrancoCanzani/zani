@@ -52,6 +52,14 @@ describe("normalizeEvent", () => {
     )
   })
 
+  test("keeps a hash route and drops an in-page anchor", () => {
+    expect(normalizePath("/#/pricing?plan=pro")).toBe("/#/pricing")
+    expect(normalizePath("https://example.com/app/#!/docs")).toBe(
+      "/app/#!/docs"
+    )
+    expect(normalizePath("/pricing#buy")).toBe("/pricing")
+  })
+
   test("rejects an event name outside the allowed characters", () => {
     expect(normalizeName("Sign Up")).toBeNull()
   })

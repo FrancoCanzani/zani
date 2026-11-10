@@ -24,6 +24,14 @@ const source = `(() => {
     if (!trimmed || trimmed.length > 80) return
     return trimmed
   }
+  const pagePath = () => {
+    const hash = location.hash
+    if (hash.startsWith("#/") || hash.startsWith("#!/")) {
+      const query = hash.indexOf("?")
+      return location.pathname + (query < 0 ? hash : hash.slice(0, query))
+    }
+    return location.pathname
+  }
   const send = (referrer) => {
     void fetch(endpoint, {
       method: "POST",
@@ -32,7 +40,7 @@ const source = `(() => {
         name: "pageview",
         visitorId: visitor,
         sessionId: session,
-        path: location.pathname,
+        path,
         referrer,
         utmSource: utm("utm_source"),
         utmMedium: utm("utm_medium"),
@@ -42,7 +50,7 @@ const source = `(() => {
     })
   }
   const track = () => {
-    const next = location.pathname
+    const next = pagePath()
     if (next === path) return
     const referrer = path ? location.origin + path : document.referrer
     path = next
@@ -61,6 +69,7 @@ const source = `(() => {
     return result
   }
   addEventListener("popstate", track)
+  addEventListener("hashchange", track)
   track()
 })()
 `

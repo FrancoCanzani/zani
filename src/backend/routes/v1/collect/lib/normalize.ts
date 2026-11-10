@@ -55,24 +55,38 @@ export function normalizeSessionId(input: string): string | null {
   return value
 }
 
+function hashRoute(hash: string): string {
+  if (!hash.startsWith("#/") && !hash.startsWith("#!/")) return ""
+  const query = hash.indexOf("?")
+  return query < 0 ? hash : hash.slice(0, query)
+}
+
 export function normalizePath(input: string): string | null {
   const trimmed = input.trim()
   if (!trimmed || trimmed.length > 2048) return null
 
   let path = trimmed
+  let route = ""
   if (path.includes("://")) {
     try {
-      path = new URL(path).pathname
+      const url = new URL(path)
+      path = url.pathname
+      route = hashRoute(url.hash)
     } catch {
       return null
     }
+  } else {
+    const hash = path.indexOf("#")
+    if (hash >= 0) {
+      route = hashRoute(path.slice(hash))
+      path = path.slice(0, hash)
+    }
+    const query = path.indexOf("?")
+    if (query >= 0) path = path.slice(0, query)
   }
 
-  const hash = path.indexOf("#")
-  if (hash >= 0) path = path.slice(0, hash)
-  const query = path.indexOf("?")
-  if (query >= 0) path = path.slice(0, query)
   if (!path.startsWith("/")) path = `/${path}`
+  path += route
   if (path.length > 1024) return null
   return path
 }
