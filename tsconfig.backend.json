@@ -6,5 +6,6 @@
     "noEmit": true,
     "paths": {}
   },
-  "include": ["src/backend", "worker-configuration.d.ts"]
+  "include": ["src/backend", "worker-configuration.d.ts"],
+  "exclude": ["src/backend/**/*.test.ts"]
 }

@@ -263,3 +263,43 @@ export const invoice = sqliteTable(
     ),
   ]
 )
+
+export const site = sqliteTable(
+  "site",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    domain: text("domain"),
+    writeKeyHash: text("write_key_hash").notNull().unique(),
+    createdAt: integer("created_at").notNull(),
+    revokedAt: integer("revoked_at"),
+  },
+  (table) => [index("site_workspaceId_idx").on(table.workspaceId)]
+)
+
+export const event = sqliteTable(
+  "event",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => site.id, { onDelete: "cascade" }),
+    timestamp: integer("timestamp").notNull(),
+    name: text("name").notNull(),
+    sessionId: text("session_id").notNull(),
+    path: text("path").notNull(),
+    referrerHost: text("referrer_host").notNull().default(""),
+    country: text("country").notNull().default(""),
+    browser: text("browser").notNull().default(""),
+    device: text("device").notNull().default(""),
+    utmSource: text("utm_source").notNull().default(""),
+    utmMedium: text("utm_medium").notNull().default(""),
+    utmCampaign: text("utm_campaign").notNull().default(""),
+  },
+  (table) => [
+    index("event_site_timestamp_idx").on(table.siteId, table.timestamp),
+  ]
+)

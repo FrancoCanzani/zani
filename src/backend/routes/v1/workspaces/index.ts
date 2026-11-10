@@ -5,6 +5,7 @@ import type { AppEnv } from "../../../types"
 import { customers } from "../customers"
 import { invoices } from "../invoices"
 import { products } from "../products"
+import { sites } from "../sites"
 
 import { createWorkspace } from "./create"
 import { getWorkspace } from "./get"
@@ -23,3 +24,4 @@ export const workspaces = new Hono<AppEnv>()
   .route("/:slug/customers", customers)
   .route("/:slug/invoices", invoices)
   .route("/:slug/products", products)
+  .route("/:slug/sites", sites)
