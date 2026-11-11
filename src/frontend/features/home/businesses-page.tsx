@@ -36,12 +36,12 @@ export function BusinessesPage() {
             <EmptyHeader>
               <EmptyTitle>No businesses yet</EmptyTitle>
               <EmptyDescription>
-                You don’t have a business yet.
+                Create one, then add the site you want pageviews for.
               </EmptyDescription>
             </EmptyHeader>
             <EmptyContent>
               <Button asChild>
-                <Link to="/businesses/new">Set up your business</Link>
+                <Link to="/businesses/new">Create a business</Link>
               </Button>
             </EmptyContent>
           </Empty>

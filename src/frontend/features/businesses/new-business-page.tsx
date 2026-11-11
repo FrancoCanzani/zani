@@ -14,7 +14,7 @@ import { api } from "@lib/api"
 import { fieldErrors } from "@lib/utils"
 
 const businessSchema = z.object({
-  name: z.string().trim().min(1, "Enter a business name.").max(80),
+  name: z.string().trim().min(1, "Enter a name.").max(80),
 })
 
 export function NewBusinessPage() {
@@ -74,10 +74,10 @@ export function NewBusinessPage() {
           Back
         </Link>
         <h1 className="text-2xl font-light tracking-tight sm:text-4xl">
-          Set up your business
+          Create a business
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          This is the name of the business.
+          You’ll add sites under this name.
         </p>
 
         <form
@@ -102,7 +102,7 @@ export function NewBusinessPage() {
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
-                    placeholder="Rivera Plumbing"
+                    placeholder="Acme"
                   />
                   <FieldError errors={fieldErrors(field.state.meta.errors)} />
                 </Field>
