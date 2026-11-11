@@ -6,6 +6,12 @@ import { useState } from "react"
 import { InstallSnippet } from "@components/install-snippet"
 import { Button } from "@components/ui/button"
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@components/ui/dialog"
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -117,13 +123,27 @@ export function SitePage() {
         ) : null}
       </div>
 
-      {writeKey ? (
-        <InstallSnippet
-          label="Write key"
-          writeKey={writeKey}
-          note="Shown once. The previous key no longer works."
-        />
-      ) : null}
+      <Dialog
+        open={writeKey !== null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setWriteKey(null)
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader className="sr-only">
+            <DialogTitle>Write key</DialogTitle>
+          </DialogHeader>
+          {writeKey ? (
+            <InstallSnippet
+              label="Write key"
+              writeKey={writeKey}
+              note="Shown once. The previous key no longer works."
+            />
+          ) : null}
+        </DialogContent>
+      </Dialog>
 
       {replace.error ? (
         <p className="text-sm text-muted-foreground">{replace.error.message}</p>
