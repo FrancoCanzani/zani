@@ -2,6 +2,7 @@ import { useMutation, useSuspenseQuery } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 
+import { InstallSnippet } from "@components/install-snippet"
 import { Button } from "@components/ui/button"
 
 import { workspaceQueryOptions } from "@features/workspaces/api"
@@ -50,11 +51,6 @@ export function SitePage() {
       setWriteKey(result.writeKey)
     },
   })
-  const script =
-    writeKey === null
-      ? ""
-      : `<script defer data-key="${writeKey}" src="${window.location.origin}/script.js"></script>`
-
   return (
     <div className="flex flex-col gap-10">
       <div className="space-y-1">
@@ -70,14 +66,11 @@ export function SitePage() {
       </div>
 
       {writeKey ? (
-        <section className="space-y-2 text-sm">
-          <h2 className="text-muted-foreground">Write key</h2>
-          <pre className="overflow-x-auto whitespace-pre-wrap">{writeKey}</pre>
-          <pre className="overflow-x-auto whitespace-pre-wrap">{script}</pre>
-          <p className="text-muted-foreground">
-            Shown once. The previous key no longer works.
-          </p>
-        </section>
+        <InstallSnippet
+          label="Write key"
+          writeKey={writeKey}
+          note="Shown once. The previous key no longer works."
+        />
       ) : null}
 
       {canReplace ? (

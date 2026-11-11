@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { z } from "zod"
 
 import { BrandMark } from "@components/brand-mark"
+import { InstallSnippet } from "@components/install-snippet"
 import { Button } from "@components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
@@ -95,11 +96,6 @@ export function NewBusinessPage() {
     },
   })
 
-  const script =
-    created === null
-      ? ""
-      : `<script defer data-key="${created.writeKey}" src="${window.location.origin}/script.js"></script>`
-
   return (
     <div className="flex min-h-svh flex-col">
       <header className="px-5">
@@ -123,13 +119,12 @@ export function NewBusinessPage() {
         </p>
 
         {created ? (
-          <section className="mt-8 space-y-3 text-sm">
-            <h2 className="text-muted-foreground">{created.name} write key</h2>
-            <pre className="overflow-x-auto whitespace-pre-wrap">
-              {created.writeKey}
-            </pre>
-            <pre className="overflow-x-auto whitespace-pre-wrap">{script}</pre>
-            <p className="text-muted-foreground">Shown once.</p>
+          <div className="mt-8 space-y-6">
+            <InstallSnippet
+              label={`${created.name} write key`}
+              writeKey={created.writeKey}
+              note="Shown once."
+            />
             <Button asChild>
               <Link
                 to="/businesses/$slug/sites/$siteId"
@@ -138,7 +133,7 @@ export function NewBusinessPage() {
                 Open site
               </Link>
             </Button>
-          </section>
+          </div>
         ) : (
           <form
             className="mt-8"

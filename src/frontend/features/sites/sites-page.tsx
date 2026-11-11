@@ -4,6 +4,7 @@ import { Link, getRouteApi } from "@tanstack/react-router"
 import { useState } from "react"
 import { z } from "zod"
 
+import { InstallSnippet } from "@components/install-snippet"
 import { Button } from "@components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
@@ -50,11 +51,6 @@ export function SitesPage() {
     },
   })
 
-  const script =
-    created === null
-      ? ""
-      : `<script defer data-key="${created.writeKey}" src="${window.location.origin}/script.js"></script>`
-
   return (
     <div className="flex flex-col gap-10">
       <h1 className="text-4xl font-light tracking-tight">Sites</h1>
@@ -81,14 +77,11 @@ export function SitesPage() {
       </ul>
 
       {created ? (
-        <section className="space-y-2 text-sm">
-          <h2 className="text-muted-foreground">{created.name} write key</h2>
-          <pre className="overflow-x-auto whitespace-pre-wrap">
-            {created.writeKey}
-          </pre>
-          <pre className="overflow-x-auto whitespace-pre-wrap">{script}</pre>
-          <p className="text-muted-foreground">Shown once.</p>
-        </section>
+        <InstallSnippet
+          label={`${created.name} write key`}
+          writeKey={created.writeKey}
+          note="Shown once."
+        />
       ) : null}
 
       {canAdd ? (
