@@ -1,15 +1,8 @@
-import {
-  useEffect,
-  useLayoutEffect,
-  useRef,
-  useState,
-  type RefObject,
-} from "react"
+import { useEffect, useState } from "react"
 import { CheckIcon, CopyIcon } from "lucide-react"
 import { toast } from "sonner"
 
 import { Button } from "@components/ui/button"
-import { cn } from "@lib/utils"
 
 type InstallSnippetProps = {
   label: string
@@ -45,25 +38,29 @@ export function InstallSnippet({ label, writeKey, note }: InstallSnippetProps) {
         <WriteKeyLine value={writeKey} />
       </div>
       <ScriptBlock source={source} />
+      <p className="text-muted-foreground">
+        Check the{" "}
+        <a
+          href="#docs"
+          onClick={(event) => {
+            event.preventDefault()
+          }}
+          className="underline underline-offset-4 hover:text-foreground"
+        >
+          docs
+        </a>{" "}
+        for how to install.
+      </p>
       <p className="text-muted-foreground">{note}</p>
     </section>
   )
 }
 
 function WriteKeyLine({ value }: { value: string }) {
-  const scrollerRef = useRef<HTMLDivElement>(null)
-  const edges = useScrollEdges(scrollerRef, value)
-
   return (
     <div className="flex items-center gap-1">
-      <div className="relative min-w-0 flex-1">
-        <div
-          ref={scrollerRef}
-          className="no-scrollbar overflow-x-auto py-1 font-mono text-xs"
-        >
-          <span className="whitespace-nowrap">{value}</span>
-        </div>
-        <EdgeFade edges={edges} tone="background" />
+      <div className="no-scrollbar min-w-0 flex-1 overflow-x-auto py-1 font-mono text-xs">
+        <span className="whitespace-nowrap">{value}</span>
       </div>
       <CopyButton value={value} label="Copy write key" />
     </div>
@@ -71,71 +68,22 @@ function WriteKeyLine({ value }: { value: string }) {
 }
 
 function ScriptBlock({ source }: { source: string }) {
-  const scrollerRef = useRef<HTMLPreElement>(null)
-  const edges = useScrollEdges(scrollerRef, source)
-
   return (
     <div className="bg-secondary">
       <div className="flex items-center gap-3 px-3 py-2">
         <span className="text-xs text-muted-foreground">html</span>
-        <a
-          href="#docs"
-          onClick={(event) => {
-            event.preventDefault()
-          }}
-          className="ml-auto text-xs text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
-        >
-          Docs
-        </a>
-        <CopyButton value={source} label="Copy script" />
+        <CopyButton value={source} label="Copy script" className="ml-auto" />
       </div>
-      <div className="relative">
-        <pre
-          ref={scrollerRef}
-          className="no-scrollbar overflow-x-auto px-3 pb-3 font-mono text-xs leading-relaxed"
-        >
-          <code>
-            {highlightHtml(source).map((token, index) => (
-              <span key={index} className={tokenClass(token.kind)}>
-                {token.text}
-              </span>
-            ))}
-          </code>
-        </pre>
-        <EdgeFade edges={edges} tone="secondary" />
-      </div>
+      <pre className="no-scrollbar overflow-x-auto px-3 pb-3 font-mono text-xs leading-relaxed">
+        <code>
+          {highlightHtml(source).map((token, index) => (
+            <span key={index} className={tokenClass(token.kind)}>
+              {token.text}
+            </span>
+          ))}
+        </code>
+      </pre>
     </div>
-  )
-}
-
-function EdgeFade({
-  edges,
-  tone,
-}: {
-  edges: { start: boolean; end: boolean }
-  tone: "background" | "secondary"
-}) {
-  const from = tone === "background" ? "from-background" : "from-secondary"
-
-  return (
-    <>
-      <div
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute inset-y-0 left-0 w-8 bg-gradient-to-r to-transparent backdrop-blur-sm transition-opacity",
-          from,
-          edges.start ? "opacity-100" : "opacity-0"
-        )}
-      />
-      <div
-        aria-hidden
-        className={cn(
-          "pointer-events-none absolute inset-y-0 right-0 w-10 bg-gradient-to-l to-transparent backdrop-blur-sm transition-opacity",
-          from,
-          edges.end ? "opacity-100" : "opacity-0"
-        )}
-      />
-    </>
   )
 }
 
@@ -183,37 +131,6 @@ function CopyButton({
       {copied ? <CheckIcon /> : <CopyIcon />}
     </Button>
   )
-}
-
-function useScrollEdges<T extends HTMLElement>(
-  ref: RefObject<T | null>,
-  value: string
-) {
-  const [edges, setEdges] = useState({ start: false, end: false })
-
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) {
-      return
-    }
-    const update = () => {
-      const max = el.scrollWidth - el.clientWidth
-      setEdges({
-        start: el.scrollLeft > 1,
-        end: max - el.scrollLeft > 1,
-      })
-    }
-    update()
-    el.addEventListener("scroll", update, { passive: true })
-    const observer = new ResizeObserver(update)
-    observer.observe(el)
-    return () => {
-      el.removeEventListener("scroll", update)
-      observer.disconnect()
-    }
-  }, [ref, value])
-
-  return edges
 }
 
 function tokenClass(kind: TokenKind) {
