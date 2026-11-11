@@ -16,7 +16,6 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarProvider,
-  SidebarTrigger,
 } from "@components/ui/sidebar"
 
 import { UserMenu } from "@features/account/user-menu"
@@ -40,7 +39,7 @@ export function AppShell() {
 
   return (
     <SidebarProvider>
-      <Sidebar collapsible="offcanvas" className="border-r-0!">
+      <Sidebar collapsible="none" className="min-h-svh shrink-0 border-r-0!">
         <SidebarHeader className="px-4 pt-4">
           <BrandMark to="/businesses" className="px-2" />
         </SidebarHeader>
@@ -62,9 +61,6 @@ export function AppShell() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <div className="px-4 pt-3 md:hidden">
-          <SidebarTrigger />
-        </div>
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-8">
           <Outlet />
         </div>

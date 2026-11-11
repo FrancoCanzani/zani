@@ -110,7 +110,7 @@ export function SitePage() {
                   void replace.mutate()
                 }}
               >
-                {replace.isPending ? "Replacing…" : "New write key"}
+                {replace.isPending ? "Rotating…" : "Rotate key"}
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
