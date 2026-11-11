@@ -9,7 +9,7 @@ import {
 import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
 
 export const Route = createFileRoute("/_authed/businesses/$slug")({
-  pendingComponent: pendingScreen("Loading business…"),
+  pendingComponent: pendingScreen("Loading…"),
   loader: async ({ context, params }) => {
     writeLastWorkspaceSlug(params.slug)
     await Promise.all([

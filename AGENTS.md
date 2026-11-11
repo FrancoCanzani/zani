@@ -75,7 +75,7 @@ Auth, workspace, site, and event tables are the v1 domain. Do not create payment
 
 Do not implement Stripe, PDF export, or subscriptions unless the current task asks for them.
 
-Workspace is the tenant (the trade business). UI copy says **business**; code/API may still say workspace. Business URLs are `/businesses/$slug` where `slug` is an opaque UUID (same as workspace id on create). Auth flow: sign in → `/welcome` if display name empty → `/businesses` → create business → `/businesses/$slug`. Load session, workspace lists, and membership through TanStack Router `beforeLoad` / `loader` plus `queryClient.query({ ...options, staleTime: "static" })` — do not fetch with `useEffect`.
+Workspace is the tenant. UI copy says **site**. Code, API, and URLs may still say workspace or business. A workspace is created with the first site and is not named in the UI. URLs stay `/businesses/$slug`. Auth flow: sign in → `/welcome` if display name empty → `/businesses` (sites) → add a site. Load session, workspace lists, and membership through TanStack Router `beforeLoad` / `loader` plus `queryClient.query({ ...options, staleTime: "static" })` — do not fetch with `useEffect`.
 
 Do not seed, insert, or copy data — real or fake — unless asked.
 

@@ -1,4 +1,4 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
+import { useQueryClient } from "@tanstack/react-query"
 import {
   Link,
   Outlet,
@@ -14,15 +14,11 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
 import { authClient } from "@lib/auth/client"
 import { cn } from "@lib/utils"
-
-import { workspaceQueryOptions, workspacesQueryOptions } from "./api"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug")
 
@@ -34,8 +30,6 @@ export function WorkspaceShell() {
   const pathname = useRouterState({
     select: (state) => state.location.pathname,
   })
-  const { data: workspace } = useSuspenseQuery(workspaceQueryOptions(slug))
-  const { data: workspaces } = useSuspenseQuery(workspacesQueryOptions())
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -59,7 +53,7 @@ export function WorkspaceShell() {
           </nav>
           <DropdownMenu>
             <DropdownMenuTrigger className="flex max-w-[14rem] items-center gap-1 rounded-md px-2 py-1 text-sm outline-none hover:bg-muted focus-visible:ring-1 focus-visible:ring-ring">
-              <span className="truncate">{workspace.workspace.name}</span>
+              <span className="truncate">{session.user.name}</span>
               <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-56">
@@ -68,30 +62,6 @@ export function WorkspaceShell() {
                   {session.user.email}
                 </span>
               </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              <DropdownMenuLabel>Switch business</DropdownMenuLabel>
-              <DropdownMenuRadioGroup
-                value={slug}
-                onValueChange={(next) => {
-                  void router.navigate({
-                    to: "/businesses/$slug",
-                    params: { slug: next },
-                  })
-                }}
-              >
-                {workspaces.workspaces.map((item) => (
-                  <DropdownMenuRadioItem key={item.id} value={item.slug}>
-                    {item.name}
-                  </DropdownMenuRadioItem>
-                ))}
-              </DropdownMenuRadioGroup>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/businesses/new">New business</Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/businesses">All businesses</Link>
-              </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>
                 <Link to="/account">Settings</Link>

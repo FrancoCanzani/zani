@@ -1,15 +1,8 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
+@import "@fontsource-variable/inter";
 @import "@fontsource-variable/source-code-pro";
-
-@font-face {
-  font-family: "Geist Serif";
-  src: url("./fonts/GeistSerif-Regular.woff2") format("woff2");
-  font-weight: 400;
-  font-style: normal;
-  font-display: swap;
-}
 
 @custom-variant dark (&:is(.dark *));
 @source "./**/*.{ts,tsx}";
@@ -54,9 +47,9 @@
   --radius-2xl: 0;
   --radius-3xl: 0;
   --radius-4xl: 9999px;
-  --font-sans: "Geist Serif", "Times New Roman", Times, serif;
+  --font-sans: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
   --font-mono: "Source Code Pro Variable", ui-monospace, monospace;
-  --font-brand: "Geist Serif", "Times New Roman", Times, serif;
+  --font-brand: "Inter Variable", Inter, ui-sans-serif, system-ui, sans-serif;
   --text-xl: 1.125rem;
   --text-xl--line-height: 1.5rem;
   --text-2xl: 1.25rem;

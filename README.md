@@ -4,9 +4,9 @@ Development foundation for a SaaS that records pageviews for a site you own.
 
 Product line: **Pageviews for a site you own.**
 
-The first slice is versioned HTTP APIs, email OTP sign-in, display-name completion, businesses, sites, `/script.js`, and raw pageview numbers. Subscriptions are not implemented yet.
+The first slice is versioned HTTP APIs, email OTP sign-in, display-name completion, sites, `/script.js`, and raw pageview numbers. Subscriptions are not implemented yet.
 
-Flow: sign in → `/welcome` (name) → `/businesses` → create a business → `/businesses/$slug` (sites; slug is a UUID). A site page is `/businesses/$slug/sites/$siteId`. Invite links are `/invites/$token`.
+Flow: sign in → `/welcome` (name) → `/businesses` (sites) → add a site. A site page is `/businesses/$slug/sites/$siteId`. Invite links are `/invites/$token`.
 
 ## Stack
 
@@ -40,7 +40,7 @@ Smoke checks:
 - App: [http://localhost:5173](http://localhost:5173)
 - Sign in: [http://localhost:5173/sign-in](http://localhost:5173/sign-in)
 - Welcome (name): [http://localhost:5173/welcome](http://localhost:5173/welcome)
-- Businesses: [http://localhost:5173/businesses](http://localhost:5173/businesses)
+- Sites: [http://localhost:5173/businesses](http://localhost:5173/businesses)
 - Health: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health)
 
 D1 (`DB`) and Email (`EMAIL`) are local Wrangler bindings. Generate migrations with `bun run db:generate`; apply locally yourself with `bun run db:migrate:dev` when ready. No remote Cloudflare resources are required.

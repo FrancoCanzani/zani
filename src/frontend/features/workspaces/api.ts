@@ -54,10 +54,10 @@ export async function updateWorkspace(
     json: body,
   })
   if (response.status === 403) {
-    throw new Error("You cannot update this business.")
+    throw new Error("You cannot update this.")
   }
   if (!response.ok) {
-    throw new Error("Could not save business details.")
+    throw new Error("Could not save.")
   }
   return requireJson<{ workspace: Workspace }>(response, "workspace")
 }

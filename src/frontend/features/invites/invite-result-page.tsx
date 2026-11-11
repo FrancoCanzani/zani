@@ -19,7 +19,7 @@ export function InviteResultPage() {
       return (
         <InviteMessage
           title="This invite has expired"
-          body="Ask a workspace owner to send a new one."
+          body="Ask for a new invite."
         />
       )
     case "failed":

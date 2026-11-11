@@ -1,6 +1,7 @@
 import { useForm } from "@tanstack/react-form"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { Link, useNavigate } from "@tanstack/react-router"
+import { Link } from "@tanstack/react-router"
+import { useState } from "react"
 import { toast } from "sonner"
 import { z } from "zod"
 
@@ -9,37 +10,69 @@ import { Button } from "@components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
-import { writeLastWorkspaceSlug } from "@features/workspaces/last-workspace"
-import { api } from "@lib/api"
+import { createSite } from "@features/sites/api"
+import {
+  readLastWorkspaceSlug,
+  writeLastWorkspaceSlug,
+} from "@features/workspaces/last-workspace"
+import { api, requireJson } from "@lib/api"
 import { fieldErrors } from "@lib/utils"
 
-const businessSchema = z.object({
+const siteSchema = z.object({
   name: z.string().trim().min(1, "Enter a name.").max(80),
+  domain: z.string().trim().min(1, "Enter a domain.").max(253),
 })
 
+type CreatedSite = {
+  slug: string
+  siteId: string
+  name: string
+  writeKey: string
+}
+
 export function NewBusinessPage() {
-  const navigate = useNavigate()
   const queryClient = useQueryClient()
+  const [created, setCreated] = useState<CreatedSite | null>(null)
 
-  const createBusiness = useMutation({
-    mutationFn: async (name: string) => {
-      const response = await api.workspaces.$post({
-        json: { name },
-      })
+  const addSite = useMutation({
+    mutationFn: async (value: { name: string; domain: string }) => {
+      const listed = await requireJson<{
+        workspaces: Array<{ slug: string }>
+      }>(await api.workspaces.$get(), "workspaces")
+      const last = readLastWorkspaceSlug()
+      const existing =
+        listed.workspaces.find((item) => item.slug === last) ??
+        listed.workspaces[0]
+      let slug = existing?.slug
 
-      if (!response.ok) {
-        throw new Error("Could not create the business.")
+      if (!slug) {
+        const response = await api.workspaces.$post({
+          json: { name: value.name },
+        })
+        if (!response.ok) {
+          throw new Error("Could not add the site.")
+        }
+        const body = await requireJson<{ workspace: { slug: string } }>(
+          response,
+          "workspace"
+        )
+        slug = body.workspace.slug
       }
 
-      return response.json()
+      const result = await createSite(slug, value)
+      writeLastWorkspaceSlug(slug)
+      return {
+        slug,
+        siteId: result.site.id,
+        name: result.site.name,
+        writeKey: result.writeKey,
+      }
     },
-    onSuccess: async (body) => {
-      writeLastWorkspaceSlug(body.workspace.slug)
+    onSuccess: async (result) => {
+      setCreated(result)
       await queryClient.invalidateQueries({ queryKey: ["workspaces"] })
-      await navigate({
-        to: "/businesses/$slug",
-        params: { slug: body.workspace.slug },
-      })
+      await queryClient.invalidateQueries({ queryKey: ["account-sites"] })
+      await queryClient.invalidateQueries({ queryKey: ["sites", result.slug] })
     },
     onError: (error) => {
       toast.error(error.message)
@@ -49,14 +82,23 @@ export function NewBusinessPage() {
   const form = useForm({
     defaultValues: {
       name: "",
+      domain: "",
     },
     validators: {
-      onSubmit: businessSchema,
+      onSubmit: siteSchema,
     },
     onSubmit: async ({ value }) => {
-      await createBusiness.mutateAsync(value.name.trim())
+      await addSite.mutateAsync({
+        name: value.name.trim(),
+        domain: value.domain.trim(),
+      })
     },
   })
+
+  const script =
+    created === null
+      ? ""
+      : `<script defer data-key="${created.writeKey}" src="${window.location.origin}/script.js"></script>`
 
   return (
     <div className="flex min-h-svh flex-col">
@@ -74,49 +116,86 @@ export function NewBusinessPage() {
           Back
         </Link>
         <h1 className="text-2xl font-light tracking-tight sm:text-4xl">
-          Create a business
+          Add a site
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          You’ll add sites under this name.
+          The domain is the hostname visitors use.
         </p>
 
-        <form
-          className="mt-8"
-          onSubmit={(event) => {
-            event.preventDefault()
-            event.stopPropagation()
-            createBusiness.reset()
-            void form.handleSubmit()
-          }}
-        >
-          <FieldGroup>
-            <form.Field name="name">
-              {(field) => (
-                <Field data-invalid={field.state.meta.errors.length > 0}>
-                  <FieldLabel htmlFor={field.name}>Business name</FieldLabel>
-                  <Input
-                    id={field.name}
-                    name={field.name}
-                    autoComplete="organization"
-                    autoFocus
-                    value={field.state.value}
-                    onBlur={field.handleBlur}
-                    onChange={(event) => field.handleChange(event.target.value)}
-                    placeholder="Acme"
-                  />
-                  <FieldError errors={fieldErrors(field.state.meta.errors)} />
-                </Field>
-              )}
-            </form.Field>
-            <form.Subscribe selector={(state) => state.isSubmitting}>
-              {(isSubmitting) => (
-                <Button type="submit" disabled={isSubmitting}>
-                  {isSubmitting ? "Creating…" : "Continue"}
-                </Button>
-              )}
-            </form.Subscribe>
-          </FieldGroup>
-        </form>
+        {created ? (
+          <section className="mt-8 space-y-3 text-sm">
+            <h2 className="text-muted-foreground">{created.name} write key</h2>
+            <pre className="overflow-x-auto whitespace-pre-wrap">
+              {created.writeKey}
+            </pre>
+            <pre className="overflow-x-auto whitespace-pre-wrap">{script}</pre>
+            <p className="text-muted-foreground">Shown once.</p>
+            <Button asChild>
+              <Link
+                to="/businesses/$slug/sites/$siteId"
+                params={{ slug: created.slug, siteId: created.siteId }}
+              >
+                Open site
+              </Link>
+            </Button>
+          </section>
+        ) : (
+          <form
+            className="mt-8"
+            onSubmit={(event) => {
+              event.preventDefault()
+              event.stopPropagation()
+              addSite.reset()
+              void form.handleSubmit()
+            }}
+          >
+            <FieldGroup>
+              <form.Field name="name">
+                {(field) => (
+                  <Field data-invalid={field.state.meta.errors.length > 0}>
+                    <FieldLabel htmlFor={field.name}>Name</FieldLabel>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      autoFocus
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                    />
+                    <FieldError errors={fieldErrors(field.state.meta.errors)} />
+                  </Field>
+                )}
+              </form.Field>
+              <form.Field name="domain">
+                {(field) => (
+                  <Field data-invalid={field.state.meta.errors.length > 0}>
+                    <FieldLabel htmlFor={field.name}>Domain</FieldLabel>
+                    <Input
+                      id={field.name}
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(event) =>
+                        field.handleChange(event.target.value)
+                      }
+                      placeholder="example.com"
+                    />
+                    <FieldError errors={fieldErrors(field.state.meta.errors)} />
+                  </Field>
+                )}
+              </form.Field>
+              <form.Subscribe selector={(state) => state.isSubmitting}>
+                {(isSubmitting) => (
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? "Adding…" : "Add site"}
+                  </Button>
+                )}
+              </form.Subscribe>
+            </FieldGroup>
+          </form>
+        )}
       </main>
     </div>
   )

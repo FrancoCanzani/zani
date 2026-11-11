@@ -16,12 +16,7 @@ import {
   AlertDialogTrigger,
 } from "@components/ui/alert-dialog"
 import { Button } from "@components/ui/button"
-import {
-  Field,
-  FieldError,
-  FieldGroup,
-  FieldLabel,
-} from "@components/ui/field"
+import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@components/ui/input-otp"
 
@@ -156,8 +151,7 @@ export function AccountSettings({ name, email }: AccountSettingsProps) {
                       <Button
                         type="submit"
                         disabled={
-                          Boolean(isSubmitting) ||
-                          String(value).trim() === name
+                          Boolean(isSubmitting) || String(value).trim() === name
                         }
                       >
                         {isSubmitting ? "Saving…" : "Save"}
@@ -183,8 +177,8 @@ export function AccountSettings({ name, email }: AccountSettingsProps) {
       <section className="space-y-3 border-t pt-8">
         <h2 className="text-sm text-muted-foreground">Delete account</h2>
         <p className="text-sm leading-relaxed text-muted-foreground">
-          Permanently deletes your account and any businesses you own. We’ll
-          email a confirmation code first.
+          Permanently deletes your account and the sites you own. We’ll email a
+          confirmation code first.
         </p>
         <AlertDialog
           open={deleteOpen}
@@ -207,7 +201,7 @@ export function AccountSettings({ name, email }: AccountSettingsProps) {
                   <AlertDialogTitle>Delete your account?</AlertDialogTitle>
                   <AlertDialogDescription>
                     We’ll email a one-time code to {email}. Enter it to
-                    permanently delete your account and businesses you own. This
+                    permanently delete your account and the sites you own. This
                     can’t be undone.
                   </AlertDialogDescription>
                 </AlertDialogHeader>

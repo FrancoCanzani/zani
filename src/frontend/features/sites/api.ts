@@ -45,6 +45,31 @@ export function statsRange() {
   }
 }
 
+export type AccountSite = Site & { slug: string }
+
+export function accountSitesQueryOptions() {
+  return queryOptions({
+    queryKey: ["account-sites"] as const,
+    queryFn: async () => {
+      const { workspaces } = await requireJson<{
+        workspaces: Array<{ slug: string }>
+      }>(await api.workspaces.$get(), "workspaces")
+      const groups = await Promise.all(
+        workspaces.map(async (workspace) => {
+          const { sites } = await requireJson<{ sites: Site[] }>(
+            await api.workspaces[":slug"].sites.$get({
+              param: { slug: workspace.slug },
+            }),
+            "sites"
+          )
+          return sites.map((site) => ({ ...site, slug: workspace.slug }))
+        })
+      )
+      return groups.flat()
+    },
+  })
+}
+
 export function sitesQueryOptions(slug: string) {
   return queryOptions({
     queryKey: ["sites", slug] as const,

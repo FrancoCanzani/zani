@@ -99,11 +99,6 @@ export function ManagePage() {
       </div>
 
       <section className="space-y-3">
-        <h2 className="text-sm text-muted-foreground">Business</h2>
-        <p className="text-sm">{workspace.name}</p>
-      </section>
-
-      <section className="space-y-3">
         <h2 className="text-sm text-muted-foreground">People</h2>
         <ul className="divide-y border-y">
           {membersData.members.map((member) => (
