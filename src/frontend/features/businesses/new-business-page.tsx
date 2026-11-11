@@ -5,7 +5,6 @@ import { useState } from "react"
 import { toast } from "sonner"
 import { z } from "zod"
 
-import { BrandMark } from "@components/brand-mark"
 import { InstallSnippet } from "@components/install-snippet"
 import { Button } from "@components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
@@ -97,101 +96,89 @@ export function NewBusinessPage() {
   })
 
   return (
-    <div className="flex min-h-svh flex-col">
-      <header className="px-5">
-        <div className="mx-auto flex h-12 w-full max-w-5xl items-center">
-          <BrandMark to="/businesses" />
+    <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center py-10">
+      <Link
+        to="/businesses"
+        className="mb-4 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      >
+        Back
+      </Link>
+      <h1 className="text-2xl font-light tracking-tight sm:text-4xl">
+        Add a site
+      </h1>
+      <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+        The domain is the hostname visitors use.
+      </p>
+
+      {created ? (
+        <div className="mt-8 space-y-6">
+          <InstallSnippet
+            label={`${created.name} write key`}
+            writeKey={created.writeKey}
+            note="Shown once."
+          />
+          <Button asChild>
+            <Link
+              to="/businesses/$slug/sites/$siteId"
+              params={{ slug: created.slug, siteId: created.siteId }}
+            >
+              Open site
+            </Link>
+          </Button>
         </div>
-      </header>
-
-      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-10">
-        <Link
-          to="/businesses"
-          className="mb-4 text-sm text-muted-foreground transition-colors hover:text-foreground"
+      ) : (
+        <form
+          className="mt-8"
+          onSubmit={(event) => {
+            event.preventDefault()
+            event.stopPropagation()
+            addSite.reset()
+            void form.handleSubmit()
+          }}
         >
-          Back
-        </Link>
-        <h1 className="text-2xl font-light tracking-tight sm:text-4xl">
-          Add a site
-        </h1>
-        <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          The domain is the hostname visitors use.
-        </p>
-
-        {created ? (
-          <div className="mt-8 space-y-6">
-            <InstallSnippet
-              label={`${created.name} write key`}
-              writeKey={created.writeKey}
-              note="Shown once."
-            />
-            <Button asChild>
-              <Link
-                to="/businesses/$slug/sites/$siteId"
-                params={{ slug: created.slug, siteId: created.siteId }}
-              >
-                Open site
-              </Link>
-            </Button>
-          </div>
-        ) : (
-          <form
-            className="mt-8"
-            onSubmit={(event) => {
-              event.preventDefault()
-              event.stopPropagation()
-              addSite.reset()
-              void form.handleSubmit()
-            }}
-          >
-            <FieldGroup>
-              <form.Field name="name">
-                {(field) => (
-                  <Field data-invalid={field.state.meta.errors.length > 0}>
-                    <FieldLabel htmlFor={field.name}>Name</FieldLabel>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      autoFocus
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                    />
-                    <FieldError errors={fieldErrors(field.state.meta.errors)} />
-                  </Field>
-                )}
-              </form.Field>
-              <form.Field name="domain">
-                {(field) => (
-                  <Field data-invalid={field.state.meta.errors.length > 0}>
-                    <FieldLabel htmlFor={field.name}>Domain</FieldLabel>
-                    <Input
-                      id={field.name}
-                      name={field.name}
-                      value={field.state.value}
-                      onBlur={field.handleBlur}
-                      onChange={(event) =>
-                        field.handleChange(event.target.value)
-                      }
-                      placeholder="example.com"
-                    />
-                    <FieldError errors={fieldErrors(field.state.meta.errors)} />
-                  </Field>
-                )}
-              </form.Field>
-              <form.Subscribe selector={(state) => state.isSubmitting}>
-                {(isSubmitting) => (
-                  <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting ? "Adding…" : "Add site"}
-                  </Button>
-                )}
-              </form.Subscribe>
-            </FieldGroup>
-          </form>
-        )}
-      </main>
+          <FieldGroup>
+            <form.Field name="name">
+              {(field) => (
+                <Field data-invalid={field.state.meta.errors.length > 0}>
+                  <FieldLabel htmlFor={field.name}>Name</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    autoFocus
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                  />
+                  <FieldError errors={fieldErrors(field.state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
+            <form.Field name="domain">
+              {(field) => (
+                <Field data-invalid={field.state.meta.errors.length > 0}>
+                  <FieldLabel htmlFor={field.name}>Domain</FieldLabel>
+                  <Input
+                    id={field.name}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(event) => field.handleChange(event.target.value)}
+                    placeholder="example.com"
+                  />
+                  <FieldError errors={fieldErrors(field.state.meta.errors)} />
+                </Field>
+              )}
+            </form.Field>
+            <form.Subscribe selector={(state) => state.isSubmitting}>
+              {(isSubmitting) => (
+                <Button type="submit" disabled={isSubmitting}>
+                  {isSubmitting ? "Adding…" : "Add site"}
+                </Button>
+              )}
+            </form.Subscribe>
+          </FieldGroup>
+        </form>
+      )}
     </div>
   )
 }

@@ -1,5 +1,6 @@
-import { Outlet, createFileRoute, redirect } from "@tanstack/react-router"
+import { createFileRoute, redirect } from "@tanstack/react-router"
 
+import { AppShell } from "@features/app/app-shell"
 import { needsDisplayName } from "@lib/auth/profile"
 
 export const Route = createFileRoute("/_authed")({
@@ -24,5 +25,5 @@ export const Route = createFileRoute("/_authed")({
 
     return { session: context.session }
   },
-  component: Outlet,
+  component: AppShell,
 })

@@ -1,7 +1,5 @@
-import { createFileRoute } from "@tanstack/react-router"
-
-import { WorkspaceShell } from "@features/workspaces/workspace-shell"
+import { Outlet, createFileRoute } from "@tanstack/react-router"
 
 export const Route = createFileRoute("/_authed/businesses/$slug/_shell")({
-  component: WorkspaceShell,
+  component: Outlet,
 })
