@@ -69,9 +69,9 @@
 }
 
 :root {
-  --background: #f8f9fb;
+  --background: #ffffff;
   --foreground: #1c1f24;
-  --card: #f8f9fb;
+  --card: #ffffff;
   --card-foreground: #1c1f24;
   --popover: #ffffff;
   --popover-foreground: #1c1f24;
@@ -97,7 +97,7 @@
   --sidebar-foreground: #1c1f24;
   --sidebar-primary: #1c1f24;
   --sidebar-primary-foreground: #ffffff;
-  --sidebar-accent: #e8eaee;
+  --sidebar-accent: #d7dbe3;
   --sidebar-accent-foreground: #1c1f24;
   --sidebar-border: transparent;
   --sidebar-ring: #1c1f24;

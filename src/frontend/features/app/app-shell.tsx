@@ -50,7 +50,7 @@ export function AppShell() {
               <SidebarMenuButton
                 asChild
                 isActive={sitesActive}
-                className="bg-transparent font-normal text-muted-foreground hover:bg-transparent hover:text-foreground data-active:bg-transparent data-active:font-normal data-active:text-foreground"
+                className="font-normal text-muted-foreground hover:bg-sidebar-accent hover:text-foreground data-active:bg-sidebar-accent data-active:font-medium data-active:text-foreground"
               >
                 <Link to="/businesses">Sites</Link>
               </SidebarMenuButton>
