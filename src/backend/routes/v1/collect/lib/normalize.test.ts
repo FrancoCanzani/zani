@@ -51,6 +51,12 @@ describe("normalizeEvent", () => {
 
   test("drops a referrer on the site's own domain", () => {
     expect(referrerHost("https://example.com/docs", "example.com")).toBe("")
+    expect(referrerHost("https://www.example.com/docs", "example.com")).toBe(
+      ""
+    )
+    expect(referrerHost("https://example.com/docs", "www.example.com")).toBe(
+      ""
+    )
   })
 
   test("strips the query string from a full url", () => {
