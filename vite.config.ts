@@ -18,6 +18,9 @@ export default defineConfig({
     cloudflare(),
     tailwindcss(),
   ],
+  server: {
+    allowedHosts: [".trycloudflare.com"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src/frontend"),

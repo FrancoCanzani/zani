@@ -11,6 +11,7 @@ export const health = new Hono<AppEnv>().get("/", async (c) => {
     {
       ok: true as const,
       version: "v1" as const,
+      environment: c.env.ENVIRONMENT,
       bindings: {
         d1: dbResult?.ok === 1,
         email: typeof c.env.EMAIL.send === "function",

@@ -2,6 +2,8 @@ import type { CollectBody } from "./schema"
 
 const namePattern = /^[a-z0-9_-]{1,32}$/
 const sessionPattern = /^[A-Za-z0-9_-]{8,64}$/
+const screenPattern = /^\d{2,5}x\d{2,5}$/
+const cityPattern = /^[\p{L}\p{N} .'-]{1,80}$/u
 
 export type NormalizedEvent = {
   name: string
@@ -12,14 +14,24 @@ export type NormalizedEvent = {
   utmSource: string
   utmMedium: string
   utmCampaign: string
+  utmContent: string
+  utmTerm: string
   country: string
+  city: string
   browser: string
   device: string
+  os: string
+  screen: string
 }
 
 export function normalizeEvent(
   body: CollectBody,
-  input: { siteDomain: string; userAgent: string; country: string }
+  input: {
+    siteDomain: string
+    userAgent: string
+    country: string
+    city: string
+  }
 ): NormalizedEvent | null {
   const name = normalizeName(body.name)
   const visitorId = normalizeSessionId(body.visitorId)
@@ -37,9 +49,14 @@ export function normalizeEvent(
     utmSource: normalizeUtm(body.utmSource),
     utmMedium: normalizeUtm(body.utmMedium),
     utmCampaign: normalizeUtm(body.utmCampaign),
+    utmContent: normalizeUtm(body.utmContent),
+    utmTerm: normalizeUtm(body.utmTerm),
     country: normalizeCountry(input.country),
+    city: normalizeCity(input.city),
     browser: agent.browser,
     device: agent.device,
+    os: agent.os,
+    screen: normalizeScreen(body.screen),
   }
 }
 
@@ -120,6 +137,19 @@ export function normalizeCountry(input: string): string {
   return input
 }
 
+export function normalizeCity(input: string): string {
+  const value = input.trim().slice(0, 80)
+  if (!value || !cityPattern.test(value)) return ""
+  return value
+}
+
+export function normalizeScreen(input: string | undefined): string {
+  if (!input) return ""
+  const value = input.trim().toLowerCase()
+  if (!screenPattern.test(value)) return ""
+  return value
+}
+
 export function countryFromRequest(request: Request): string {
   const cf = request.cf
   if (!cf || typeof cf !== "object" || !("country" in cf)) return ""
@@ -128,9 +158,18 @@ export function countryFromRequest(request: Request): string {
   return normalizeCountry(country)
 }
 
+export function cityFromRequest(request: Request): string {
+  const cf = request.cf
+  if (!cf || typeof cf !== "object" || !("city" in cf)) return ""
+  const city = cf.city
+  if (typeof city !== "string") return ""
+  return normalizeCity(city)
+}
+
 export function classifyAgent(userAgent: string): {
   browser: string
   device: string
+  os: string
 } {
   const value = userAgent.toLowerCase()
   const device = /ipad|tablet/.test(value)
@@ -151,5 +190,17 @@ export function classifyAgent(userAgent: string): {
             ? "safari"
             : "other"
 
-  return { browser, device }
+  const os = /iphone|ipad|ipod/.test(value)
+    ? "ios"
+    : value.includes("android")
+      ? "android"
+      : value.includes("windows")
+        ? "windows"
+        : value.includes("mac os") || value.includes("macos")
+          ? "macos"
+          : value.includes("linux") || value.includes("cros")
+            ? "linux"
+            : "other"
+
+  return { browser, device, os }
 }

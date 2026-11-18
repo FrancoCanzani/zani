@@ -40,7 +40,7 @@ export function BusinessesPage() {
             </Button>
           </div>
 
-          <ul className="flex flex-col overflow-hidden bg-secondary">
+          <ul className="flex flex-col overflow-hidden rounded-md bg-secondary">
             {sites.map((site) => (
               <li
                 key={site.id}
@@ -54,7 +54,7 @@ export function BusinessesPage() {
                 />
                 <div className="pointer-events-none relative flex items-baseline justify-between gap-4 px-3 py-3">
                   <span className="min-w-0 flex-1 truncate">{site.name}</span>
-                  <span className="shrink-0 text-sm text-muted-foreground">
+                  <span className="shrink-0 font-mono text-sm text-muted-foreground">
                     {site.domain}
                     {site.revokedAt ? " revoked" : ""}
                   </span>

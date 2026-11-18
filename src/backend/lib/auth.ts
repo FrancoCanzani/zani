@@ -27,7 +27,14 @@ export function createAuth(env: Env, ctx?: WaitUntilCtx) {
         : env.BETTER_AUTH_URL,
     basePath: AUTH_BASE_PATH,
     secret: env.BETTER_AUTH_SECRET,
-    trustedOrigins: [env.BETTER_AUTH_URL],
+    trustedOrigins:
+      env.ENVIRONMENT === "development"
+        ? [
+            env.BETTER_AUTH_URL,
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+          ]
+        : [env.BETTER_AUTH_URL],
     database: drizzleAdapter(db, {
       provider: "sqlite",
       schema,

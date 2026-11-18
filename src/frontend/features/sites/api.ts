@@ -1,6 +1,17 @@
-import { queryOptions } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  queryOptions,
+  type QueryClient,
+} from "@tanstack/react-query"
 
 import { api, requireJson } from "@lib/api"
+
+import {
+  filtersFromSearch,
+  rangeFromSearch,
+  type FilterKey,
+  type SiteSearch,
+} from "./search"
 
 export type Site = {
   id: string
@@ -28,22 +39,39 @@ export type SiteStats = {
   views: number
   visitors: number
   sessions: number
+  bounceRate: number
+  viewsPerVisit: number
   truncated: boolean
   points: StatsPoint[]
 }
 
-export type Breakdown = "path" | "referrer" | "country"
+export type Breakdown =
+  | "path"
+  | "referrer"
+  | "country"
+  | "city"
+  | "browser"
+  | "device"
+  | "os"
+  | "screen"
+  | "utm_source"
+  | "utm_medium"
+  | "utm_campaign"
+  | "utm_content"
+  | "utm_term"
+  | "entry"
+  | "exit"
 
-const weekMs = 7 * 24 * 60 * 60 * 1000
-
-export function statsRange() {
-  const endMs = Math.ceil(Date.now() / 3_600_000) * 3_600_000
-  const startMs = endMs - weekMs
-  return {
-    start: new Date(startMs).toISOString(),
-    end: new Date(endMs).toISOString(),
-  }
+export type StatsRange = {
+  start: string
+  end: string
+  grain: "hour" | "day"
+  tz?: string
 }
+
+export type StatsFilters = Partial<Record<FilterKey, string>>
+
+const statsStaleMs = 30_000
 
 export type AccountSite = Site & { slug: string }
 
@@ -87,7 +115,8 @@ export function siteStatsQueryOptions(
   slug: string,
   siteId: string,
   breakdown: Breakdown | undefined,
-  range: { start: string; end: string }
+  range: StatsRange,
+  filters: StatsFilters = {}
 ) {
   return queryOptions({
     queryKey: [
@@ -96,6 +125,7 @@ export function siteStatsQueryOptions(
       siteId,
       breakdown ?? "total",
       range,
+      filters,
     ] as const,
     queryFn: async () =>
       requireJson<SiteStats>(
@@ -104,12 +134,16 @@ export function siteStatsQueryOptions(
           query: {
             start: range.start,
             end: range.end,
-            grain: "day",
+            grain: range.grain,
+            ...(range.tz ? { tz: range.tz } : {}),
             ...(breakdown ? { breakdown } : {}),
+            ...filters,
           },
         }),
         "views"
       ),
+    staleTime: statsStaleMs,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -146,4 +180,87 @@ export async function replaceWriteKey(slug: string, siteId: string) {
     throw new Error("Could not replace the write key.")
   }
   return requireJson<{ site: Site; writeKey: string }>(response, "writeKey")
+}
+
+export async function simulateSiteViews(slug: string, siteId: string) {
+  const response = await api.workspaces[":slug"].sites[":siteId"].simulate.$post(
+    {
+      param: { slug, siteId },
+    }
+  )
+  if (response.status === 404) {
+    throw new Error("Simulate is only available in development.")
+  }
+  if (response.status === 409) {
+    throw new Error("This site is revoked.")
+  }
+  if (!response.ok) {
+    throw new Error("Could not simulate views.")
+  }
+  return requireJson<{ inserted: number }>(response, "inserted")
+}
+
+const overviewBreakdowns: Breakdown[] = [
+  "path",
+  "referrer",
+  "country",
+  "city",
+  "browser",
+  "device",
+  "os",
+  "screen",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+  "utm_content",
+  "utm_term",
+  "entry",
+  "exit",
+]
+
+export function statsQueryFromSearch(search: SiteSearch) {
+  const range = rangeFromSearch(search)
+  return {
+    range: { ...range, tz: search.tz },
+    filters: filtersFromSearch(search),
+  }
+}
+
+export function previousStatsRange(range: StatsRange): StatsRange {
+  const startMs = Date.parse(range.start)
+  const endMs = Date.parse(range.end)
+  const duration = Math.max(0, endMs - startMs)
+  return {
+    start: new Date(startMs - duration).toISOString(),
+    end: new Date(startMs).toISOString(),
+    grain: range.grain,
+    tz: range.tz,
+  }
+}
+
+export function changePercent(current: number, previous: number): number | null {
+  if (previous <= 0) return current > 0 ? 100 : current === 0 ? 0 : null
+  return Math.round(((current - previous) / previous) * 100)
+}
+
+export async function preloadSiteStats(
+  queryClient: QueryClient,
+  slug: string,
+  siteId: string,
+  search: SiteSearch
+) {
+  const { range, filters } = statsQueryFromSearch(search)
+  const previous = previousStatsRange(range)
+  await Promise.all([
+    ...[undefined, ...overviewBreakdowns].map((breakdown) =>
+      queryClient.query({
+        ...siteStatsQueryOptions(slug, siteId, breakdown, range, filters),
+        staleTime: statsStaleMs,
+      })
+    ),
+    queryClient.query({
+      ...siteStatsQueryOptions(slug, siteId, undefined, previous, filters),
+      staleTime: statsStaleMs,
+    }),
+  ])
 }
