@@ -200,22 +200,12 @@ export async function simulateSiteViews(slug: string, siteId: string) {
   return requireJson<{ inserted: number }>(response, "inserted")
 }
 
-const overviewBreakdowns: Breakdown[] = [
+const defaultPanelBreakdowns: Breakdown[] = [
   "path",
   "referrer",
-  "country",
-  "city",
-  "browser",
-  "device",
-  "os",
-  "screen",
   "utm_source",
-  "utm_medium",
-  "utm_campaign",
-  "utm_content",
-  "utm_term",
-  "entry",
-  "exit",
+  "country",
+  "browser",
 ]
 
 export function statsQueryFromSearch(search: SiteSearch) {
@@ -252,15 +242,19 @@ export async function preloadSiteStats(
   const { range, filters } = statsQueryFromSearch(search)
   const previous = previousStatsRange(range)
   await Promise.all([
-    ...[undefined, ...overviewBreakdowns].map((breakdown) =>
+    queryClient.query({
+      ...siteStatsQueryOptions(slug, siteId, undefined, range, filters),
+      staleTime: statsStaleMs,
+    }),
+    queryClient.query({
+      ...siteStatsQueryOptions(slug, siteId, undefined, previous, filters),
+      staleTime: statsStaleMs,
+    }),
+    ...defaultPanelBreakdowns.map((breakdown) =>
       queryClient.query({
         ...siteStatsQueryOptions(slug, siteId, breakdown, range, filters),
         staleTime: statsStaleMs,
       })
     ),
-    queryClient.query({
-      ...siteStatsQueryOptions(slug, siteId, undefined, previous, filters),
-      staleTime: statsStaleMs,
-    }),
   ])
 }

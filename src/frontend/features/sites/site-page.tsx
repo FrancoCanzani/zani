@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query"
 import { getRouteApi } from "@tanstack/react-router"
 import { EllipsisIcon, XIcon } from "lucide-react"
-import { startTransition, useState } from "react"
+import { Suspense, startTransition, useEffect, useState } from "react"
 import { toast } from "sonner"
 
 import { InstallSnippet } from "@components/install-snippet"
@@ -37,6 +37,8 @@ import {
   statsQueryFromSearch,
   type Breakdown,
   type SiteStats,
+  type StatsFilters,
+  type StatsRange,
 } from "./api"
 import {
   activeFilterChips,
@@ -250,25 +252,101 @@ function BreakdownTable({
   )
 }
 
+function breakdownKey(tab: BreakdownTab): Breakdown {
+  return tab.key === "map" ? "country" : tab.key
+}
+
+function BreakdownBodyFallback() {
+  return <p className="py-2 text-xs text-muted-foreground">Loading…</p>
+}
+
+function BreakdownBody({
+  tab,
+  slug,
+  siteId,
+  range,
+  filters,
+  search,
+  onSelect,
+}: {
+  tab: BreakdownTab
+  slug: string
+  siteId: string
+  range: StatsRange
+  filters: StatsFilters
+  search: SiteSearch
+  onSelect: (key: FilterKey, value: string) => void
+}) {
+  const dataKey = breakdownKey(tab)
+  const { data } = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, dataKey, range, filters)
+  )
+
+  if (tab.view === "map") {
+    return (
+      <CountriesMap
+        points={data.points}
+        activeValue={search.country}
+        onSelect={(country) => onSelect("country", country)}
+      />
+    )
+  }
+
+  return (
+    <BreakdownTable
+      filterKey={tab.filterKey}
+      data={data}
+      activeValue={search[tab.filterKey]}
+      onSelect={onSelect}
+    />
+  )
+}
+
 function BreakdownPanel({
   title,
   tabs,
-  tableQueries,
+  slug,
+  siteId,
+  range,
+  filters,
   search,
   onSelect,
 }: {
   title: string
   tabs: BreakdownTab[]
-  tableQueries: Record<Breakdown, { data: SiteStats }>
+  slug: string
+  siteId: string
+  range: StatsRange
+  filters: StatsFilters
   search: SiteSearch
   onSelect: (key: FilterKey, value: string) => void
 }) {
+  const queryClient = useQueryClient()
   const [active, setActive] = useState(tabs[0]!.key)
   const tab = tabs.find((item) => item.key === active) ?? tabs[0]!
-  const dataKey = tab.key === "map" ? "country" : tab.key
-  const table = tableQueries[dataKey]
+  const dataKey = breakdownKey(tab)
   const showTabs = tabs.length > 1
-  const showMap = tab.view === "map"
+
+  function prefetch(breakdown: Breakdown) {
+    void queryClient.prefetchQuery(
+      siteStatsQueryOptions(slug, siteId, breakdown, range, filters)
+    )
+  }
+
+  useEffect(() => {
+    const { range: idleRange, filters: idleFilters } =
+      statsQueryFromSearch(search)
+    const handle = window.setTimeout(() => {
+      for (const item of tabs) {
+        const key = breakdownKey(item)
+        if (key === dataKey) continue
+        void queryClient.prefetchQuery(
+          siteStatsQueryOptions(slug, siteId, key, idleRange, idleFilters)
+        )
+      }
+    }, 150)
+    return () => window.clearTimeout(handle)
+  }, [slug, siteId, search, dataKey, queryClient, tabs])
 
   return (
     <section className="rounded-lg border border-border/70 p-4">
@@ -288,6 +366,8 @@ function BreakdownPanel({
                   type="button"
                   role="radio"
                   aria-checked={selected}
+                  onMouseEnter={() => prefetch(breakdownKey(item))}
+                  onFocus={() => prefetch(breakdownKey(item))}
                   onClick={() => setActive(item.key)}
                   className={`h-[22px] shrink-0 rounded-[5px] px-2 text-[12px] leading-4 transition-colors ${
                     selected
@@ -302,20 +382,17 @@ function BreakdownPanel({
           </div>
         ) : null}
       </div>
-      {showMap ? (
-        <CountriesMap
-          points={table.data.points}
-          activeValue={search.country}
-          onSelect={(country) => onSelect("country", country)}
-        />
-      ) : (
-        <BreakdownTable
-          filterKey={tab.filterKey}
-          data={table.data}
-          activeValue={search[tab.filterKey]}
+      <Suspense fallback={<BreakdownBodyFallback />}>
+        <BreakdownBody
+          tab={tab}
+          slug={slug}
+          siteId={siteId}
+          range={range}
+          filters={filters}
+          search={search}
           onSelect={onSelect}
         />
-      )}
+      </Suspense>
     </section>
   )
 }
@@ -342,69 +419,6 @@ export function SitePage() {
       filters
     )
   )
-
-  const path = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "path", range, filters)
-  )
-  const entry = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "entry", range, filters)
-  )
-  const exit = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "exit", range, filters)
-  )
-  const referrer = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "referrer", range, filters)
-  )
-  const country = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "country", range, filters)
-  )
-  const city = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "city", range, filters)
-  )
-  const browser = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "browser", range, filters)
-  )
-  const device = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "device", range, filters)
-  )
-  const os = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "os", range, filters)
-  )
-  const screen = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "screen", range, filters)
-  )
-  const utmSource = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "utm_source", range, filters)
-  )
-  const utmMedium = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "utm_medium", range, filters)
-  )
-  const utmCampaign = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "utm_campaign", range, filters)
-  )
-  const utmContent = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "utm_content", range, filters)
-  )
-  const utmTerm = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "utm_term", range, filters)
-  )
-  const tableQueries: Record<Breakdown, { data: SiteStats }> = {
-    path,
-    entry,
-    exit,
-    referrer,
-    country,
-    city,
-    browser,
-    device,
-    os,
-    screen,
-    utm_source: utmSource,
-    utm_medium: utmMedium,
-    utm_campaign: utmCampaign,
-    utm_content: utmContent,
-    utm_term: utmTerm,
-  }
 
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
   const role = parseWorkspaceRole(workspaceData.workspace.role)
@@ -680,7 +694,10 @@ export function SitePage() {
             key={panel.id}
             title={panel.title}
             tabs={panel.tabs}
-            tableQueries={tableQueries}
+            slug={slug}
+            siteId={siteId}
+            range={range}
+            filters={filters}
             search={search}
             onSelect={toggleFilter}
           />
