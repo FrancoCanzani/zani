@@ -42,7 +42,7 @@ export function AppShell() {
     <SidebarProvider>
       <Sidebar collapsible="offcanvas">
         <SidebarHeader className="px-2 pt-6">
-          <BrandMark to="/businesses" className="px-2" />
+          <BrandMark to="/businesses" className="px-2 text-2xl" />
         </SidebarHeader>
         <SidebarContent className="mt-6">
           <SidebarMenu className="px-2">
