@@ -4,7 +4,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { Link, getRouteApi } from "@tanstack/react-router"
-import { EllipsisIcon } from "lucide-react"
+import { EllipsisIcon, XIcon } from "lucide-react"
 import { startTransition, useState } from "react"
 import { toast } from "sonner"
 
@@ -33,30 +33,23 @@ import {
   replaceWriteKey,
   simulateSiteViews,
   siteStatsQueryOptions,
-  statsRange,
-  type Breakdown,
+  statsQueryFromSearch,
   type SiteStats,
 } from "./api"
+import {
+  activeFilterChips,
+  filterLabels,
+  metricLabels,
+  rangeLabels,
+  rangePresets,
+  type FilterKey,
+  type Metric,
+  type RangePreset,
+  type SiteSearch,
+} from "./search"
 import { ViewsChart } from "./views-chart"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
-
-const breakdowns: Array<{ key: Breakdown; label: string }> = [
-  { key: "path", label: "Pages" },
-  { key: "referrer", label: "Referrers" },
-  { key: "country", label: "Countries" },
-  { key: "browser", label: "Browsers" },
-  { key: "device", label: "Devices" },
-  { key: "utm_source", label: "UTM source" },
-  { key: "utm_medium", label: "UTM medium" },
-  { key: "utm_campaign", label: "UTM campaign" },
-]
-
-const ranges = [
-  { days: 1, label: "Today" },
-  { days: 7, label: "7d" },
-  { days: 30, label: "30d" },
-] as const
 
 function formatStatsRange(start: string, end: string) {
   const startDate = new Date(start)
@@ -78,46 +71,57 @@ function formatStatsRange(start: string, end: string) {
 
 function BreakdownTable({
   label,
+  filterKey,
   data,
+  activeValue,
+  onSelect,
 }: {
   label: string
+  filterKey: FilterKey
   data: SiteStats
+  activeValue: string | undefined
+  onSelect: (key: FilterKey, value: string) => void
 }) {
+  const maxViews = Math.max(1, ...data.points.map((point) => point.views))
+
   return (
-    <section className="space-y-2">
+    <section className="space-y-3">
       <h2 className="text-sm text-muted-foreground">{label}</h2>
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-muted-foreground">
-            <th className="py-1 font-normal">value</th>
-            <th className="py-1 font-normal">views</th>
-            <th className="py-1 font-normal">visitors</th>
-            <th className="py-1 font-normal">%</th>
-          </tr>
-        </thead>
-        <tbody>
-          {data.points.length === 0 ? (
-            <tr className="border-t">
-              <td className="py-1 text-muted-foreground" colSpan={4}>
-                No data
-              </td>
-            </tr>
-          ) : (
-            data.points.map((point) => (
-              <tr key={point.series || "(none)"} className="border-t">
-                <td className="py-1">{point.series || "(none)"}</td>
-                <td className="py-1">{point.views}</td>
-                <td className="py-1">{point.visitors}</td>
-                <td className="py-1">
-                  {data.views === 0
-                    ? "0%"
-                    : `${Math.round((point.views / data.views) * 100)}%`}
-                </td>
-              </tr>
-            ))
-          )}
-        </tbody>
-      </table>
+      <ul className="space-y-1">
+        {data.points.length === 0 ? (
+          <li className="py-2 text-sm text-muted-foreground">No data</li>
+        ) : (
+          data.points.map((point) => {
+            const value = point.series
+            const selected = activeValue === value
+            const share = data.views === 0 ? 0 : point.views / data.views
+            return (
+              <li key={value || "(none)"}>
+                <button
+                  type="button"
+                  onClick={() => onSelect(filterKey, value)}
+                  className={`relative flex w-full items-center gap-3 overflow-hidden rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted ${selected ? "bg-muted" : ""}`}
+                >
+                  <span
+                    aria-hidden
+                    className="absolute inset-y-0 left-0 bg-foreground/5"
+                    style={{ width: `${(point.views / maxViews) * 100}%` }}
+                  />
+                  <span className="relative min-w-0 flex-1 truncate">
+                    {value || "(none)"}
+                  </span>
+                  <span className="relative tabular-nums text-muted-foreground">
+                    {point.views}
+                  </span>
+                  <span className="relative w-8 text-right tabular-nums text-muted-foreground">
+                    {Math.round(share * 100)}%
+                  </span>
+                </button>
+              </li>
+            )
+          })
+        )}
+      </ul>
       {data.truncated ? (
         <p className="text-sm text-muted-foreground">Truncated.</p>
       ) : null}
@@ -127,46 +131,21 @@ function BreakdownTable({
 
 export function SitePage() {
   const { slug, siteId } = routeApi.useParams()
+  const search = routeApi.useSearch()
+  const navigate = routeApi.useNavigate()
   const queryClient = useQueryClient()
-  const [days, setDays] = useState<(typeof ranges)[number]["days"]>(7)
-  const range = statsRange(days)
+  const { range, filters } = statsQueryFromSearch(search)
+  const chips = activeFilterChips(search)
+
   const totals = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, undefined, range)
+    siteStatsQueryOptions(slug, siteId, undefined, range, filters)
   )
   const path = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "path", range)
+    siteStatsQueryOptions(slug, siteId, "path", range, filters)
   )
   const referrer = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "referrer", range)
+    siteStatsQueryOptions(slug, siteId, "referrer", range, filters)
   )
-  const country = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "country", range)
-  )
-  const browser = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "browser", range)
-  )
-  const device = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "device", range)
-  )
-  const utmSource = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "utm_source", range)
-  )
-  const utmMedium = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "utm_medium", range)
-  )
-  const utmCampaign = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, "utm_campaign", range)
-  )
-  const tables: Record<Breakdown, SiteStats> = {
-    path: path.data,
-    referrer: referrer.data,
-    country: country.data,
-    browser: browser.data,
-    device: device.data,
-    utm_source: utmSource.data,
-    utm_medium: utmMedium.data,
-    utm_campaign: utmCampaign.data,
-  }
 
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
   const role = parseWorkspaceRole(workspaceData.workspace.role)
@@ -175,6 +154,27 @@ export function SitePage() {
     canManageBusiness(role) &&
     totals.data.site.revokedAt === null
   const [writeKey, setWriteKey] = useState<string | null>(null)
+
+  function patchSearch(patch: Partial<SiteSearch>) {
+    startTransition(() => {
+      void navigate({
+        search: (prev) => {
+          const next = { ...prev, ...patch }
+          for (const key of Object.keys(patch) as Array<keyof SiteSearch>) {
+            if (patch[key] === undefined) delete next[key]
+          }
+          return next
+        },
+      })
+    })
+  }
+
+  function toggleFilter(key: FilterKey, value: string) {
+    patchSearch({
+      [key]: search[key] === value ? undefined : value,
+    })
+  }
+
   const replace = useMutation({
     mutationFn: () => replaceWriteKey(slug, siteId),
     onSuccess: (result) => {
@@ -195,74 +195,70 @@ export function SitePage() {
   })
 
   return (
-    <div className="flex flex-col gap-10">
-      <div>
-        <Link
-          to="/businesses"
-          className="mb-4 inline-block text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Back to sites
-        </Link>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <h1 className="text-4xl font-light tracking-tight">
-              {totals.data.site.name}
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              {totals.data.site.domain}
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {formatStatsRange(range.start, range.end)}
-            </p>
-          </div>
-          <div className="flex items-center gap-2">
-            {import.meta.env.DEV ? (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={
-                  simulate.isPending || totals.data.site.revokedAt !== null
-                }
-                onClick={() => simulate.mutate()}
-              >
-                {simulate.isPending ? "Simulating…" : "Simulate views"}
-              </Button>
-            ) : null}
-            {canReplace ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Site actions"
-                  >
-                    <EllipsisIcon />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem
-                    disabled={replace.isPending}
-                    onClick={() => {
-                      replace.reset()
-                      void replace.mutate()
-                    }}
-                  >
-                    {replace.isPending ? "Rotating…" : "Rotate key"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-          </div>
+    <div className="flex flex-col gap-8">
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <Link
+            to="/businesses"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Back to sites
+          </Link>
+          <h1 className="text-4xl font-light tracking-tight">
+            {totals.data.site.name}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {totals.data.site.domain}
+          </p>
+          <p className="text-sm text-muted-foreground">
+            {formatStatsRange(range.start, range.end)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {import.meta.env.DEV ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={
+                simulate.isPending || totals.data.site.revokedAt !== null
+              }
+              onClick={() => simulate.mutate()}
+            >
+              {simulate.isPending ? "Simulating…" : "Simulate views"}
+            </Button>
+          ) : null}
+          {canReplace ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Site actions"
+                >
+                  <EllipsisIcon />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={replace.isPending}
+                  onClick={() => {
+                    replace.reset()
+                    void replace.mutate()
+                  }}
+                >
+                  {replace.isPending ? "Rotating…" : "Rotate key"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
         </div>
       </div>
 
       <Dialog
         open={writeKey !== null}
         onOpenChange={(open) => {
-          if (!open) {
-            setWriteKey(null)
-          }
+          if (!open) setWriteKey(null)
         }}
       >
         <DialogContent className="sm:max-w-xl">
@@ -283,54 +279,97 @@ export function SitePage() {
         <p className="text-sm text-muted-foreground">{replace.error.message}</p>
       ) : null}
 
-      <div className="flex gap-2">
-        {ranges.map((option) => (
+      <div className="flex flex-wrap items-center gap-2">
+        {rangePresets.map((preset) => (
           <Button
-            key={option.days}
+            key={preset}
             type="button"
             size="xs"
-            variant={days === option.days ? "default" : "outline"}
-            onClick={() => {
-              startTransition(() => setDays(option.days))
-            }}
+            variant={search.range === preset ? "default" : "outline"}
+            onClick={() => patchSearch({ range: preset as RangePreset })}
           >
-            {option.label}
+            {rangeLabels[preset]}
           </Button>
         ))}
+        {chips.map((chip) => (
+          <Button
+            key={`${chip.key}:${chip.value}`}
+            type="button"
+            size="xs"
+            variant="secondary"
+            onClick={() => patchSearch({ [chip.key]: undefined })}
+          >
+            {filterLabels[chip.key]}: {chip.value || "(none)"}
+            <XIcon data-icon="inline-end" />
+          </Button>
+        ))}
+        {chips.length > 0 ? (
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            onClick={() =>
+              patchSearch({
+                path: undefined,
+                referrer: undefined,
+                country: undefined,
+                browser: undefined,
+                device: undefined,
+                utm_source: undefined,
+                utm_medium: undefined,
+                utm_campaign: undefined,
+              })
+            }
+          >
+            Clear filters
+          </Button>
+        ) : null}
       </div>
 
-      <dl className="grid grid-cols-3 gap-4 text-sm">
-        <div>
-          <dt className="text-muted-foreground">Views</dt>
-          <dd className="text-2xl font-light tracking-tight">
-            {totals.data.views}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Visitors</dt>
-          <dd className="text-2xl font-light tracking-tight">
-            {totals.data.visitors}
-          </dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Sessions</dt>
-          <dd className="text-2xl font-light tracking-tight">
-            {totals.data.sessions}
-          </dd>
-        </div>
-      </dl>
+      <div className="grid grid-cols-3 gap-3">
+        {(["views", "visitors", "sessions"] as const).map((metric) => {
+          const selected = search.metric === metric
+          return (
+            <button
+              key={metric}
+              type="button"
+              onClick={() => patchSearch({ metric: metric as Metric })}
+              className={`rounded-md border px-3 py-3 text-left transition-colors ${selected ? "border-foreground bg-muted/60" : "border-border hover:bg-muted/40"}`}
+            >
+              <div className="text-sm text-muted-foreground">
+                {metricLabels[metric]}
+              </div>
+              <div className="text-2xl font-light tracking-tight tabular-nums">
+                {totals.data[metric]}
+              </div>
+            </button>
+          )
+        })}
+      </div>
 
       <ViewsChart
         points={totals.data.points}
         start={range.start}
         end={range.end}
         grain={range.grain}
+        metric={search.metric}
       />
 
       <div className="grid gap-10 md:grid-cols-2">
-        {breakdowns.map(({ key, label }) => (
-          <BreakdownTable key={key} label={label} data={tables[key]} />
-        ))}
+        <BreakdownTable
+          label="Pages"
+          filterKey="path"
+          data={path.data}
+          activeValue={search.path}
+          onSelect={toggleFilter}
+        />
+        <BreakdownTable
+          label="Referrers"
+          filterKey="referrer"
+          data={referrer.data}
+          activeValue={search.referrer}
+          onSelect={toggleFilter}
+        />
       </div>
     </div>
   )

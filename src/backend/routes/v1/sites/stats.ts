@@ -11,7 +11,13 @@ import { workspaceFromContext } from "../workspaces/lib/context"
 
 import { loadSite } from "./lib/load"
 import { statsQuerySchema } from "./lib/schema"
-import { asNumber, bucketSql, parseRange, seriesColumn } from "./lib/stats"
+import {
+  asNumber,
+  bucketSql,
+  filterConditions,
+  parseRange,
+  seriesColumn,
+} from "./lib/stats"
 
 const pointLimit = 500
 
@@ -45,7 +51,8 @@ export const siteStats = new Hono<AppEnv>().get(
     const where = and(
       eq(event.siteId, matched.id),
       gte(event.timestamp, range.start),
-      lt(event.timestamp, range.end)
+      lt(event.timestamp, range.end),
+      ...filterConditions(query)
     )
     const bucket = bucketSql(range.grain)
     const column = seriesColumn(query.breakdown)

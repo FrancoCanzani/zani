@@ -1,9 +1,9 @@
-import type { AnyColumn } from "drizzle-orm"
-import { sql } from "drizzle-orm"
+import type { AnyColumn, SQL } from "drizzle-orm"
+import { eq, sql } from "drizzle-orm"
 
 import { event } from "../../../../db/schema"
 
-import type { Breakdown, Grain } from "./schema"
+import type { Breakdown, FilterKey, Grain } from "./schema"
 
 const maxRangeMs = 31 * 24 * 60 * 60 * 1000
 const hourMs = 60 * 60 * 1000
@@ -73,6 +73,51 @@ export function seriesColumn(
       return exhaustive
     }
   }
+}
+
+function filterColumn(key: FilterKey): AnyColumn {
+  switch (key) {
+    case "path":
+      return event.path
+    case "referrer":
+      return event.referrerHost
+    case "country":
+      return event.country
+    case "browser":
+      return event.browser
+    case "device":
+      return event.device
+    case "utm_source":
+      return event.utmSource
+    case "utm_medium":
+      return event.utmMedium
+    case "utm_campaign":
+      return event.utmCampaign
+    default: {
+      const exhaustive: never = key
+      return exhaustive
+    }
+  }
+}
+
+export function filterConditions(
+  filters: Partial<Record<FilterKey, string | undefined>>
+): SQL[] {
+  const conditions: SQL[] = []
+  for (const key of [
+    "path",
+    "referrer",
+    "country",
+    "browser",
+    "device",
+    "utm_source",
+    "utm_medium",
+    "utm_campaign",
+  ] as const) {
+    if (filters[key] === undefined) continue
+    conditions.push(eq(filterColumn(key), filters[key]))
+  }
+  return conditions
 }
 
 export function bucketSql(grain: Grain) {

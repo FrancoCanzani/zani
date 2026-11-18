@@ -1,6 +1,17 @@
-import { queryOptions, type QueryClient } from "@tanstack/react-query"
+import {
+  keepPreviousData,
+  queryOptions,
+  type QueryClient,
+} from "@tanstack/react-query"
 
 import { api, requireJson } from "@lib/api"
+
+import {
+  filtersFromSearch,
+  rangeFromPreset,
+  type FilterKey,
+  type SiteSearch,
+} from "./search"
 
 export type Site = {
   id: string
@@ -48,18 +59,9 @@ export type StatsRange = {
   grain: "hour" | "day"
 }
 
-const hourMs = 60 * 60 * 1000
-const dayMs = 24 * hourMs
+export type StatsFilters = Partial<Record<FilterKey, string>>
 
-export function statsRange(days = 7): StatsRange {
-  const endMs = Math.ceil(Date.now() / hourMs) * hourMs
-  const startMs = endMs - days * dayMs
-  return {
-    start: new Date(startMs).toISOString(),
-    end: new Date(endMs).toISOString(),
-    grain: days <= 1 ? "hour" : "day",
-  }
-}
+const statsStaleMs = 30_000
 
 export type AccountSite = Site & { slug: string }
 
@@ -103,7 +105,8 @@ export function siteStatsQueryOptions(
   slug: string,
   siteId: string,
   breakdown: Breakdown | undefined,
-  range: StatsRange
+  range: StatsRange,
+  filters: StatsFilters = {}
 ) {
   return queryOptions({
     queryKey: [
@@ -112,6 +115,7 @@ export function siteStatsQueryOptions(
       siteId,
       breakdown ?? "total",
       range,
+      filters,
     ] as const,
     queryFn: async () =>
       requireJson<SiteStats>(
@@ -122,10 +126,13 @@ export function siteStatsQueryOptions(
             end: range.end,
             grain: range.grain,
             ...(breakdown ? { breakdown } : {}),
+            ...filters,
           },
         }),
         "views"
       ),
+    staleTime: statsStaleMs,
+    placeholderData: keepPreviousData,
   })
 }
 
@@ -182,32 +189,27 @@ export async function simulateSiteViews(slug: string, siteId: string) {
   return requireJson<{ inserted: number }>(response, "inserted")
 }
 
-const dashboardBreakdowns: Breakdown[] = [
-  "path",
-  "referrer",
-  "country",
-  "browser",
-  "device",
-  "utm_source",
-  "utm_medium",
-  "utm_campaign",
-]
+const overviewBreakdowns: Breakdown[] = ["path", "referrer"]
+
+export function statsQueryFromSearch(search: SiteSearch) {
+  return {
+    range: rangeFromPreset(search.range),
+    filters: filtersFromSearch(search),
+  }
+}
 
 export async function preloadSiteStats(
   queryClient: QueryClient,
   slug: string,
   siteId: string,
-  range: StatsRange
+  search: SiteSearch
 ) {
-  const keys: Array<Breakdown | undefined> = [
-    undefined,
-    ...dashboardBreakdowns,
-  ]
+  const { range, filters } = statsQueryFromSearch(search)
   await Promise.all(
-    keys.map((breakdown) =>
+    [undefined, ...overviewBreakdowns].map((breakdown) =>
       queryClient.query({
-        ...siteStatsQueryOptions(slug, siteId, breakdown, range),
-        staleTime: "static",
+        ...siteStatsQueryOptions(slug, siteId, breakdown, range, filters),
+        staleTime: statsStaleMs,
       })
     )
   )
