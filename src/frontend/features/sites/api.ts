@@ -1,4 +1,4 @@
-import { queryOptions } from "@tanstack/react-query"
+import { queryOptions, type QueryClient } from "@tanstack/react-query"
 
 import { api, requireJson } from "@lib/api"
 
@@ -32,16 +32,32 @@ export type SiteStats = {
   points: StatsPoint[]
 }
 
-export type Breakdown = "path" | "referrer" | "country"
+export type Breakdown =
+  | "path"
+  | "referrer"
+  | "country"
+  | "browser"
+  | "device"
+  | "utm_source"
+  | "utm_medium"
+  | "utm_campaign"
 
-const weekMs = 7 * 24 * 60 * 60 * 1000
+export type StatsRange = {
+  start: string
+  end: string
+  grain: "hour" | "day"
+}
 
-export function statsRange() {
-  const endMs = Math.ceil(Date.now() / 3_600_000) * 3_600_000
-  const startMs = endMs - weekMs
+const hourMs = 60 * 60 * 1000
+const dayMs = 24 * hourMs
+
+export function statsRange(days = 7): StatsRange {
+  const endMs = Math.ceil(Date.now() / hourMs) * hourMs
+  const startMs = endMs - days * dayMs
   return {
     start: new Date(startMs).toISOString(),
     end: new Date(endMs).toISOString(),
+    grain: days <= 1 ? "hour" : "day",
   }
 }
 
@@ -87,7 +103,7 @@ export function siteStatsQueryOptions(
   slug: string,
   siteId: string,
   breakdown: Breakdown | undefined,
-  range: { start: string; end: string }
+  range: StatsRange
 ) {
   return queryOptions({
     queryKey: [
@@ -104,7 +120,7 @@ export function siteStatsQueryOptions(
           query: {
             start: range.start,
             end: range.end,
-            grain: "day",
+            grain: range.grain,
             ...(breakdown ? { breakdown } : {}),
           },
         }),
@@ -146,4 +162,53 @@ export async function replaceWriteKey(slug: string, siteId: string) {
     throw new Error("Could not replace the write key.")
   }
   return requireJson<{ site: Site; writeKey: string }>(response, "writeKey")
+}
+
+export async function simulateSiteViews(slug: string, siteId: string) {
+  const response = await api.workspaces[":slug"].sites[":siteId"].simulate.$post(
+    {
+      param: { slug, siteId },
+    }
+  )
+  if (response.status === 404) {
+    throw new Error("Simulate is only available in development.")
+  }
+  if (response.status === 409) {
+    throw new Error("This site is revoked.")
+  }
+  if (!response.ok) {
+    throw new Error("Could not simulate views.")
+  }
+  return requireJson<{ inserted: number }>(response, "inserted")
+}
+
+const dashboardBreakdowns: Breakdown[] = [
+  "path",
+  "referrer",
+  "country",
+  "browser",
+  "device",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+]
+
+export async function preloadSiteStats(
+  queryClient: QueryClient,
+  slug: string,
+  siteId: string,
+  range: StatsRange
+) {
+  const keys: Array<Breakdown | undefined> = [
+    undefined,
+    ...dashboardBreakdowns,
+  ]
+  await Promise.all(
+    keys.map((breakdown) =>
+      queryClient.query({
+        ...siteStatsQueryOptions(slug, siteId, breakdown, range),
+        staleTime: "static",
+      })
+    )
+  )
 }

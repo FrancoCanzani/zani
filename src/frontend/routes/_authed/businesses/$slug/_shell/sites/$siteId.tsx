@@ -3,7 +3,7 @@ import { createFileRoute } from "@tanstack/react-router"
 import { NotFoundScreen } from "@components/not-found-screen"
 import { pendingScreen } from "@components/pending-screen"
 
-import { siteStatsQueryOptions, statsRange } from "@features/sites/api"
+import { preloadSiteStats, statsRange } from "@features/sites/api"
 import { SitePage } from "@features/sites/site-page"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 
@@ -19,22 +19,12 @@ export const Route = createFileRoute(
         ...workspaceQueryOptions(params.slug),
         staleTime: "static",
       }),
-      context.queryClient.query({
-        ...siteStatsQueryOptions(params.slug, params.siteId, undefined, range),
-        staleTime: "static",
-      }),
-      context.queryClient.query({
-        ...siteStatsQueryOptions(params.slug, params.siteId, "path", range),
-        staleTime: "static",
-      }),
-      context.queryClient.query({
-        ...siteStatsQueryOptions(params.slug, params.siteId, "referrer", range),
-        staleTime: "static",
-      }),
-      context.queryClient.query({
-        ...siteStatsQueryOptions(params.slug, params.siteId, "country", range),
-        staleTime: "static",
-      }),
+      preloadSiteStats(
+        context.queryClient,
+        params.slug,
+        params.siteId,
+        range
+      ),
     ])
   },
   component: SitePage,

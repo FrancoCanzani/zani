@@ -62,6 +62,12 @@ export function seriesColumn(
       return event.device
     case "event":
       return event.name
+    case "utm_source":
+      return event.utmSource
+    case "utm_medium":
+      return event.utmMedium
+    case "utm_campaign":
+      return event.utmCampaign
     default: {
       const exhaustive: never = breakdown
       return exhaustive

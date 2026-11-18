@@ -10,6 +10,9 @@ export const breakdowns = [
   "browser",
   "device",
   "event",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
 ] as const
 
 export const grains = ["hour", "day"] as const
