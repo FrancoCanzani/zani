@@ -61,7 +61,7 @@ function ShellFrame({
           <SidebarTrigger className="fixed top-3 left-3 z-20" />
         ) : null}
         <div
-          className={`mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 pb-16 ${sidebarVisible ? "pt-2" : "pt-14"}`}
+          className={`mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 pb-24 ${sidebarVisible ? "pt-8" : "pt-16"}`}
         >
           <Outlet />
         </div>
