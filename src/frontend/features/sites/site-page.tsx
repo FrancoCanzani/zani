@@ -23,7 +23,6 @@ import {
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
 
-import { ShellTopBar } from "@features/app/shell-top-bar"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import {
   canManageBusiness,
@@ -122,10 +121,10 @@ function BreakdownTable({
                   <span className="relative min-w-0 flex-1 truncate">
                     {value || "(none)"}
                   </span>
-                  <span className="relative tabular-nums text-muted-foreground">
+                  <span className="relative font-mono tabular-nums text-muted-foreground">
                     {point.views}
                   </span>
-                  <span className="relative w-8 text-right tabular-nums text-muted-foreground">
+                  <span className="relative w-8 text-right font-mono tabular-nums text-muted-foreground">
                     {Math.round(share * 100)}%
                   </span>
                 </button>
@@ -236,67 +235,63 @@ export function SitePage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <ShellTopBar
-        end={
-          <>
-            {import.meta.env.DEV ? (
-              <Button
-                type="button"
-                variant="outline"
-                disabled={
-                  simulate.isPending || totals.data.site.revokedAt !== null
-                }
-                onClick={() => simulate.mutate()}
-              >
-                {simulate.isPending ? "Simulating…" : "Simulate views"}
-              </Button>
-            ) : null}
-            {canReplace ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="icon-sm"
-                    aria-label="Site actions"
-                  >
-                    <EllipsisIcon />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="min-w-40">
-                  <DropdownMenuItem
-                    disabled={replace.isPending}
-                    onClick={() => {
-                      replace.reset()
-                      void replace.mutate()
-                    }}
-                  >
-                    {replace.isPending ? "Rotating…" : "Rotate key"}
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : null}
-          </>
-        }
-      >
-        <Link
-          to="/businesses"
-          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          Back to sites
-        </Link>
-      </ShellTopBar>
-
-      <div className="space-y-1">
-        <h1 className="text-4xl font-light tracking-tight">
-          {totals.data.site.name}
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          {totals.data.site.domain}
-        </p>
-        <p className="text-sm text-muted-foreground">
-          {formatStatsRange(range.start, range.end)}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <Link
+            to="/businesses"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+          >
+            Back to sites
+          </Link>
+          <h1 className="text-4xl font-light tracking-tight">
+            {totals.data.site.name}
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {totals.data.site.domain}
+          </p>
+          <p className="font-mono text-sm text-muted-foreground">
+            {formatStatsRange(range.start, range.end)}
+          </p>
+        </div>
+        <div className="flex items-center gap-2">
+          {import.meta.env.DEV ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={
+                simulate.isPending || totals.data.site.revokedAt !== null
+              }
+              onClick={() => simulate.mutate()}
+            >
+              {simulate.isPending ? "Simulating…" : "Simulate views"}
+            </Button>
+          ) : null}
+          {canReplace ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label="Site actions"
+                >
+                  <EllipsisIcon />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="min-w-40">
+                <DropdownMenuItem
+                  disabled={replace.isPending}
+                  onClick={() => {
+                    replace.reset()
+                    void replace.mutate()
+                  }}
+                >
+                  {replace.isPending ? "Rotating…" : "Rotate key"}
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
+        </div>
       </div>
 
       <Dialog
@@ -383,7 +378,7 @@ export function SitePage() {
               <div className="text-sm text-muted-foreground">
                 {metricLabels[metric]}
               </div>
-              <div className="text-2xl font-light tracking-tight tabular-nums">
+              <div className="font-mono text-2xl font-light tracking-tight tabular-nums">
                 {totals.data[metric]}
               </div>
             </button>

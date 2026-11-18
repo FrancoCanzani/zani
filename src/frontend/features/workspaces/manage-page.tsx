@@ -18,7 +18,6 @@ import {
 } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
-import { ShellTopBar } from "@features/app/shell-top-bar"
 import {
   workspaceMembersQueryOptions,
   workspaceQueryOptions,
@@ -94,7 +93,6 @@ export function ManagePage() {
 
   return (
     <div className="mx-auto flex w-full max-w-lg flex-col gap-10">
-      <ShellTopBar />
       <div className="space-y-1">
         <h1 className="text-4xl font-light tracking-tight">Manage</h1>
         <p className="text-sm text-muted-foreground">People and invites.</p>

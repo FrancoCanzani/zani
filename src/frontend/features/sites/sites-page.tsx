@@ -9,7 +9,6 @@ import { Button } from "@components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
-import { ShellTopBar } from "@features/app/shell-top-bar"
 import {
   canManageBusiness,
   parseWorkspaceRole,
@@ -54,7 +53,6 @@ export function SitesPage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <ShellTopBar />
       <h1 className="text-4xl font-light tracking-tight">Sites</h1>
 
       <ul className="divide-y border-y">

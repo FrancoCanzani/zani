@@ -10,7 +10,6 @@ import {
   EmptyTitle,
 } from "@components/ui/empty"
 
-import { ShellTopBar } from "@features/app/shell-top-bar"
 import { accountSitesQueryOptions } from "@features/sites/api"
 
 export function BusinessesPage() {
@@ -18,15 +17,6 @@ export function BusinessesPage() {
 
   return (
     <div className="flex flex-1 flex-col">
-      <ShellTopBar
-        end={
-          sites.length > 0 ? (
-            <Button asChild className="shrink-0">
-              <Link to="/businesses/new">Add a site</Link>
-            </Button>
-          ) : null
-        }
-      />
       {sites.length === 0 ? (
         <Empty className="border-none">
           <EmptyHeader>
@@ -43,7 +33,12 @@ export function BusinessesPage() {
         </Empty>
       ) : (
         <div className="flex flex-1 flex-col gap-8">
-          <h1 className="text-4xl font-light tracking-tight">Sites</h1>
+          <div className="flex items-center justify-between gap-4">
+            <h1 className="text-4xl font-light tracking-tight">Sites</h1>
+            <Button asChild className="shrink-0">
+              <Link to="/businesses/new">Add a site</Link>
+            </Button>
+          </div>
 
           <ul className="flex flex-col overflow-hidden rounded-md bg-secondary">
             {sites.map((site) => (
@@ -59,7 +54,7 @@ export function BusinessesPage() {
                 />
                 <div className="pointer-events-none relative flex items-baseline justify-between gap-4 px-3 py-3">
                   <span className="min-w-0 flex-1 truncate">{site.name}</span>
-                  <span className="shrink-0 text-sm text-muted-foreground">
+                  <span className="shrink-0 font-mono text-sm text-muted-foreground">
                     {site.domain}
                     {site.revokedAt ? " revoked" : ""}
                   </span>
