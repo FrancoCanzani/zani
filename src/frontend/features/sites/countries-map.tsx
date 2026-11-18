@@ -1,5 +1,11 @@
 import { useMemo, useState } from "react"
-import { alpha2ToNumeric, numericToAlpha2 } from "i18n-iso-countries"
+import {
+  alpha2ToNumeric,
+  getName,
+  numericToAlpha2,
+  registerLocale,
+} from "i18n-iso-countries"
+import enLocale from "i18n-iso-countries/langs/en.json"
 import { ComposableMap, Geographies, Geography } from "react-simple-maps"
 import { feature } from "topojson-client"
 import type {
@@ -10,10 +16,21 @@ import type {
 import type { Topology, GeometryCollection } from "topojson-specification"
 import countries110m from "world-atlas/countries-110m.json"
 
+registerLocale(enLocale)
+
 type CountriesMapProps = {
   points: Array<{ series: string; views: number }>
   activeValue: string | undefined
   onSelect: (country: string) => void
+}
+
+type HoverState = {
+  code: string
+  name: string
+  views: number
+  share: number
+  x: number
+  y: number
 }
 
 const topology = countries110m as unknown as Topology<{
@@ -25,15 +42,27 @@ const countriesGeo = feature(
   topology.objects.countries
 ) as FeatureCollection<Geometry, GeoJsonProperties>
 
+const emptyFill = "#E8EAED"
+const dataBlue = "#5B8DEF"
+const selectedBlue = "#3B6FD4"
+
+function formatCompact(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value)
+}
+
 export function CountriesMap({
   points,
   activeValue,
   onSelect,
 }: CountriesMapProps) {
-  const [hovered, setHovered] = useState<string | null>(null)
+  const [hover, setHover] = useState<HoverState | null>(null)
 
-  const byNumeric = useMemo(() => {
+  const { byNumeric, totalViews, maxViews } = useMemo(() => {
     const map = new Map<string, number>()
+    let total = 0
     for (const point of points) {
       const code = point.series.trim().toUpperCase()
       if (!/^[A-Z]{2}$/.test(code)) continue
@@ -41,20 +70,26 @@ export function CountriesMap({
       if (numeric == null) continue
       const id = String(numeric).padStart(3, "0")
       map.set(id, (map.get(id) ?? 0) + point.views)
+      total += point.views
     }
-    return map
+    return {
+      byNumeric: map,
+      totalViews: total,
+      maxViews: Math.max(1, ...map.values()),
+    }
   }, [points])
 
-  const maxViews = Math.max(1, ...byNumeric.values())
-
   return (
-    <div className="w-full overflow-hidden rounded-md bg-muted/20">
+    <div
+      className="relative w-full overflow-hidden"
+      onMouseLeave={() => setHover(null)}
+    >
       <ComposableMap
         projection="geoEqualEarth"
-        projectionConfig={{ scale: 147 }}
+        projectionConfig={{ scale: 155, center: [0, 8] }}
         width={800}
-        height={360}
-        style={{ width: "100%", height: "auto" }}
+        height={420}
+        style={{ width: "100%", height: "auto", display: "block" }}
       >
         <Geographies geography={countriesGeo}>
           {({ geographies }) =>
@@ -63,29 +98,65 @@ export function CountriesMap({
               const views = byNumeric.get(numeric)
               const alpha2 = numericToAlpha2(numeric) ?? ""
               const selected = activeValue === alpha2
-              const isHovered = hovered === alpha2
+              const name =
+                (alpha2 ? getName(alpha2, "en") : undefined) ??
+                (typeof geo.properties?.name === "string"
+                  ? geo.properties.name
+                  : alpha2)
               const fill =
                 views == null
-                  ? "var(--muted)"
-                  : selected || isHovered
-                    ? "var(--foreground)"
-                    : `color-mix(in oklab, var(--foreground) ${Math.max(12, Math.round((views / maxViews) * 72))}%, var(--muted))`
+                  ? emptyFill
+                  : selected
+                    ? selectedBlue
+                    : `color-mix(in srgb, ${dataBlue} ${Math.max(45, Math.round((views / maxViews) * 100))}%, ${emptyFill})`
 
               return (
                 <Geography
                   key={geo.rsmKey}
                   geography={geo}
                   fill={fill}
-                  stroke="var(--background)"
-                  strokeWidth={0.4}
+                  stroke="#fff"
+                  strokeWidth={0.5}
                   style={{
                     outline: "none",
                     cursor: alpha2 ? "pointer" : "default",
                   }}
-                  onMouseEnter={() => {
-                    if (alpha2) setHovered(alpha2)
+                  onMouseEnter={(event) => {
+                    if (!alpha2 || views == null) {
+                      setHover(null)
+                      return
+                    }
+                    const rect = (
+                      event.currentTarget.ownerSVGElement
+                        ?.parentElement as HTMLElement | null
+                    )?.getBoundingClientRect()
+                    if (!rect) return
+                    setHover({
+                      code: alpha2,
+                      name: name || alpha2,
+                      views,
+                      share: totalViews === 0 ? 0 : views / totalViews,
+                      x: event.clientX - rect.left,
+                      y: event.clientY - rect.top,
+                    })
                   }}
-                  onMouseLeave={() => setHovered(null)}
+                  onMouseMove={(event) => {
+                    if (!alpha2 || views == null) return
+                    const rect = (
+                      event.currentTarget.ownerSVGElement
+                        ?.parentElement as HTMLElement | null
+                    )?.getBoundingClientRect()
+                    if (!rect) return
+                    setHover({
+                      code: alpha2,
+                      name: name || alpha2,
+                      views,
+                      share: totalViews === 0 ? 0 : views / totalViews,
+                      x: event.clientX - rect.left,
+                      y: event.clientY - rect.top,
+                    })
+                  }}
+                  onMouseLeave={() => setHover(null)}
                   onClick={() => {
                     if (!alpha2) return
                     onSelect(alpha2)
@@ -96,6 +167,22 @@ export function CountriesMap({
           }
         </Geographies>
       </ComposableMap>
+
+      {hover ? (
+        <div
+          className="pointer-events-none absolute z-10 min-w-[160px] -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-md border border-border/80 bg-popover px-2.5 py-2 shadow-md"
+          style={{ left: hover.x, top: hover.y }}
+        >
+          <div className="text-[13px] font-semibold tracking-tight text-foreground">
+            <span className="font-mono">{hover.code}</span>{" "}
+            <span>{hover.name}</span>
+          </div>
+          <div className="mt-0.5 text-[12px] text-muted-foreground">
+            {formatCompact(hover.views)} Visitors ·{" "}
+            {(hover.share * 100).toFixed(1)}%
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }
