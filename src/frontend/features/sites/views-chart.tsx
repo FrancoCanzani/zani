@@ -8,7 +8,7 @@ import {
   type ChartConfig,
 } from "@components/ui/chart"
 
-import { changePercent, type StatsPoint } from "./api"
+import { type StatsPoint } from "./api"
 import { metricLabels, type ChartMetric } from "./search"
 
 type ViewsChartProps = {
@@ -267,10 +267,6 @@ export function ViewsChart({
                 seriesIndex >= 0
                   ? previousSeries[seriesIndex]?.value
                   : undefined
-              const delta =
-                previousValue === undefined
-                  ? null
-                  : changePercent(row.value, previousValue)
               return (
                 <div className="rounded-md border border-border bg-background px-3 py-2 shadow-sm">
                   <p className="font-mono text-sm font-medium tabular-nums">
@@ -282,20 +278,6 @@ export function ViewsChart({
                       Prior: {previousValue}
                     </p>
                   ) : null}
-                  {delta === null ? null : (
-                    <p
-                      className={`mt-0.5 font-mono text-xs font-medium tabular-nums ${
-                        delta > 0
-                          ? "text-emerald-700"
-                          : delta < 0
-                            ? "text-red-700"
-                            : "text-muted-foreground"
-                      }`}
-                    >
-                      {delta > 0 ? "+" : ""}
-                      {delta}% vs prior
-                    </p>
-                  )}
                 </div>
               )
             }}

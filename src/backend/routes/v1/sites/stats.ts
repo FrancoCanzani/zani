@@ -63,27 +63,22 @@ export const siteStats = new Hono<AppEnv>().get(
       .from(event)
       .where(where)
 
-    const sessionCounts = db.$with("session_counts").as(
-      db
-        .select({
-          sessionId: event.sessionId,
-          views: sql<number>`count(*)`.as("views"),
-        })
-        .from(event)
-        .where(where)
-        .groupBy(event.sessionId)
-    )
-    const [sessionStats] = await db
-      .with(sessionCounts)
-      .select({
-        sessions: sql<number>`count(*)`,
-        bounces: sql<number>`sum(case when ${sessionCounts.views} = 1 then 1 else 0 end)`,
-      })
-      .from(sessionCounts)
-
     const totalViews = asNumber(totals?.views)
     const totalSessions = asNumber(totals?.sessions)
-    const bounceSessions = asNumber(sessionStats?.bounces)
+
+    const sessionRows = await db
+      .select({
+        sessionId: event.sessionId,
+        views: sql<number>`count(*)`.as("views"),
+      })
+      .from(event)
+      .where(where)
+      .groupBy(event.sessionId)
+
+    const bounceSessions = sessionRows.reduce(
+      (count, row) => count + (asNumber(row.views) === 1 ? 1 : 0),
+      0
+    )
     const bounceRate =
       totalSessions === 0
         ? 0
@@ -93,9 +88,8 @@ export const siteStats = new Hono<AppEnv>().get(
         ? 0
         : Math.round((totalViews / totalSessions) * 100) / 100
 
-    const breakdown = query.breakdown
     const rows = await loadBreakdownRows(db, {
-      breakdown,
+      breakdown: query.breakdown,
       where,
       grain: range.grain,
       timeZone: query.tz,
@@ -143,40 +137,61 @@ async function loadBreakdownRows(
   const sessions = sql<number>`count(distinct ${event.sessionId})`
 
   if (breakdown === "entry" || breakdown === "exit") {
-    const order =
+    const edgeExpr =
       breakdown === "entry"
-        ? sql`min(${event.timestamp})`
-        : sql`max(${event.timestamp})`
-    const edge = db.$with("session_edge").as(
-      db
-        .select({
-          sessionId: event.sessionId,
-          edgeAt: order.as("edge_at"),
-        })
-        .from(event)
-        .where(where)
-        .groupBy(event.sessionId)
-    )
-    return db
-      .with(edge)
+        ? sql<number>`min(${event.timestamp})`
+        : sql<number>`max(${event.timestamp})`
+    const edges = await db
       .select({
-        series: event.path,
-        views,
-        visitors,
-        sessions,
+        sessionId: event.sessionId,
+        edgeAt: edgeExpr.as("edge_at"),
       })
       .from(event)
-      .innerJoin(
-        edge,
-        and(
-          eq(event.sessionId, edge.sessionId),
-          eq(event.timestamp, edge.edgeAt)
-        )
-      )
       .where(where)
-      .groupBy(event.path)
-      .orderBy(desc(sessions))
-      .limit(pointLimit)
+      .groupBy(event.sessionId)
+
+    if (edges.length === 0) return []
+
+    const bySession = new Map(
+      edges.map((row) => [row.sessionId, asNumber(row.edgeAt)])
+    )
+    const pageviews = await db
+      .select({
+        sessionId: event.sessionId,
+        path: event.path,
+        timestamp: event.timestamp,
+        visitorId: event.visitorId,
+      })
+      .from(event)
+      .where(where)
+
+    const counts = new Map<
+      string,
+      { views: number; visitors: Set<string>; sessions: Set<string> }
+    >()
+    for (const row of pageviews) {
+      const edgeAt = bySession.get(row.sessionId)
+      if (edgeAt === undefined || row.timestamp !== edgeAt) continue
+      const current = counts.get(row.path) ?? {
+        views: 0,
+        visitors: new Set<string>(),
+        sessions: new Set<string>(),
+      }
+      current.views += 1
+      current.visitors.add(row.visitorId)
+      current.sessions.add(row.sessionId)
+      counts.set(row.path, current)
+    }
+
+    return [...counts.entries()]
+      .map(([series, value]) => ({
+        series,
+        views: value.views,
+        visitors: value.visitors.size,
+        sessions: value.sessions.size,
+      }))
+      .sort((a, b) => b.sessions - a.sessions)
+      .slice(0, pointLimit)
   }
 
   const column = seriesColumn(breakdown)
