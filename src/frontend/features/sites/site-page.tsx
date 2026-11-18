@@ -22,8 +22,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
-
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import {
   canManageBusiness,
@@ -55,10 +53,16 @@ import { ViewsChart } from "./views-chart"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
 
+type BreakdownTab = {
+  key: Breakdown
+  label: string
+  filterKey: FilterKey
+}
+
 const breakdownPanels: Array<{
   id: string
   title: string
-  tabs: Array<{ key: Breakdown; label: string; filterKey: FilterKey }>
+  tabs: BreakdownTab[]
 }> = [
   {
     id: "pages",
@@ -70,10 +74,14 @@ const breakdownPanels: Array<{
     ],
   },
   {
-    id: "sources",
-    title: "Sources",
+    id: "referrers",
+    title: "Referrers",
+    tabs: [{ key: "referrer", label: "Referrer", filterKey: "referrer" }],
+  },
+  {
+    id: "utm",
+    title: "UTM",
     tabs: [
-      { key: "referrer", label: "Referrer", filterKey: "referrer" },
       { key: "utm_source", label: "Source", filterKey: "utm_source" },
       { key: "utm_medium", label: "Medium", filterKey: "utm_medium" },
       { key: "utm_campaign", label: "Campaign", filterKey: "utm_campaign" },
@@ -82,20 +90,20 @@ const breakdownPanels: Array<{
     ],
   },
   {
-    id: "geo",
-    title: "Geography",
+    id: "countries",
+    title: "Countries",
     tabs: [
       { key: "country", label: "Country", filterKey: "country" },
       { key: "city", label: "City", filterKey: "city" },
     ],
   },
   {
-    id: "clients",
-    title: "Clients",
+    id: "devices",
+    title: "Devices",
     tabs: [
-      { key: "device", label: "Device", filterKey: "device" },
       { key: "browser", label: "Browser", filterKey: "browser" },
       { key: "os", label: "OS", filterKey: "os" },
+      { key: "device", label: "Device", filterKey: "device" },
       { key: "screen", label: "Screen", filterKey: "screen" },
     ],
   },
@@ -196,10 +204,10 @@ function BreakdownTable({
   const totalViews = data.points.reduce((sum, point) => sum + point.views, 0)
 
   return (
-    <div className="space-y-1">
-      <ul className="space-y-1">
+    <div className="space-y-1.5">
+      <ul className="space-y-1.5">
         {data.points.length === 0 ? (
-          <li className="py-2 text-sm text-muted-foreground">No data</li>
+          <li className="py-2 text-xs text-muted-foreground">No data</li>
         ) : (
           data.points.map((point) => {
             const value = point.series
@@ -210,20 +218,20 @@ function BreakdownTable({
                 <button
                   type="button"
                   onClick={() => onSelect(filterKey, value)}
-                  className={`relative flex w-full items-center gap-3 overflow-hidden rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted ${selected ? "bg-muted" : ""}`}
+                  className={`relative flex h-[30px] w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-[13px] transition-colors hover:bg-muted/60 ${selected ? "bg-muted/60" : ""}`}
                 >
                   <span
                     aria-hidden
-                    className="absolute inset-y-0 left-0 bg-foreground/5"
+                    className="absolute inset-y-0 left-0 bg-foreground/[0.06]"
                     style={{ width: `${(point.views / maxViews) * 100}%` }}
                   />
-                  <span className="relative min-w-0 flex-1 truncate">
+                  <span className="relative min-w-0 flex-1 truncate font-mono">
                     {value || "(none)"}
                   </span>
-                  <span className="relative font-mono tabular-nums text-muted-foreground">
+                  <span className="relative font-mono text-[13px] tabular-nums text-muted-foreground">
                     {point.views}
                   </span>
-                  <span className="relative w-8 text-right font-mono tabular-nums text-muted-foreground">
+                  <span className="relative w-8 text-right font-mono text-[13px] tabular-nums text-muted-foreground">
                     {Math.round(share * 100)}%
                   </span>
                 </button>
@@ -233,9 +241,69 @@ function BreakdownTable({
         )}
       </ul>
       {data.truncated ? (
-        <p className="text-sm text-muted-foreground">Truncated.</p>
+        <p className="text-xs text-muted-foreground">Truncated.</p>
       ) : null}
     </div>
+  )
+}
+
+function BreakdownPanel({
+  title,
+  tabs,
+  tableQueries,
+  search,
+  onSelect,
+}: {
+  title: string
+  tabs: BreakdownTab[]
+  tableQueries: Record<Breakdown, { data: SiteStats }>
+  search: SiteSearch
+  onSelect: (key: FilterKey, value: string) => void
+}) {
+  const [active, setActive] = useState(tabs[0]!.key)
+  const tab = tabs.find((item) => item.key === active) ?? tabs[0]!
+  const table = tableQueries[tab.key]
+  const showTabs = tabs.length > 1
+
+  return (
+    <section className="rounded-lg border border-border/70 p-4">
+      <div className="mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+        {showTabs ? (
+          <div
+            role="radiogroup"
+            aria-label={`${title} breakdown`}
+            className="flex h-[26px] items-center gap-0.5 rounded-[7px] bg-muted p-0.5"
+          >
+            {tabs.map((item) => {
+              const selected = item.key === active
+              return (
+                <button
+                  key={item.key}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setActive(item.key)}
+                  className={`h-[22px] shrink-0 rounded-[5px] px-2 text-[12px] leading-4 transition-colors ${
+                    selected
+                      ? "bg-background text-foreground shadow-sm"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  {item.label}
+                </button>
+              )
+            })}
+          </div>
+        ) : null}
+      </div>
+      <BreakdownTable
+        filterKey={tab.filterKey}
+        data={table.data}
+        activeValue={search[tab.filterKey]}
+        onSelect={onSelect}
+      />
+    </section>
   )
 }
 
@@ -307,10 +375,7 @@ export function SitePage() {
   const utmTerm = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "utm_term", range, filters)
   )
-  const tableQueries: Record<
-    (typeof breakdownPanels)[number]["tabs"][number]["key"],
-    { data: SiteStats }
-  > = {
+  const tableQueries: Record<Breakdown, { data: SiteStats }> = {
     path,
     entry,
     exit,
@@ -596,42 +661,16 @@ export function SitePage() {
         compare={Boolean(search.compare)}
       />
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-3 md:grid-cols-2">
         {breakdownPanels.map((panel) => (
-          <section
+          <BreakdownPanel
             key={panel.id}
-            className="rounded-xl border border-border/70 p-3"
-          >
-            <Tabs defaultValue={panel.tabs[0]!.key}>
-              <div className="mb-3 flex items-center justify-between gap-3">
-                <h2 className="text-sm font-medium">{panel.title}</h2>
-                <TabsList className="h-7 max-w-[70%] gap-0.5 overflow-x-auto rounded-md bg-muted p-0.5">
-                  {panel.tabs.map((tab) => (
-                    <TabsTrigger
-                      key={tab.key}
-                      value={tab.key}
-                      className="h-6 shrink-0 rounded-sm px-2 text-xs"
-                    >
-                      {tab.label}
-                    </TabsTrigger>
-                  ))}
-                </TabsList>
-              </div>
-              {panel.tabs.map((tab) => {
-                const table = tableQueries[tab.key]
-                return (
-                  <TabsContent key={tab.key} value={tab.key} className="mt-0">
-                    <BreakdownTable
-                      filterKey={tab.filterKey}
-                      data={table.data}
-                      activeValue={search[tab.filterKey]}
-                      onSelect={toggleFilter}
-                    />
-                  </TabsContent>
-                )
-              })}
-            </Tabs>
-          </section>
+            title={panel.title}
+            tabs={panel.tabs}
+            tableQueries={tableQueries}
+            search={search}
+            onSelect={toggleFilter}
+          />
         ))}
       </div>
     </div>
