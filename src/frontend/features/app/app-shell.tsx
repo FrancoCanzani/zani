@@ -17,11 +17,58 @@ import {
   SidebarMenuItem,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@components/ui/sidebar"
 
 import { UserMenu } from "@features/account/user-menu"
 
 const routeApi = getRouteApi("/_authed")
+
+function ShellFrame({
+  sitesActive,
+  email,
+  name,
+}: {
+  sitesActive: boolean
+  email: string
+  name: string
+}) {
+  const { open, openMobile, isMobile } = useSidebar()
+  const sidebarVisible = isMobile ? openMobile : open
+
+  return (
+    <>
+      <Sidebar collapsible="offcanvas">
+        <SidebarHeader className="flex h-14 flex-row items-center gap-1 px-2">
+          <BrandMark to="/businesses" className="min-w-0 flex-1 px-2 text-4xl" />
+          {sidebarVisible ? <SidebarTrigger /> : null}
+        </SidebarHeader>
+        <SidebarContent className="mt-2">
+          <SidebarMenu className="px-2">
+            <SidebarMenuItem>
+              <SidebarMenuButton asChild isActive={sitesActive}>
+                <Link to="/businesses">Sites</Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarContent>
+        <SidebarFooter className="px-2 pb-4">
+          <UserMenu name={name} email={email} />
+        </SidebarFooter>
+      </Sidebar>
+      <SidebarInset>
+        {!sidebarVisible ? (
+          <SidebarTrigger className="fixed top-3 left-3 z-20" />
+        ) : null}
+        <div
+          className={`mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 pb-16 ${sidebarVisible ? "pt-2" : "pt-14"}`}
+        >
+          <Outlet />
+        </div>
+      </SidebarInset>
+    </>
+  )
+}
 
 export function AppShell() {
   const { session } = routeApi.useRouteContext()
@@ -40,31 +87,11 @@ export function AppShell() {
 
   return (
     <SidebarProvider>
-      <Sidebar collapsible="offcanvas">
-        <SidebarHeader className="h-14 justify-center px-2">
-          <BrandMark to="/businesses" className="px-2 text-4xl" />
-        </SidebarHeader>
-        <SidebarContent className="mt-2">
-          <SidebarMenu className="px-2">
-            <SidebarMenuItem>
-              <SidebarMenuButton asChild isActive={sitesActive}>
-                <Link to="/businesses">Sites</Link>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarContent>
-        <SidebarFooter className="px-2 pb-4">
-          <UserMenu name={session.user.name} email={session.user.email} />
-        </SidebarFooter>
-      </Sidebar>
-      <SidebarInset>
-        <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 pb-6">
-          <div className="-mx-2 flex h-14 items-center">
-            <SidebarTrigger />
-          </div>
-          <Outlet />
-        </div>
-      </SidebarInset>
+      <ShellFrame
+        sitesActive={sitesActive}
+        email={session.user.email}
+        name={session.user.name}
+      />
     </SidebarProvider>
   )
 }

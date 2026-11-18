@@ -3,7 +3,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { Link, getRouteApi } from "@tanstack/react-router"
+import { getRouteApi } from "@tanstack/react-router"
 import { EllipsisIcon, XIcon } from "lucide-react"
 import { startTransition, useState } from "react"
 import { toast } from "sonner"
@@ -237,12 +237,6 @@ export function SitePage() {
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between gap-4">
         <div className="space-y-1">
-          <Link
-            to="/businesses"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Back to sites
-          </Link>
           <h1 className="text-4xl font-light tracking-tight">
             {totals.data.site.name}
           </h1>
