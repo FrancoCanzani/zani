@@ -11,7 +11,8 @@ import { workspaceFromContext } from "../workspaces/lib/context"
 import { loadSite } from "./lib/load"
 
 const dayMs = 24 * 60 * 60 * 1000
-const batchSize = 50
+// D1 caps bound parameters per query (~100); each event row binds 14 columns.
+const batchSize = 6
 const eventCount = 240
 
 const paths = ["/", "/pricing", "/docs", "/blog", "/about", "/changelog"]
