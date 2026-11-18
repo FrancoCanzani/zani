@@ -189,7 +189,16 @@ export async function simulateSiteViews(slug: string, siteId: string) {
   return requireJson<{ inserted: number }>(response, "inserted")
 }
 
-const overviewBreakdowns: Breakdown[] = ["path", "referrer"]
+const overviewBreakdowns: Breakdown[] = [
+  "path",
+  "referrer",
+  "country",
+  "browser",
+  "device",
+  "utm_source",
+  "utm_medium",
+  "utm_campaign",
+]
 
 export function statsQueryFromSearch(search: SiteSearch) {
   return {

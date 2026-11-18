@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
 
+import { ShellTopBar } from "@features/app/shell-top-bar"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import {
   canManageBusiness,
@@ -50,6 +51,17 @@ import {
 import { ViewsChart } from "./views-chart"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
+
+const breakdowns: Array<{ key: FilterKey; label: string }> = [
+  { key: "path", label: "Pages" },
+  { key: "referrer", label: "Referrers" },
+  { key: "country", label: "Countries" },
+  { key: "browser", label: "Browsers" },
+  { key: "device", label: "Devices" },
+  { key: "utm_source", label: "UTM source" },
+  { key: "utm_medium", label: "UTM medium" },
+  { key: "utm_campaign", label: "UTM campaign" },
+]
 
 function formatStatsRange(start: string, end: string) {
   const startDate = new Date(start)
@@ -146,6 +158,34 @@ export function SitePage() {
   const referrer = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "referrer", range, filters)
   )
+  const country = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "country", range, filters)
+  )
+  const browser = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "browser", range, filters)
+  )
+  const device = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "device", range, filters)
+  )
+  const utmSource = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "utm_source", range, filters)
+  )
+  const utmMedium = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "utm_medium", range, filters)
+  )
+  const utmCampaign = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "utm_campaign", range, filters)
+  )
+  const tables: Record<FilterKey, SiteStats> = {
+    path: path.data,
+    referrer: referrer.data,
+    country: country.data,
+    browser: browser.data,
+    device: device.data,
+    utm_source: utmSource.data,
+    utm_medium: utmMedium.data,
+    utm_campaign: utmCampaign.data,
+  }
 
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
   const role = parseWorkspaceRole(workspaceData.workspace.role)
@@ -196,63 +236,67 @@ export function SitePage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <Link
-            to="/businesses"
-            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
-          >
-            Back to sites
-          </Link>
-          <h1 className="text-4xl font-light tracking-tight">
-            {totals.data.site.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {totals.data.site.domain}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {formatStatsRange(range.start, range.end)}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {import.meta.env.DEV ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={
-                simulate.isPending || totals.data.site.revokedAt !== null
-              }
-              onClick={() => simulate.mutate()}
-            >
-              {simulate.isPending ? "Simulating…" : "Simulate views"}
-            </Button>
-          ) : null}
-          {canReplace ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Site actions"
-                >
-                  <EllipsisIcon />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={replace.isPending}
-                  onClick={() => {
-                    replace.reset()
-                    void replace.mutate()
-                  }}
-                >
-                  {replace.isPending ? "Rotating…" : "Rotate key"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
-        </div>
+      <ShellTopBar
+        end={
+          <>
+            {import.meta.env.DEV ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={
+                  simulate.isPending || totals.data.site.revokedAt !== null
+                }
+                onClick={() => simulate.mutate()}
+              >
+                {simulate.isPending ? "Simulating…" : "Simulate views"}
+              </Button>
+            ) : null}
+            {canReplace ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Site actions"
+                  >
+                    <EllipsisIcon />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="min-w-40">
+                  <DropdownMenuItem
+                    disabled={replace.isPending}
+                    onClick={() => {
+                      replace.reset()
+                      void replace.mutate()
+                    }}
+                  >
+                    {replace.isPending ? "Rotating…" : "Rotate key"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </>
+        }
+      >
+        <Link
+          to="/businesses"
+          className="text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Back to sites
+        </Link>
+      </ShellTopBar>
+
+      <div className="space-y-1">
+        <h1 className="text-4xl font-light tracking-tight">
+          {totals.data.site.name}
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          {totals.data.site.domain}
+        </p>
+        <p className="text-sm text-muted-foreground">
+          {formatStatsRange(range.start, range.end)}
+        </p>
       </div>
 
       <Dialog
@@ -348,6 +392,7 @@ export function SitePage() {
       </div>
 
       <ViewsChart
+        key={search.metric}
         points={totals.data.points}
         start={range.start}
         end={range.end}
@@ -356,20 +401,16 @@ export function SitePage() {
       />
 
       <div className="grid gap-10 md:grid-cols-2">
-        <BreakdownTable
-          label="Pages"
-          filterKey="path"
-          data={path.data}
-          activeValue={search.path}
-          onSelect={toggleFilter}
-        />
-        <BreakdownTable
-          label="Referrers"
-          filterKey="referrer"
-          data={referrer.data}
-          activeValue={search.referrer}
-          onSelect={toggleFilter}
-        />
+        {breakdowns.map(({ key, label }) => (
+          <BreakdownTable
+            key={key}
+            label={label}
+            filterKey={key}
+            data={tables[key]}
+            activeValue={search[key]}
+            onSelect={toggleFilter}
+          />
+        ))}
       </div>
     </div>
   )

@@ -10,6 +10,7 @@ import {
   EmptyTitle,
 } from "@components/ui/empty"
 
+import { ShellTopBar } from "@features/app/shell-top-bar"
 import { accountSitesQueryOptions } from "@features/sites/api"
 
 export function BusinessesPage() {
@@ -17,6 +18,15 @@ export function BusinessesPage() {
 
   return (
     <div className="flex flex-1 flex-col">
+      <ShellTopBar
+        end={
+          sites.length > 0 ? (
+            <Button asChild className="shrink-0">
+              <Link to="/businesses/new">Add a site</Link>
+            </Button>
+          ) : null
+        }
+      />
       {sites.length === 0 ? (
         <Empty className="border-none">
           <EmptyHeader>
@@ -33,12 +43,7 @@ export function BusinessesPage() {
         </Empty>
       ) : (
         <div className="flex flex-1 flex-col gap-8">
-          <div className="flex items-center justify-between gap-4">
-            <h1 className="text-4xl font-light tracking-tight">Sites</h1>
-            <Button asChild className="shrink-0">
-              <Link to="/businesses/new">Add a site</Link>
-            </Button>
-          </div>
+          <h1 className="text-4xl font-light tracking-tight">Sites</h1>
 
           <ul className="flex flex-col overflow-hidden rounded-md bg-secondary">
             {sites.map((site) => (

@@ -25,7 +25,11 @@ export function UserMenu({ name, email }: UserMenuProps) {
       <DropdownMenuTrigger className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm text-sidebar-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
         <span className="truncate">{name}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent side="top" align="start" className="w-40">
+      <DropdownMenuContent
+        side="top"
+        align="start"
+        className="w-(--radix-dropdown-menu-trigger-width)"
+      >
         <DropdownMenuLabel className="font-normal">
           <span className="truncate text-xs font-normal text-muted-foreground">
             {email}
