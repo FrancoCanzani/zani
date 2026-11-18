@@ -18,6 +18,10 @@ export default defineConfig({
     cloudflare(),
     tailwindcss(),
   ],
+  server: {
+    // Quick tunnels mint a random *.trycloudflare.com host each run.
+    allowedHosts: [".trycloudflare.com"],
+  },
   resolve: {
     alias: {
       "@": path.resolve(import.meta.dirname, "./src/frontend"),
