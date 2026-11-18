@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react"
+import { useMemo, useState, type MouseEvent } from "react"
+import { createPortal } from "react-dom"
 import {
   alpha2ToNumeric,
   getName,
@@ -53,6 +54,23 @@ function formatCompact(value: number) {
   }).format(value)
 }
 
+function hoverFromEvent(
+  event: MouseEvent,
+  code: string,
+  name: string,
+  views: number,
+  totalViews: number
+): HoverState {
+  return {
+    code,
+    name,
+    views,
+    share: totalViews === 0 ? 0 : views / totalViews,
+    x: event.clientX,
+    y: event.clientY,
+  }
+}
+
 export function CountriesMap({
   points,
   activeValue,
@@ -79,11 +97,28 @@ export function CountriesMap({
     }
   }, [points])
 
+  const tooltip =
+    hover && typeof document !== "undefined"
+      ? createPortal(
+          <div
+            className="pointer-events-none fixed z-50 min-w-[160px] -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-md border border-border/80 bg-popover px-2.5 py-2 shadow-md"
+            style={{ left: hover.x, top: hover.y }}
+          >
+            <div className="text-[13px] font-semibold tracking-tight text-foreground">
+              <span className="font-mono">{hover.code}</span>{" "}
+              <span>{hover.name}</span>
+            </div>
+            <div className="mt-0.5 text-[12px] text-muted-foreground">
+              {formatCompact(hover.views)} Visitors ·{" "}
+              {(hover.share * 100).toFixed(1)}%
+            </div>
+          </div>,
+          document.body
+        )
+      : null
+
   return (
-    <div
-      className="relative w-full overflow-hidden"
-      onMouseLeave={() => setHover(null)}
-    >
+    <div className="relative w-full" onMouseLeave={() => setHover(null)}>
       <ComposableMap
         projection="geoEqualEarth"
         projectionConfig={{ scale: 155, center: [0, 8] }}
@@ -126,35 +161,27 @@ export function CountriesMap({
                       setHover(null)
                       return
                     }
-                    const rect = (
-                      event.currentTarget.ownerSVGElement
-                        ?.parentElement as HTMLElement | null
-                    )?.getBoundingClientRect()
-                    if (!rect) return
-                    setHover({
-                      code: alpha2,
-                      name: name || alpha2,
-                      views,
-                      share: totalViews === 0 ? 0 : views / totalViews,
-                      x: event.clientX - rect.left,
-                      y: event.clientY - rect.top,
-                    })
+                    setHover(
+                      hoverFromEvent(
+                        event,
+                        alpha2,
+                        name || alpha2,
+                        views,
+                        totalViews
+                      )
+                    )
                   }}
                   onMouseMove={(event) => {
                     if (!alpha2 || views == null) return
-                    const rect = (
-                      event.currentTarget.ownerSVGElement
-                        ?.parentElement as HTMLElement | null
-                    )?.getBoundingClientRect()
-                    if (!rect) return
-                    setHover({
-                      code: alpha2,
-                      name: name || alpha2,
-                      views,
-                      share: totalViews === 0 ? 0 : views / totalViews,
-                      x: event.clientX - rect.left,
-                      y: event.clientY - rect.top,
-                    })
+                    setHover(
+                      hoverFromEvent(
+                        event,
+                        alpha2,
+                        name || alpha2,
+                        views,
+                        totalViews
+                      )
+                    )
                   }}
                   onMouseLeave={() => setHover(null)}
                   onClick={() => {
@@ -167,22 +194,7 @@ export function CountriesMap({
           }
         </Geographies>
       </ComposableMap>
-
-      {hover ? (
-        <div
-          className="pointer-events-none absolute z-10 min-w-[160px] -translate-x-1/2 -translate-y-[calc(100%+10px)] rounded-md border border-border/80 bg-popover px-2.5 py-2 shadow-md"
-          style={{ left: hover.x, top: hover.y }}
-        >
-          <div className="text-[13px] font-semibold tracking-tight text-foreground">
-            <span className="font-mono">{hover.code}</span>{" "}
-            <span>{hover.name}</span>
-          </div>
-          <div className="mt-0.5 text-[12px] text-muted-foreground">
-            {formatCompact(hover.views)} Visitors ·{" "}
-            {(hover.share * 100).toFixed(1)}%
-          </div>
-        </div>
-      ) : null}
+      {tooltip}
     </div>
   )
 }
