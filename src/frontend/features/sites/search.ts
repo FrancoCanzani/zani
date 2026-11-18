@@ -125,12 +125,21 @@ export function rangeFromSearch(search: SiteSearch): {
         from.year,
         from.month,
         from.day,
-        0,
-        0,
+        from.hour,
+        from.minute,
         0
       )
-      const endMs =
-        zonedDateUtcMs(timeZone, to.year, to.month, to.day, 0, 0, 0) + dayMs
+      const endMs = to.hasTime
+        ? zonedDateUtcMs(
+            timeZone,
+            to.year,
+            to.month,
+            to.day,
+            to.hour,
+            to.minute,
+            0
+          ) + 60_000
+        : zonedDateUtcMs(timeZone, to.year, to.month, to.day, 0, 0, 0) + dayMs
       const duration = endMs - startMs
       return {
         start: new Date(startMs).toISOString(),
@@ -163,12 +172,17 @@ export function rangeFromSearch(search: SiteSearch): {
 }
 
 function parseDateInput(value: string) {
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim())
+  const match =
+    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?$/.exec(value.trim())
   if (!match) return null
+  const hasTime = match[4] !== undefined && match[5] !== undefined
   return {
     year: Number(match[1]),
     month: Number(match[2]),
     day: Number(match[3]),
+    hour: hasTime ? Number(match[4]) : 0,
+    minute: hasTime ? Number(match[5]) : 0,
+    hasTime,
   }
 }
 

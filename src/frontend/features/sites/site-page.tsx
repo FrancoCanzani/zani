@@ -48,15 +48,17 @@ import {
   type Metric,
   type SiteSearch,
 } from "./search"
+import { CountriesMap } from "./countries-map"
 import { RangePicker } from "./range-picker"
 import { ViewsChart } from "./views-chart"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
 
 type BreakdownTab = {
-  key: Breakdown
+  key: Breakdown | "map"
   label: string
   filterKey: FilterKey
+  view?: "list" | "map"
 }
 
 const breakdownPanels: Array<{
@@ -93,8 +95,9 @@ const breakdownPanels: Array<{
     id: "countries",
     title: "Countries",
     tabs: [
-      { key: "country", label: "Country", filterKey: "country" },
-      { key: "city", label: "City", filterKey: "city" },
+      { key: "map", label: "Map", filterKey: "country", view: "map" },
+      { key: "country", label: "List", filterKey: "country", view: "list" },
+      { key: "city", label: "City", filterKey: "city", view: "list" },
     ],
   },
   {
@@ -262,8 +265,10 @@ function BreakdownPanel({
 }) {
   const [active, setActive] = useState(tabs[0]!.key)
   const tab = tabs.find((item) => item.key === active) ?? tabs[0]!
-  const table = tableQueries[tab.key]
+  const dataKey = tab.key === "map" ? "country" : tab.key
+  const table = tableQueries[dataKey]
   const showTabs = tabs.length > 1
+  const showMap = tab.view === "map"
 
   return (
     <section className="rounded-lg border border-border/70 p-4">
@@ -297,12 +302,20 @@ function BreakdownPanel({
           </div>
         ) : null}
       </div>
-      <BreakdownTable
-        filterKey={tab.filterKey}
-        data={table.data}
-        activeValue={search[tab.filterKey]}
-        onSelect={onSelect}
-      />
+      {showMap ? (
+        <CountriesMap
+          points={table.data.points}
+          activeValue={search.country}
+          onSelect={(country) => onSelect("country", country)}
+        />
+      ) : (
+        <BreakdownTable
+          filterKey={tab.filterKey}
+          data={table.data}
+          activeValue={search[tab.filterKey]}
+          onSelect={onSelect}
+        />
+      )}
     </section>
   )
 }
