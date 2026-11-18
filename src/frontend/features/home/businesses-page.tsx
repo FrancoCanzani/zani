@@ -40,7 +40,7 @@ export function BusinessesPage() {
             </Button>
           </div>
 
-          <ul className="flex flex-col overflow-hidden bg-secondary">
+          <ul className="flex flex-col overflow-hidden rounded-md bg-secondary">
             {sites.map((site) => (
               <li
                 key={site.id}

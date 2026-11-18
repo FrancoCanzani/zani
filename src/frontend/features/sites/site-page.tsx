@@ -3,7 +3,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { getRouteApi } from "@tanstack/react-router"
+import { Link, getRouteApi } from "@tanstack/react-router"
 import { EllipsisIcon } from "lucide-react"
 import { startTransition, useState } from "react"
 import { toast } from "sonner"
@@ -196,56 +196,64 @@ export function SitePage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-4xl font-light tracking-tight">
-            {totals.data.site.name}
-          </h1>
-          <p className="text-sm text-muted-foreground">
-            {totals.data.site.domain}
-          </p>
-          <p className="text-sm text-muted-foreground">
-            {formatStatsRange(range.start, range.end)}
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          {import.meta.env.DEV ? (
-            <Button
-              type="button"
-              variant="outline"
-              disabled={
-                simulate.isPending || totals.data.site.revokedAt !== null
-              }
-              onClick={() => simulate.mutate()}
-            >
-              {simulate.isPending ? "Simulating…" : "Simulate views"}
-            </Button>
-          ) : null}
-          {canReplace ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Site actions"
-                >
-                  <EllipsisIcon />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={replace.isPending}
-                  onClick={() => {
-                    replace.reset()
-                    void replace.mutate()
-                  }}
-                >
-                  {replace.isPending ? "Rotating…" : "Rotate key"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+      <div>
+        <Link
+          to="/businesses"
+          className="mb-4 inline-block text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          Back to sites
+        </Link>
+        <div className="flex items-start justify-between gap-4">
+          <div className="space-y-1">
+            <h1 className="text-4xl font-light tracking-tight">
+              {totals.data.site.name}
+            </h1>
+            <p className="text-sm text-muted-foreground">
+              {totals.data.site.domain}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {formatStatsRange(range.start, range.end)}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {import.meta.env.DEV ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={
+                  simulate.isPending || totals.data.site.revokedAt !== null
+                }
+                onClick={() => simulate.mutate()}
+              >
+                {simulate.isPending ? "Simulating…" : "Simulate views"}
+              </Button>
+            ) : null}
+            {canReplace ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label="Site actions"
+                  >
+                    <EllipsisIcon />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    disabled={replace.isPending}
+                    onClick={() => {
+                      replace.reset()
+                      void replace.mutate()
+                    }}
+                  >
+                    {replace.isPending ? "Rotating…" : "Rotate key"}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : null}
+          </div>
         </div>
       </div>
 
