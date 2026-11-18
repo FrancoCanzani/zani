@@ -10,21 +10,13 @@ import {
   PopoverTrigger,
 } from "@components/ui/popover"
 
-import {
-  rangeLabels,
-  type RangePreset,
-} from "./search"
-
-const quickRanges = ["1d", "7d", "30d"] as const
-
 type RangePickerProps = {
-  range: RangePreset
   from?: string
   to?: string
   timeZone: string
   localTz: string
+  active: boolean
   label: string
-  onPreset: (preset: Exclude<RangePreset, "custom">) => void
   onCustom: (from: string, to: string) => void
   onTimeZone: (tz: string) => void
 }
@@ -49,13 +41,12 @@ function formatDay(date: Date) {
 }
 
 export function RangePicker({
-  range,
   from,
   to,
   timeZone,
   localTz,
+  active,
   label,
-  onPreset,
   onCustom,
   onTimeZone,
 }: RangePickerProps) {
@@ -79,28 +70,17 @@ export function RangePicker({
       }}
     >
       <PopoverTrigger asChild>
-        <Button type="button" variant="outline" size="sm" className="gap-2">
-          <CalendarIcon className="size-3.5" />
+        <Button
+          type="button"
+          variant={active ? "default" : "outline"}
+          size="xs"
+          className="gap-1.5"
+        >
+          <CalendarIcon className="size-3" />
           {label}
         </Button>
       </PopoverTrigger>
       <PopoverContent align="start" className="w-auto p-3">
-        <div className="flex flex-wrap gap-1 pb-3">
-          {quickRanges.map((preset) => (
-            <Button
-              key={preset}
-              type="button"
-              size="xs"
-              variant={range === preset ? "default" : "outline"}
-              onClick={() => {
-                onPreset(preset)
-                setOpen(false)
-              }}
-            >
-              {rangeLabels[preset]}
-            </Button>
-          ))}
-        </div>
         <Calendar
           mode="range"
           numberOfMonths={1}

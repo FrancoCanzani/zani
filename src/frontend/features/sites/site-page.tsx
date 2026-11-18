@@ -57,44 +57,51 @@ const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
 
 const breakdownPanels: Array<{
   id: string
+  title: string
   tabs: Array<{ key: Breakdown; label: string; filterKey: FilterKey }>
 }> = [
   {
     id: "pages",
+    title: "Pages",
     tabs: [
-      { key: "path", label: "Pages", filterKey: "path" },
+      { key: "path", label: "Path", filterKey: "path" },
       { key: "entry", label: "Entry", filterKey: "path" },
       { key: "exit", label: "Exit", filterKey: "path" },
     ],
   },
   {
     id: "sources",
+    title: "Sources",
     tabs: [
-      { key: "referrer", label: "Referrers", filterKey: "referrer" },
-      { key: "utm_source", label: "UTM source", filterKey: "utm_source" },
-      { key: "utm_medium", label: "UTM medium", filterKey: "utm_medium" },
-      { key: "utm_campaign", label: "UTM campaign", filterKey: "utm_campaign" },
-      { key: "utm_content", label: "UTM content", filterKey: "utm_content" },
-      { key: "utm_term", label: "UTM term", filterKey: "utm_term" },
+      { key: "referrer", label: "Referrer", filterKey: "referrer" },
+      { key: "utm_source", label: "Source", filterKey: "utm_source" },
+      { key: "utm_medium", label: "Medium", filterKey: "utm_medium" },
+      { key: "utm_campaign", label: "Campaign", filterKey: "utm_campaign" },
+      { key: "utm_content", label: "Content", filterKey: "utm_content" },
+      { key: "utm_term", label: "Term", filterKey: "utm_term" },
     ],
   },
   {
     id: "geo",
+    title: "Geography",
     tabs: [
-      { key: "country", label: "Countries", filterKey: "country" },
-      { key: "city", label: "Cities", filterKey: "city" },
+      { key: "country", label: "Country", filterKey: "country" },
+      { key: "city", label: "City", filterKey: "city" },
     ],
   },
   {
     id: "clients",
+    title: "Clients",
     tabs: [
-      { key: "device", label: "Devices", filterKey: "device" },
-      { key: "browser", label: "Browsers", filterKey: "browser" },
+      { key: "device", label: "Device", filterKey: "device" },
+      { key: "browser", label: "Browser", filterKey: "browser" },
       { key: "os", label: "OS", filterKey: "os" },
-      { key: "screen", label: "Screens", filterKey: "screen" },
+      { key: "screen", label: "Screen", filterKey: "screen" },
     ],
   },
 ]
+
+const quickRanges = ["1d", "7d", "30d"] as const
 
 const kpiMetrics = [
   "views",
@@ -449,24 +456,34 @@ export function SitePage() {
         <p className="text-sm text-muted-foreground">{replace.error.message}</p>
       ) : null}
 
-      <div className="flex flex-wrap items-center gap-2">
+      <div className="flex flex-wrap items-center gap-1.5">
+        {quickRanges.map((preset) => (
+          <Button
+            key={preset}
+            type="button"
+            size="xs"
+            variant={search.range === preset ? "default" : "outline"}
+            onClick={() =>
+              patchSearch({
+                range: preset,
+                from: undefined,
+                to: undefined,
+              })
+            }
+          >
+            {rangeLabels[preset]}
+          </Button>
+        ))}
         <RangePicker
-          range={search.range}
           from={search.from ?? dateInputValue(range.start, timeZone)}
           to={search.to ?? dateInputValue(range.end, timeZone)}
           timeZone={timeZone}
           localTz={localTz}
+          active={search.range === "custom"}
           label={
             search.range === "custom" && search.from && search.to
               ? `${search.from} → ${search.to}`
-              : rangeLabels[search.range]
-          }
-          onPreset={(preset) =>
-            patchSearch({
-              range: preset,
-              from: undefined,
-              to: undefined,
-            })
+              : "Custom"
           }
           onCustom={(from, to) =>
             patchSearch({
@@ -479,7 +496,7 @@ export function SitePage() {
         />
         <Button
           type="button"
-          size="sm"
+          size="xs"
           variant={search.compare ? "default" : "outline"}
           onClick={() =>
             patchSearch({ compare: search.compare ? undefined : true })
@@ -583,20 +600,27 @@ export function SitePage() {
         {breakdownPanels.map((panel) => (
           <section
             key={panel.id}
-            className="rounded-xl border border-border/80 p-3"
+            className="rounded-xl border border-border/70 p-3"
           >
             <Tabs defaultValue={panel.tabs[0]!.key}>
-              <TabsList variant="line" className="mb-3 w-full justify-start">
-                {panel.tabs.map((tab) => (
-                  <TabsTrigger key={tab.key} value={tab.key}>
-                    {tab.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
+              <div className="mb-3 flex items-center justify-between gap-3">
+                <h2 className="text-sm font-medium">{panel.title}</h2>
+                <TabsList className="h-7 max-w-[70%] gap-0.5 overflow-x-auto rounded-md bg-muted p-0.5">
+                  {panel.tabs.map((tab) => (
+                    <TabsTrigger
+                      key={tab.key}
+                      value={tab.key}
+                      className="h-6 shrink-0 rounded-sm px-2 text-xs"
+                    >
+                      {tab.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </div>
               {panel.tabs.map((tab) => {
                 const table = tableQueries[tab.key]
                 return (
-                  <TabsContent key={tab.key} value={tab.key}>
+                  <TabsContent key={tab.key} value={tab.key} className="mt-0">
                     <BreakdownTable
                       filterKey={tab.filterKey}
                       data={table.data}
