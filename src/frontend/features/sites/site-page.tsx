@@ -22,7 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
-import { Input } from "@components/ui/input"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@components/ui/tabs"
 
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import {
@@ -46,36 +46,54 @@ import {
   isChartMetric,
   metricLabels,
   rangeLabels,
-  rangePresets,
   type FilterKey,
   type Metric,
-  type RangePreset,
   type SiteSearch,
 } from "./search"
+import { RangePicker } from "./range-picker"
 import { ViewsChart } from "./views-chart"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
 
-const breakdowns: Array<{
-  key: Breakdown
-  label: string
-  filterKey: FilterKey
+const breakdownPanels: Array<{
+  id: string
+  tabs: Array<{ key: Breakdown; label: string; filterKey: FilterKey }>
 }> = [
-  { key: "path", label: "Pages", filterKey: "path" },
-  { key: "entry", label: "Entry pages", filterKey: "path" },
-  { key: "exit", label: "Exit pages", filterKey: "path" },
-  { key: "referrer", label: "Referrers", filterKey: "referrer" },
-  { key: "country", label: "Countries", filterKey: "country" },
-  { key: "city", label: "Cities", filterKey: "city" },
-  { key: "browser", label: "Browsers", filterKey: "browser" },
-  { key: "device", label: "Devices", filterKey: "device" },
-  { key: "os", label: "OS", filterKey: "os" },
-  { key: "screen", label: "Screens", filterKey: "screen" },
-  { key: "utm_source", label: "UTM source", filterKey: "utm_source" },
-  { key: "utm_medium", label: "UTM medium", filterKey: "utm_medium" },
-  { key: "utm_campaign", label: "UTM campaign", filterKey: "utm_campaign" },
-  { key: "utm_content", label: "UTM content", filterKey: "utm_content" },
-  { key: "utm_term", label: "UTM term", filterKey: "utm_term" },
+  {
+    id: "pages",
+    tabs: [
+      { key: "path", label: "Pages", filterKey: "path" },
+      { key: "entry", label: "Entry", filterKey: "path" },
+      { key: "exit", label: "Exit", filterKey: "path" },
+    ],
+  },
+  {
+    id: "sources",
+    tabs: [
+      { key: "referrer", label: "Referrers", filterKey: "referrer" },
+      { key: "utm_source", label: "UTM source", filterKey: "utm_source" },
+      { key: "utm_medium", label: "UTM medium", filterKey: "utm_medium" },
+      { key: "utm_campaign", label: "UTM campaign", filterKey: "utm_campaign" },
+      { key: "utm_content", label: "UTM content", filterKey: "utm_content" },
+      { key: "utm_term", label: "UTM term", filterKey: "utm_term" },
+    ],
+  },
+  {
+    id: "geo",
+    tabs: [
+      { key: "country", label: "Countries", filterKey: "country" },
+      { key: "city", label: "Cities", filterKey: "city" },
+    ],
+  },
+  {
+    id: "clients",
+    tabs: [
+      { key: "device", label: "Devices", filterKey: "device" },
+      { key: "browser", label: "Browsers", filterKey: "browser" },
+      { key: "os", label: "OS", filterKey: "os" },
+      { key: "screen", label: "Screens", filterKey: "screen" },
+    ],
+  },
 ]
 
 const kpiMetrics = [
@@ -157,13 +175,11 @@ function dateInputValue(iso: string, timeZone: string) {
 }
 
 function BreakdownTable({
-  label,
   filterKey,
   data,
   activeValue,
   onSelect,
 }: {
-  label: string
   filterKey: FilterKey
   data: SiteStats
   activeValue: string | undefined
@@ -173,8 +189,7 @@ function BreakdownTable({
   const totalViews = data.points.reduce((sum, point) => sum + point.views, 0)
 
   return (
-    <section className="space-y-3">
-      <h2 className="text-sm text-muted-foreground">{label}</h2>
+    <div className="space-y-1">
       <ul className="space-y-1">
         {data.points.length === 0 ? (
           <li className="py-2 text-sm text-muted-foreground">No data</li>
@@ -188,7 +203,7 @@ function BreakdownTable({
                 <button
                   type="button"
                   onClick={() => onSelect(filterKey, value)}
-                  className={`relative flex w-full items-center gap-3 overflow-hidden rounded-md px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted ${selected ? "bg-muted" : ""}`}
+                  className={`relative flex w-full items-center gap-3 overflow-hidden rounded-lg px-2 py-1.5 text-left text-sm transition-colors hover:bg-muted ${selected ? "bg-muted" : ""}`}
                 >
                   <span
                     aria-hidden
@@ -213,7 +228,7 @@ function BreakdownTable({
       {data.truncated ? (
         <p className="text-sm text-muted-foreground">Truncated.</p>
       ) : null}
-    </section>
+    </div>
   )
 }
 
@@ -285,24 +300,26 @@ export function SitePage() {
   const utmTerm = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "utm_term", range, filters)
   )
-  const tableQueries: Record<(typeof breakdowns)[number]["key"], { data: SiteStats }> =
-    {
-      path,
-      entry,
-      exit,
-      referrer,
-      country,
-      city,
-      browser,
-      device,
-      os,
-      screen,
-      utm_source: utmSource,
-      utm_medium: utmMedium,
-      utm_campaign: utmCampaign,
-      utm_content: utmContent,
-      utm_term: utmTerm,
-    }
+  const tableQueries: Record<
+    (typeof breakdownPanels)[number]["tabs"][number]["key"],
+    { data: SiteStats }
+  > = {
+    path,
+    entry,
+    exit,
+    referrer,
+    country,
+    city,
+    browser,
+    device,
+    os,
+    screen,
+    utm_source: utmSource,
+    utm_medium: utmMedium,
+    utm_campaign: utmCampaign,
+    utm_content: utmContent,
+    utm_term: utmTerm,
+  }
 
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
   const role = parseWorkspaceRole(workspaceData.workspace.role)
@@ -433,35 +450,36 @@ export function SitePage() {
       ) : null}
 
       <div className="flex flex-wrap items-center gap-2">
-        {rangePresets.map((preset) => (
-          <Button
-            key={preset}
-            type="button"
-            size="xs"
-            variant={search.range === preset ? "default" : "outline"}
-            onClick={() => {
-              if (preset === "custom") {
-                patchSearch({
-                  range: "custom",
-                  from:
-                    search.from ?? dateInputValue(range.start, timeZone),
-                  to: search.to ?? dateInputValue(range.end, timeZone),
-                })
-                return
-              }
-              patchSearch({
-                range: preset as RangePreset,
-                from: undefined,
-                to: undefined,
-              })
-            }}
-          >
-            {rangeLabels[preset]}
-          </Button>
-        ))}
+        <RangePicker
+          range={search.range}
+          from={search.from ?? dateInputValue(range.start, timeZone)}
+          to={search.to ?? dateInputValue(range.end, timeZone)}
+          timeZone={timeZone}
+          localTz={localTz}
+          label={
+            search.range === "custom" && search.from && search.to
+              ? `${search.from} → ${search.to}`
+              : rangeLabels[search.range]
+          }
+          onPreset={(preset) =>
+            patchSearch({
+              range: preset,
+              from: undefined,
+              to: undefined,
+            })
+          }
+          onCustom={(from, to) =>
+            patchSearch({
+              range: "custom",
+              from,
+              to,
+            })
+          }
+          onTimeZone={(tz) => patchSearch({ tz })}
+        />
         <Button
           type="button"
-          size="xs"
+          size="sm"
           variant={search.compare ? "default" : "outline"}
           onClick={() =>
             patchSearch({ compare: search.compare ? undefined : true })
@@ -469,24 +487,6 @@ export function SitePage() {
         >
           Compare
         </Button>
-        <Button
-          type="button"
-          size="xs"
-          variant={timeZone === "UTC" ? "default" : "outline"}
-          onClick={() => patchSearch({ tz: "UTC" })}
-        >
-          UTC
-        </Button>
-        {localTz !== "UTC" ? (
-          <Button
-            type="button"
-            size="xs"
-            variant={timeZone === localTz ? "default" : "outline"}
-            onClick={() => patchSearch({ tz: localTz })}
-          >
-            {localTz}
-          </Button>
-        ) : null}
         {chips.map((chip) => (
           <Button
             key={`${chip.key}:${chip.value}`}
@@ -527,31 +527,6 @@ export function SitePage() {
         ) : null}
       </div>
 
-      {search.range === "custom" ? (
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="space-y-1 text-sm">
-            <span className="text-muted-foreground">From</span>
-            <Input
-              type="date"
-              value={search.from ?? ""}
-              onChange={(event) =>
-                patchSearch({ range: "custom", from: event.target.value })
-              }
-            />
-          </label>
-          <label className="space-y-1 text-sm">
-            <span className="text-muted-foreground">To</span>
-            <Input
-              type="date"
-              value={search.to ?? ""}
-              onChange={(event) =>
-                patchSearch({ range: "custom", to: event.target.value })
-              }
-            />
-          </label>
-        </div>
-      ) : null}
-
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {kpiMetrics.map((metric) => {
           const selected = search.metric === metric
@@ -563,7 +538,7 @@ export function SitePage() {
               key={metric}
               type="button"
               onClick={() => patchSearch({ metric: metric as Metric })}
-              className={`rounded-md border px-3 py-3 text-left transition-colors ${selected ? "border-foreground bg-muted/60" : "border-border hover:bg-muted/40"}`}
+              className={`rounded-xl border px-3 py-3 text-left transition-colors ${selected ? "border-foreground/30 bg-muted/50" : "border-border/80 hover:bg-muted/30"}`}
             >
               <div className="text-sm text-muted-foreground">
                 {metricLabels[metric]}
@@ -574,7 +549,7 @@ export function SitePage() {
                 </div>
                 {delta === null ? null : (
                   <span
-                    className={`rounded-md px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums ${
+                    className={`rounded-full px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums ${
                       delta > 0
                         ? "bg-emerald-500/10 text-emerald-700"
                         : delta < 0
@@ -604,20 +579,36 @@ export function SitePage() {
         compare={Boolean(search.compare)}
       />
 
-      <div className="grid gap-10 md:grid-cols-2">
-        {breakdowns.map(({ key, label, filterKey }) => {
-          const table = tableQueries[key]
-          return (
-            <BreakdownTable
-              key={key}
-              label={label}
-              filterKey={filterKey}
-              data={table.data}
-              activeValue={search[filterKey]}
-              onSelect={toggleFilter}
-            />
-          )
-        })}
+      <div className="grid gap-4 md:grid-cols-2">
+        {breakdownPanels.map((panel) => (
+          <section
+            key={panel.id}
+            className="rounded-xl border border-border/80 p-3"
+          >
+            <Tabs defaultValue={panel.tabs[0]!.key}>
+              <TabsList variant="line" className="mb-3 w-full justify-start">
+                {panel.tabs.map((tab) => (
+                  <TabsTrigger key={tab.key} value={tab.key}>
+                    {tab.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+              {panel.tabs.map((tab) => {
+                const table = tableQueries[tab.key]
+                return (
+                  <TabsContent key={tab.key} value={tab.key}>
+                    <BreakdownTable
+                      filterKey={tab.filterKey}
+                      data={table.data}
+                      activeValue={search[tab.filterKey]}
+                      onSelect={toggleFilter}
+                    />
+                  </TabsContent>
+                )
+              })}
+            </Tabs>
+          </section>
+        ))}
       </div>
     </div>
   )

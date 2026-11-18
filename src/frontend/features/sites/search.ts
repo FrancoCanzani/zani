@@ -215,8 +215,8 @@ export const metricLabels: Record<Metric, string> = {
 
 export const rangeLabels: Record<RangePreset, string> = {
   "1d": "Today",
-  "7d": "7d",
-  "30d": "30d",
+  "7d": "Week",
+  "30d": "Month",
   custom: "Custom",
 }
 

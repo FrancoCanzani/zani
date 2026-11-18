@@ -170,15 +170,15 @@ export function ViewsChart({
   const chartConfig = {
     solid: {
       label,
-      color: "var(--foreground)",
+      color: "var(--chart-2)",
     },
     dashed: {
       label,
-      color: "var(--foreground)",
+      color: "var(--chart-2)",
     },
     previous: {
       label: `Prior ${label.toLowerCase()}`,
-      color: "var(--muted-foreground)",
+      color: "var(--chart-1)",
     },
   } satisfies ChartConfig
 
@@ -287,7 +287,7 @@ export function ViewsChart({
               dataKey="previous"
               type={areaType}
               fill="var(--color-previous)"
-              fillOpacity={0.04}
+              fillOpacity={0.03}
               stroke="var(--color-previous)"
               strokeWidth={1}
               strokeDasharray="3 3"
@@ -301,25 +301,35 @@ export function ViewsChart({
             dataKey="solid"
             type={areaType}
             fill="var(--color-solid)"
-            fillOpacity={0.1}
+            fillOpacity={0.08}
             stroke="var(--color-solid)"
-            strokeWidth={1.25}
+            strokeWidth={1}
             isAnimationActive={false}
             dot={false}
-            activeDot={{ r: 3.5, strokeWidth: 1, fill: "var(--background)" }}
+            activeDot={{
+              r: 3,
+              strokeWidth: 1,
+              stroke: "var(--color-solid)",
+              fill: "var(--background)",
+            }}
             connectNulls={false}
           />
           <Area
             dataKey="dashed"
             type={areaType}
             fill="var(--color-dashed)"
-            fillOpacity={0.04}
+            fillOpacity={0.03}
             stroke="var(--color-dashed)"
-            strokeWidth={1.25}
-            strokeDasharray="5 4"
+            strokeWidth={1}
+            strokeDasharray="4 4"
             isAnimationActive={false}
             dot={false}
-            activeDot={{ r: 3.5, strokeWidth: 1, fill: "var(--background)" }}
+            activeDot={{
+              r: 3,
+              strokeWidth: 1,
+              stroke: "var(--color-dashed)",
+              fill: "var(--background)",
+            }}
             connectNulls={false}
             legendType="none"
           />
