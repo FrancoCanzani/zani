@@ -22,6 +22,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@components/ui/dropdown-menu"
+import { Input } from "@components/ui/input"
 
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import {
@@ -36,11 +37,13 @@ import {
   simulateSiteViews,
   siteStatsQueryOptions,
   statsQueryFromSearch,
+  type Breakdown,
   type SiteStats,
 } from "./api"
 import {
   activeFilterChips,
   filterLabels,
+  isChartMetric,
   metricLabels,
   rangeLabels,
   rangePresets,
@@ -53,33 +56,104 @@ import { ViewsChart } from "./views-chart"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
 
-const breakdowns: Array<{ key: FilterKey; label: string }> = [
-  { key: "path", label: "Pages" },
-  { key: "referrer", label: "Referrers" },
-  { key: "country", label: "Countries" },
-  { key: "browser", label: "Browsers" },
-  { key: "device", label: "Devices" },
-  { key: "utm_source", label: "UTM source" },
-  { key: "utm_medium", label: "UTM medium" },
-  { key: "utm_campaign", label: "UTM campaign" },
+const breakdowns: Array<{
+  key: Breakdown
+  label: string
+  filterKey: FilterKey
+}> = [
+  { key: "path", label: "Pages", filterKey: "path" },
+  { key: "entry", label: "Entry pages", filterKey: "path" },
+  { key: "exit", label: "Exit pages", filterKey: "path" },
+  { key: "referrer", label: "Referrers", filterKey: "referrer" },
+  { key: "country", label: "Countries", filterKey: "country" },
+  { key: "city", label: "Cities", filterKey: "city" },
+  { key: "browser", label: "Browsers", filterKey: "browser" },
+  { key: "device", label: "Devices", filterKey: "device" },
+  { key: "os", label: "OS", filterKey: "os" },
+  { key: "screen", label: "Screens", filterKey: "screen" },
+  { key: "utm_source", label: "UTM source", filterKey: "utm_source" },
+  { key: "utm_medium", label: "UTM medium", filterKey: "utm_medium" },
+  { key: "utm_campaign", label: "UTM campaign", filterKey: "utm_campaign" },
+  { key: "utm_content", label: "UTM content", filterKey: "utm_content" },
+  { key: "utm_term", label: "UTM term", filterKey: "utm_term" },
 ]
 
-function formatStatsRange(start: string, end: string) {
+const kpiMetrics = [
+  "views",
+  "visitors",
+  "sessions",
+  "bounce",
+  "views_per_visit",
+] as const
+
+function formatStatsRange(start: string, end: string, timeZone: string) {
   const startDate = new Date(start)
   const endDate = new Date(end)
   const monthDay = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
+    timeZone,
   })
   const monthDayYear = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
     year: "numeric",
+    timeZone,
   })
   if (startDate.getFullYear() === endDate.getFullYear()) {
     return `${monthDay.format(startDate)} – ${monthDayYear.format(endDate)}`
   }
   return `${monthDayYear.format(startDate)} – ${monthDayYear.format(endDate)}`
+}
+
+function metricValue(stats: SiteStats, metric: Metric) {
+  switch (metric) {
+    case "views":
+      return stats.views
+    case "visitors":
+      return stats.visitors
+    case "sessions":
+      return stats.sessions
+    case "bounce":
+      return stats.bounceRate
+    case "views_per_visit":
+      return stats.viewsPerVisit
+    default: {
+      const exhaustive: never = metric
+      return exhaustive
+    }
+  }
+}
+
+function formatMetricValue(metric: Metric, value: number) {
+  switch (metric) {
+    case "bounce":
+      return `${value}%`
+    case "views_per_visit":
+      return value.toFixed(2)
+    case "views":
+    case "visitors":
+    case "sessions":
+      return String(value)
+    default: {
+      const exhaustive: never = metric
+      return exhaustive
+    }
+  }
+}
+
+function dateInputValue(iso: string, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(iso))
+  const year = parts.find((part) => part.type === "year")?.value
+  const month = parts.find((part) => part.type === "month")?.value
+  const day = parts.find((part) => part.type === "day")?.value
+  if (!year || !month || !day) return ""
+  return `${year}-${month}-${day}`
 }
 
 function BreakdownTable({
@@ -96,6 +170,7 @@ function BreakdownTable({
   onSelect: (key: FilterKey, value: string) => void
 }) {
   const maxViews = Math.max(1, ...data.points.map((point) => point.views))
+  const totalViews = data.points.reduce((sum, point) => sum + point.views, 0)
 
   return (
     <section className="space-y-3">
@@ -107,7 +182,7 @@ function BreakdownTable({
           data.points.map((point) => {
             const value = point.series
             const selected = activeValue === value
-            const share = data.views === 0 ? 0 : point.views / data.views
+            const share = totalViews === 0 ? 0 : point.views / totalViews
             return (
               <li key={value || "(none)"}>
                 <button
@@ -149,6 +224,8 @@ export function SitePage() {
   const queryClient = useQueryClient()
   const { range, filters } = statsQueryFromSearch(search)
   const chips = activeFilterChips(search)
+  const timeZone = search.tz || "UTC"
+  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
   const totals = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, undefined, range, filters)
@@ -162,8 +239,15 @@ export function SitePage() {
       filters
     )
   )
+
   const path = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "path", range, filters)
+  )
+  const entry = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "entry", range, filters)
+  )
+  const exit = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "exit", range, filters)
   )
   const referrer = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "referrer", range, filters)
@@ -171,11 +255,20 @@ export function SitePage() {
   const country = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "country", range, filters)
   )
+  const city = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "city", range, filters)
+  )
   const browser = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "browser", range, filters)
   )
   const device = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "device", range, filters)
+  )
+  const os = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "os", range, filters)
+  )
+  const screen = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "screen", range, filters)
   )
   const utmSource = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "utm_source", range, filters)
@@ -186,16 +279,30 @@ export function SitePage() {
   const utmCampaign = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "utm_campaign", range, filters)
   )
-  const tables: Record<FilterKey, SiteStats> = {
-    path: path.data,
-    referrer: referrer.data,
-    country: country.data,
-    browser: browser.data,
-    device: device.data,
-    utm_source: utmSource.data,
-    utm_medium: utmMedium.data,
-    utm_campaign: utmCampaign.data,
-  }
+  const utmContent = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "utm_content", range, filters)
+  )
+  const utmTerm = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, "utm_term", range, filters)
+  )
+  const tableQueries: Record<(typeof breakdowns)[number]["key"], { data: SiteStats }> =
+    {
+      path,
+      entry,
+      exit,
+      referrer,
+      country,
+      city,
+      browser,
+      device,
+      os,
+      screen,
+      utm_source: utmSource,
+      utm_medium: utmMedium,
+      utm_campaign: utmCampaign,
+      utm_content: utmContent,
+      utm_term: utmTerm,
+    }
 
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
   const role = parseWorkspaceRole(workspaceData.workspace.role)
@@ -244,6 +351,8 @@ export function SitePage() {
     },
   })
 
+  const chartMetric = isChartMetric(search.metric) ? search.metric : "views"
+
   return (
     <div className="flex flex-col gap-8">
       <div className="flex items-start justify-between gap-4">
@@ -255,7 +364,7 @@ export function SitePage() {
             {totals.data.site.domain}
           </p>
           <p className="font-mono text-sm text-muted-foreground">
-            {formatStatsRange(range.start, range.end)}
+            {formatStatsRange(range.start, range.end, timeZone)}
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -330,11 +439,54 @@ export function SitePage() {
             type="button"
             size="xs"
             variant={search.range === preset ? "default" : "outline"}
-            onClick={() => patchSearch({ range: preset as RangePreset })}
+            onClick={() => {
+              if (preset === "custom") {
+                patchSearch({
+                  range: "custom",
+                  from:
+                    search.from ?? dateInputValue(range.start, timeZone),
+                  to: search.to ?? dateInputValue(range.end, timeZone),
+                })
+                return
+              }
+              patchSearch({
+                range: preset as RangePreset,
+                from: undefined,
+                to: undefined,
+              })
+            }}
           >
             {rangeLabels[preset]}
           </Button>
         ))}
+        <Button
+          type="button"
+          size="xs"
+          variant={search.compare ? "default" : "outline"}
+          onClick={() =>
+            patchSearch({ compare: search.compare ? undefined : true })
+          }
+        >
+          Compare
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant={timeZone === "UTC" ? "default" : "outline"}
+          onClick={() => patchSearch({ tz: "UTC" })}
+        >
+          UTC
+        </Button>
+        {localTz !== "UTC" ? (
+          <Button
+            type="button"
+            size="xs"
+            variant={timeZone === localTz ? "default" : "outline"}
+            onClick={() => patchSearch({ tz: localTz })}
+          >
+            {localTz}
+          </Button>
+        ) : null}
         {chips.map((chip) => (
           <Button
             key={`${chip.key}:${chip.value}`}
@@ -357,11 +509,16 @@ export function SitePage() {
                 path: undefined,
                 referrer: undefined,
                 country: undefined,
+                city: undefined,
                 browser: undefined,
                 device: undefined,
+                os: undefined,
+                screen: undefined,
                 utm_source: undefined,
                 utm_medium: undefined,
                 utm_campaign: undefined,
+                utm_content: undefined,
+                utm_term: undefined,
               })
             }
           >
@@ -370,13 +527,37 @@ export function SitePage() {
         ) : null}
       </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        {(["views", "visitors", "sessions"] as const).map((metric) => {
+      {search.range === "custom" ? (
+        <div className="flex flex-wrap items-end gap-3">
+          <label className="space-y-1 text-sm">
+            <span className="text-muted-foreground">From</span>
+            <Input
+              type="date"
+              value={search.from ?? ""}
+              onChange={(event) =>
+                patchSearch({ range: "custom", from: event.target.value })
+              }
+            />
+          </label>
+          <label className="space-y-1 text-sm">
+            <span className="text-muted-foreground">To</span>
+            <Input
+              type="date"
+              value={search.to ?? ""}
+              onChange={(event) =>
+                patchSearch({ range: "custom", to: event.target.value })
+              }
+            />
+          </label>
+        </div>
+      ) : null}
+
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
+        {kpiMetrics.map((metric) => {
           const selected = search.metric === metric
-          const delta = changePercent(
-            totals.data[metric],
-            previousTotals.data[metric]
-          )
+          const current = metricValue(totals.data, metric)
+          const previous = metricValue(previousTotals.data, metric)
+          const delta = changePercent(current, previous)
           return (
             <button
               key={metric}
@@ -389,7 +570,7 @@ export function SitePage() {
               </div>
               <div className="mt-1 flex items-baseline gap-2">
                 <div className="font-mono text-3xl font-medium tracking-tight tabular-nums">
-                  {totals.data[metric]}
+                  {formatMetricValue(metric, current)}
                 </div>
                 {delta === null ? null : (
                   <span
@@ -412,26 +593,31 @@ export function SitePage() {
       </div>
 
       <ViewsChart
-        key={search.metric}
+        key={`${chartMetric}-${timeZone}-${search.compare ? "cmp" : "solo"}`}
         points={totals.data.points}
         previousPoints={previousTotals.data.points}
         start={range.start}
         end={range.end}
         grain={range.grain}
-        metric={search.metric}
+        metric={chartMetric}
+        timeZone={timeZone}
+        compare={Boolean(search.compare)}
       />
 
       <div className="grid gap-10 md:grid-cols-2">
-        {breakdowns.map(({ key, label }) => (
-          <BreakdownTable
-            key={key}
-            label={label}
-            filterKey={key}
-            data={tables[key]}
-            activeValue={search[key]}
-            onSelect={toggleFilter}
-          />
-        ))}
+        {breakdowns.map(({ key, label, filterKey }) => {
+          const table = tableQueries[key]
+          return (
+            <BreakdownTable
+              key={key}
+              label={label}
+              filterKey={filterKey}
+              data={table.data}
+              activeValue={search[filterKey]}
+              onSelect={toggleFilter}
+            />
+          )
+        })}
       </div>
     </div>
   )

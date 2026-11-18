@@ -16,6 +16,7 @@ const body: CollectBody = {
   path: "/pricing?plan=pro#buy",
   referrer: "https://www.google.com/search?q=zani",
   utmSource: "newsletter",
+  screen: "390x844",
 }
 
 describe("normalizeEvent", () => {
@@ -25,6 +26,7 @@ describe("normalizeEvent", () => {
       userAgent:
         "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1",
       country: "US",
+      city: "San Francisco",
     })
 
     expect(event).toEqual({
@@ -36,9 +38,14 @@ describe("normalizeEvent", () => {
       utmSource: "newsletter",
       utmMedium: "",
       utmCampaign: "",
+      utmContent: "",
+      utmTerm: "",
       country: "US",
+      city: "San Francisco",
       browser: "safari",
       device: "mobile",
+      os: "ios",
+      screen: "390x844",
     })
   })
 
@@ -73,6 +80,6 @@ describe("normalizeEvent", () => {
       classifyAgent(
         "Mozilla/5.0 (Windows NT 10.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
       )
-    ).toEqual({ browser: "chrome", device: "desktop" })
+    ).toEqual({ browser: "chrome", device: "desktop", os: "windows" })
   })
 })

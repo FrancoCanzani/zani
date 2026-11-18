@@ -8,7 +8,11 @@ import { createDb } from "../../../lib/db"
 import { newId, sha256Hex } from "../../../lib/utils"
 import type { AppEnv } from "../../../types"
 
-import { countryFromRequest, normalizeEvent } from "./lib/normalize"
+import {
+  cityFromRequest,
+  countryFromRequest,
+  normalizeEvent,
+} from "./lib/normalize"
 import { originAllowed, originHost } from "./lib/origin"
 import { collectBodySchema } from "./lib/schema"
 
@@ -46,6 +50,7 @@ export const collect = new Hono<AppEnv>()
       siteDomain: matched.domain,
       userAgent: c.req.header("user-agent") ?? "",
       country: countryFromRequest(c.req.raw),
+      city: cityFromRequest(c.req.raw),
     })
     if (!normalized) {
       return c.json({ error: "invalid_event" as const }, 400)

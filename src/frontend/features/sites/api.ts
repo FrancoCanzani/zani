@@ -8,7 +8,7 @@ import { api, requireJson } from "@lib/api"
 
 import {
   filtersFromSearch,
-  rangeFromPreset,
+  rangeFromSearch,
   type FilterKey,
   type SiteSearch,
 } from "./search"
@@ -39,6 +39,8 @@ export type SiteStats = {
   views: number
   visitors: number
   sessions: number
+  bounceRate: number
+  viewsPerVisit: number
   truncated: boolean
   points: StatsPoint[]
 }
@@ -47,16 +49,24 @@ export type Breakdown =
   | "path"
   | "referrer"
   | "country"
+  | "city"
   | "browser"
   | "device"
+  | "os"
+  | "screen"
   | "utm_source"
   | "utm_medium"
   | "utm_campaign"
+  | "utm_content"
+  | "utm_term"
+  | "entry"
+  | "exit"
 
 export type StatsRange = {
   start: string
   end: string
   grain: "hour" | "day"
+  tz?: string
 }
 
 export type StatsFilters = Partial<Record<FilterKey, string>>
@@ -125,6 +135,7 @@ export function siteStatsQueryOptions(
             start: range.start,
             end: range.end,
             grain: range.grain,
+            ...(range.tz ? { tz: range.tz } : {}),
             ...(breakdown ? { breakdown } : {}),
             ...filters,
           },
@@ -193,16 +204,24 @@ const overviewBreakdowns: Breakdown[] = [
   "path",
   "referrer",
   "country",
+  "city",
   "browser",
   "device",
+  "os",
+  "screen",
   "utm_source",
   "utm_medium",
   "utm_campaign",
+  "utm_content",
+  "utm_term",
+  "entry",
+  "exit",
 ]
 
 export function statsQueryFromSearch(search: SiteSearch) {
+  const range = rangeFromSearch(search)
   return {
-    range: rangeFromPreset(search.range),
+    range: { ...range, tz: search.tz },
     filters: filtersFromSearch(search),
   }
 }
@@ -215,6 +234,7 @@ export function previousStatsRange(range: StatsRange): StatsRange {
     start: new Date(startMs - duration).toISOString(),
     end: new Date(startMs).toISOString(),
     grain: range.grain,
+    tz: range.tz,
   }
 }
 

@@ -9,7 +9,7 @@ import {
 } from "@components/ui/chart"
 
 import { changePercent, type StatsPoint } from "./api"
-import { metricLabels, type Metric } from "./search"
+import { metricLabels, type ChartMetric } from "./search"
 
 type ViewsChartProps = {
   points: StatsPoint[]
@@ -17,7 +17,9 @@ type ViewsChartProps = {
   start: string
   end: string
   grain: "hour" | "day"
-  metric: Metric
+  metric: ChartMetric
+  timeZone: string
+  compare: boolean
 }
 
 type CurveStyle = "linear" | "step"
@@ -29,9 +31,10 @@ function bucketSize(grain: "hour" | "day") {
   return grain === "hour" ? hourMs : dayMs
 }
 
-function formatTick(ms: number, grain: "hour" | "day") {
+function formatTick(ms: number, grain: "hour" | "day", timeZone: string) {
   if (grain === "hour") {
     return new Intl.DateTimeFormat(undefined, {
+      timeZone,
       month: "short",
       day: "numeric",
       hour: "numeric",
@@ -39,14 +42,16 @@ function formatTick(ms: number, grain: "hour" | "day") {
     }).format(ms)
   }
   return new Intl.DateTimeFormat(undefined, {
+    timeZone,
     month: "short",
     day: "numeric",
   }).format(ms)
 }
 
-function formatTooltipDate(ms: number, grain: "hour" | "day") {
+function formatTooltipDate(ms: number, grain: "hour" | "day", timeZone: string) {
   if (grain === "hour") {
     return new Intl.DateTimeFormat(undefined, {
+      timeZone,
       weekday: "short",
       month: "short",
       day: "numeric",
@@ -55,6 +60,7 @@ function formatTooltipDate(ms: number, grain: "hour" | "day") {
     }).format(ms)
   }
   return new Intl.DateTimeFormat(undefined, {
+    timeZone,
     weekday: "short",
     month: "short",
     day: "numeric",
@@ -73,7 +79,7 @@ function fillSeries(
   start: string,
   end: string,
   grain: "hour" | "day",
-  metric: Metric
+  metric: ChartMetric
 ) {
   const size = bucketSize(grain)
   const startMs = Math.floor(Date.parse(start) / size) * size
@@ -91,7 +97,7 @@ function fillSeries(
 }
 
 function withTrajectory(
-  series: Array<{ bucket: number; value: number }>,
+  series: Array<{ bucket: number; value: number; previous?: number }>,
   grain: "hour" | "day"
 ) {
   const size = bucketSize(grain)
@@ -102,36 +108,21 @@ function withTrajectory(
   }
 
   return series.map((point, index) => {
-    if (lastCompleteIndex < 0 || lastCompleteIndex >= series.length - 1) {
-      return {
-        bucket: point.bucket,
-        value: point.value,
-        solid: point.value,
-        dashed: null as number | null,
-      }
-    }
-    if (index < lastCompleteIndex) {
-      return {
-        bucket: point.bucket,
-        value: point.value,
-        solid: point.value,
-        dashed: null as number | null,
-      }
-    }
-    if (index === lastCompleteIndex) {
-      return {
-        bucket: point.bucket,
-        value: point.value,
-        solid: point.value,
-        dashed: point.value,
-      }
-    }
-    return {
+    const base = {
       bucket: point.bucket,
       value: point.value,
-      solid: null as number | null,
-      dashed: point.value,
+      previous: point.previous ?? null,
     }
+    if (lastCompleteIndex < 0 || lastCompleteIndex >= series.length - 1) {
+      return { ...base, solid: point.value, dashed: null as number | null }
+    }
+    if (index < lastCompleteIndex) {
+      return { ...base, solid: point.value, dashed: null as number | null }
+    }
+    if (index === lastCompleteIndex) {
+      return { ...base, solid: point.value, dashed: point.value }
+    }
+    return { ...base, solid: null as number | null, dashed: point.value }
   })
 }
 
@@ -142,6 +133,8 @@ export function ViewsChart({
   end,
   grain,
   metric,
+  timeZone,
+  compare,
 }: ViewsChartProps) {
   const [curve, setCurve] = useState<CurveStyle>("linear")
   const series = useMemo(
@@ -159,11 +152,18 @@ export function ViewsChart({
       metric
     )
   }, [previousPoints, start, end, grain, metric])
-  const chartData = useMemo(
-    () => withTrajectory(series, grain),
-    [series, grain]
+  const chartData = useMemo(() => {
+    const merged = series.map((point, index) => ({
+      ...point,
+      previous: previousSeries[index]?.value,
+    }))
+    return withTrajectory(merged, grain)
+  }, [series, previousSeries, grain])
+  const peak = Math.max(
+    0,
+    ...series.map((point) => point.value),
+    ...(compare ? previousSeries.map((point) => point.value) : [])
   )
-  const peak = Math.max(0, ...series.map((point) => point.value))
   const label = metricLabels[metric]
   const areaType = curve === "step" ? "stepAfter" : "monotone"
 
@@ -175,6 +175,10 @@ export function ViewsChart({
     dashed: {
       label,
       color: "var(--foreground)",
+    },
+    previous: {
+      label: `Prior ${label.toLowerCase()}`,
+      color: "var(--muted-foreground)",
     },
   } satisfies ChartConfig
 
@@ -217,7 +221,7 @@ export function ViewsChart({
         </div>
       </div>
       <ChartContainer
-        key={`${metric}-${curve}`}
+        key={`${metric}-${curve}-${compare ? "cmp" : "solo"}`}
         config={chartConfig}
         className="aspect-auto h-72 w-full [&_.recharts-cartesian-axis-tick_text]:font-mono"
         initialDimension={{ width: 960, height: 288 }}
@@ -236,7 +240,9 @@ export function ViewsChart({
             tickLine={false}
             axisLine={false}
             tickMargin={10}
-            tickFormatter={(value) => formatTick(Number(value), grain)}
+            tickFormatter={(value) =>
+              formatTick(Number(value), grain, timeZone)
+            }
           />
           <YAxis
             tickLine={false}
@@ -251,7 +257,7 @@ export function ViewsChart({
             content={({ active, payload }) => {
               if (!active || !payload?.length) return null
               const row = payload[0]?.payload as
-                | { bucket: number; value: number }
+                | { bucket: number; value: number; previous?: number | null }
                 | undefined
               if (!row) return null
               const seriesIndex = series.findIndex(
@@ -268,8 +274,14 @@ export function ViewsChart({
               return (
                 <div className="rounded-md border border-border bg-background px-3 py-2 shadow-sm">
                   <p className="font-mono text-sm font-medium tabular-nums">
-                    {formatTooltipDate(row.bucket, grain)}: {row.value} {label}
+                    {formatTooltipDate(row.bucket, grain, timeZone)}:{" "}
+                    {row.value} {label}
                   </p>
+                  {compare && previousValue !== undefined ? (
+                    <p className="mt-0.5 font-mono text-xs font-medium tabular-nums text-muted-foreground">
+                      Prior: {previousValue}
+                    </p>
+                  ) : null}
                   {delta === null ? null : (
                     <p
                       className={`mt-0.5 font-mono text-xs font-medium tabular-nums ${
@@ -288,6 +300,21 @@ export function ViewsChart({
               )
             }}
           />
+          {compare ? (
+            <Area
+              dataKey="previous"
+              type={areaType}
+              fill="var(--color-previous)"
+              fillOpacity={0.04}
+              stroke="var(--color-previous)"
+              strokeWidth={1}
+              strokeDasharray="3 3"
+              isAnimationActive={false}
+              dot={false}
+              activeDot={false}
+              connectNulls={false}
+            />
+          ) : null}
           <Area
             dataKey="solid"
             type={areaType}

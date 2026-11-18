@@ -11,14 +11,26 @@ import { workspaceFromContext } from "../workspaces/lib/context"
 import { loadSite } from "./lib/load"
 
 const dayMs = 24 * 60 * 60 * 1000
-// D1 caps bound parameters per query (~100); each event row binds 14 columns.
-const batchSize = 6
+// D1 caps bound parameters per query (~100); each event row binds 19 columns.
+const batchSize = 5
 const eventCount = 240
 
 const paths = ["/", "/pricing", "/docs", "/blog", "/about", "/changelog"]
 const countries = ["US", "GB", "DE", "BR", "JP", "FR", "CA", ""]
+const cities = [
+  "San Francisco",
+  "London",
+  "Berlin",
+  "Sao Paulo",
+  "Tokyo",
+  "Paris",
+  "Toronto",
+  "",
+]
 const browsers = ["chrome", "safari", "firefox", "edge", "other"]
 const devices = ["desktop", "mobile", "tablet"]
+const operatingSystems = ["macos", "windows", "ios", "android", "linux", "other"]
+const screens = ["1440x900", "1920x1080", "390x844", "1366x768", "2560x1440"]
 const referrers = [
   "",
   "google.com",
@@ -28,10 +40,34 @@ const referrers = [
   "bing.com",
 ]
 const utms = [
-  { utmSource: "", utmMedium: "", utmCampaign: "" },
-  { utmSource: "twitter", utmMedium: "social", utmCampaign: "launch" },
-  { utmSource: "newsletter", utmMedium: "email", utmCampaign: "weekly" },
-  { utmSource: "google", utmMedium: "cpc", utmCampaign: "brand" },
+  {
+    utmSource: "",
+    utmMedium: "",
+    utmCampaign: "",
+    utmContent: "",
+    utmTerm: "",
+  },
+  {
+    utmSource: "twitter",
+    utmMedium: "social",
+    utmCampaign: "launch",
+    utmContent: "hero",
+    utmTerm: "",
+  },
+  {
+    utmSource: "newsletter",
+    utmMedium: "email",
+    utmCampaign: "weekly",
+    utmContent: "header",
+    utmTerm: "",
+  },
+  {
+    utmSource: "google",
+    utmMedium: "cpc",
+    utmCampaign: "brand",
+    utmContent: "ad1",
+    utmTerm: "analytics",
+  },
 ]
 
 function pick<T>(values: T[], index: number): T {
@@ -85,11 +121,16 @@ export const simulateSite = new Hono<AppEnv>().post(
         path: pick(paths, index + visitor),
         referrerHost: pick(referrers, index + day),
         country: pick(countries, index),
+        city: pick(cities, index),
         browser: pick(browsers, index + 1),
         device: pick(devices, index + 2),
+        os: pick(operatingSystems, index + 3),
+        screen: pick(screens, index + 4),
         utmSource: utm.utmSource,
         utmMedium: utm.utmMedium,
         utmCampaign: utm.utmCampaign,
+        utmContent: utm.utmContent,
+        utmTerm: utm.utmTerm,
       }
     })
 

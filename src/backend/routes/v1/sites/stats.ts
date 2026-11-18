@@ -10,7 +10,7 @@ import type { AppEnv } from "../../../types"
 import { workspaceFromContext } from "../workspaces/lib/context"
 
 import { loadSite } from "./lib/load"
-import { statsQuerySchema } from "./lib/schema"
+import { statsQuerySchema, type Breakdown } from "./lib/schema"
 import {
   asNumber,
   bucketSql,
@@ -54,9 +54,6 @@ export const siteStats = new Hono<AppEnv>().get(
       lt(event.timestamp, range.end),
       ...filterConditions(query)
     )
-    const bucket = bucketSql(range.grain)
-    const column = seriesColumn(query.breakdown)
-    const series = column ? sql<string>`${column}` : sql<string>`''`
     const views = sql<number>`count(*)`
     const visitors = sql<number>`count(distinct ${event.visitorId})`
     const sessions = sql<number>`count(distinct ${event.sessionId})`
@@ -66,21 +63,43 @@ export const siteStats = new Hono<AppEnv>().get(
       .from(event)
       .where(where)
 
-    const rows = query.breakdown
-      ? await db
-          .select({ series, views, visitors, sessions })
-          .from(event)
-          .where(where)
-          .groupBy(series)
-          .orderBy(desc(views))
-          .limit(pointLimit)
-      : await db
-          .select({ bucket, series, views, visitors, sessions })
-          .from(event)
-          .where(where)
-          .groupBy(bucket, series)
-          .orderBy(asc(bucket))
-          .limit(pointLimit)
+    const sessionCounts = db.$with("session_counts").as(
+      db
+        .select({
+          sessionId: event.sessionId,
+          views: sql<number>`count(*)`.as("views"),
+        })
+        .from(event)
+        .where(where)
+        .groupBy(event.sessionId)
+    )
+    const [sessionStats] = await db
+      .with(sessionCounts)
+      .select({
+        sessions: sql<number>`count(*)`,
+        bounces: sql<number>`sum(case when ${sessionCounts.views} = 1 then 1 else 0 end)`,
+      })
+      .from(sessionCounts)
+
+    const totalViews = asNumber(totals?.views)
+    const totalSessions = asNumber(totals?.sessions)
+    const bounceSessions = asNumber(sessionStats?.bounces)
+    const bounceRate =
+      totalSessions === 0
+        ? 0
+        : Math.round((bounceSessions / totalSessions) * 1000) / 10
+    const viewsPerVisit =
+      totalSessions === 0
+        ? 0
+        : Math.round((totalViews / totalSessions) * 100) / 100
+
+    const breakdown = query.breakdown
+    const rows = await loadBreakdownRows(db, {
+      breakdown,
+      where,
+      grain: range.grain,
+      timeZone: query.tz,
+    })
 
     return c.json(
       {
@@ -90,9 +109,11 @@ export const siteStats = new Hono<AppEnv>().get(
           domain: matched.domain,
           revokedAt: matched.revokedAt,
         },
-        views: asNumber(totals?.views),
+        views: totalViews,
         visitors: asNumber(totals?.visitors),
-        sessions: asNumber(totals?.sessions),
+        sessions: totalSessions,
+        bounceRate,
+        viewsPerVisit,
         truncated: rows.length >= pointLimit,
         points: rows.map((row) => ({
           bucket: "bucket" in row ? asNumber(row.bucket) : null,
@@ -106,3 +127,77 @@ export const siteStats = new Hono<AppEnv>().get(
     )
   }
 )
+
+async function loadBreakdownRows(
+  db: ReturnType<typeof createDb>,
+  input: {
+    breakdown: Breakdown | undefined
+    where: ReturnType<typeof and>
+    grain: "hour" | "day"
+    timeZone?: string
+  }
+) {
+  const { breakdown, where, grain, timeZone } = input
+  const views = sql<number>`count(*)`
+  const visitors = sql<number>`count(distinct ${event.visitorId})`
+  const sessions = sql<number>`count(distinct ${event.sessionId})`
+
+  if (breakdown === "entry" || breakdown === "exit") {
+    const order =
+      breakdown === "entry"
+        ? sql`min(${event.timestamp})`
+        : sql`max(${event.timestamp})`
+    const edge = db.$with("session_edge").as(
+      db
+        .select({
+          sessionId: event.sessionId,
+          edgeAt: order.as("edge_at"),
+        })
+        .from(event)
+        .where(where)
+        .groupBy(event.sessionId)
+    )
+    return db
+      .with(edge)
+      .select({
+        series: event.path,
+        views,
+        visitors,
+        sessions,
+      })
+      .from(event)
+      .innerJoin(
+        edge,
+        and(
+          eq(event.sessionId, edge.sessionId),
+          eq(event.timestamp, edge.edgeAt)
+        )
+      )
+      .where(where)
+      .groupBy(event.path)
+      .orderBy(desc(sessions))
+      .limit(pointLimit)
+  }
+
+  const column = seriesColumn(breakdown)
+  const series = column ? sql<string>`${column}` : sql<string>`''`
+  const bucket = bucketSql(grain, timeZone)
+
+  if (breakdown) {
+    return db
+      .select({ series, views, visitors, sessions })
+      .from(event)
+      .where(where)
+      .groupBy(series)
+      .orderBy(desc(views))
+      .limit(pointLimit)
+  }
+
+  return db
+    .select({ bucket, series, views, visitors, sessions })
+    .from(event)
+    .where(where)
+    .groupBy(bucket, series)
+    .orderBy(asc(bucket))
+    .limit(pointLimit)
+}
