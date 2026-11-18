@@ -40,18 +40,14 @@ export function AppShell() {
 
   return (
     <SidebarProvider>
-      <Sidebar collapsible="offcanvas" className="border-r-0!">
+      <Sidebar collapsible="offcanvas">
         <SidebarHeader className="px-2 pt-6">
           <BrandMark to="/businesses" className="px-2" />
         </SidebarHeader>
         <SidebarContent className="mt-6">
           <SidebarMenu className="px-2">
             <SidebarMenuItem>
-              <SidebarMenuButton
-                asChild
-                isActive={sitesActive}
-                className="font-normal text-muted-foreground hover:bg-sidebar-accent hover:text-foreground data-active:bg-sidebar-accent data-active:font-normal data-active:text-foreground"
-              >
+              <SidebarMenuButton asChild isActive={sitesActive}>
                 <Link to="/businesses">Sites</Link>
               </SidebarMenuButton>
             </SidebarMenuItem>
