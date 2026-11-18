@@ -207,6 +207,22 @@ export function statsQueryFromSearch(search: SiteSearch) {
   }
 }
 
+export function previousStatsRange(range: StatsRange): StatsRange {
+  const startMs = Date.parse(range.start)
+  const endMs = Date.parse(range.end)
+  const duration = Math.max(0, endMs - startMs)
+  return {
+    start: new Date(startMs - duration).toISOString(),
+    end: new Date(startMs).toISOString(),
+    grain: range.grain,
+  }
+}
+
+export function changePercent(current: number, previous: number): number | null {
+  if (previous <= 0) return current > 0 ? 100 : current === 0 ? 0 : null
+  return Math.round(((current - previous) / previous) * 100)
+}
+
 export async function preloadSiteStats(
   queryClient: QueryClient,
   slug: string,
@@ -214,12 +230,17 @@ export async function preloadSiteStats(
   search: SiteSearch
 ) {
   const { range, filters } = statsQueryFromSearch(search)
-  await Promise.all(
-    [undefined, ...overviewBreakdowns].map((breakdown) =>
+  const previous = previousStatsRange(range)
+  await Promise.all([
+    ...[undefined, ...overviewBreakdowns].map((breakdown) =>
       queryClient.query({
         ...siteStatsQueryOptions(slug, siteId, breakdown, range, filters),
         staleTime: statsStaleMs,
       })
-    )
-  )
+    ),
+    queryClient.query({
+      ...siteStatsQueryOptions(slug, siteId, undefined, previous, filters),
+      staleTime: statsStaleMs,
+    }),
+  ])
 }

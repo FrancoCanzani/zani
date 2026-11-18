@@ -5,15 +5,15 @@ import { Button } from "@components/ui/button"
 import {
   ChartContainer,
   ChartTooltip,
-  ChartTooltipContent,
   type ChartConfig,
 } from "@components/ui/chart"
 
-import type { StatsPoint } from "./api"
+import { changePercent, type StatsPoint } from "./api"
 import { metricLabels, type Metric } from "./search"
 
 type ViewsChartProps = {
   points: StatsPoint[]
+  previousPoints: StatsPoint[]
   start: string
   end: string
   grain: "hour" | "day"
@@ -61,6 +61,13 @@ function formatTooltipDate(ms: number, grain: "hour" | "day") {
   }).format(ms)
 }
 
+function formatAxisValue(value: number) {
+  if (value >= 1_000_000) return `${(value / 1_000_000).toFixed(1)}M`
+  if (value >= 10_000) return `${Math.round(value / 1000)}k`
+  if (value >= 1000) return `${(value / 1000).toFixed(1)}k`
+  return String(value)
+}
+
 function fillSeries(
   points: StatsPoint[],
   start: string,
@@ -83,8 +90,54 @@ function fillSeries(
   return series
 }
 
+function withTrajectory(
+  series: Array<{ bucket: number; value: number }>,
+  grain: "hour" | "day"
+) {
+  const size = bucketSize(grain)
+  const incompleteStart = Math.floor(Date.now() / size) * size
+  let lastCompleteIndex = -1
+  for (let index = 0; index < series.length; index += 1) {
+    if (series[index]!.bucket < incompleteStart) lastCompleteIndex = index
+  }
+
+  return series.map((point, index) => {
+    if (lastCompleteIndex < 0 || lastCompleteIndex >= series.length - 1) {
+      return {
+        bucket: point.bucket,
+        value: point.value,
+        solid: point.value,
+        dashed: null as number | null,
+      }
+    }
+    if (index < lastCompleteIndex) {
+      return {
+        bucket: point.bucket,
+        value: point.value,
+        solid: point.value,
+        dashed: null as number | null,
+      }
+    }
+    if (index === lastCompleteIndex) {
+      return {
+        bucket: point.bucket,
+        value: point.value,
+        solid: point.value,
+        dashed: point.value,
+      }
+    }
+    return {
+      bucket: point.bucket,
+      value: point.value,
+      solid: null as number | null,
+      dashed: point.value,
+    }
+  })
+}
+
 export function ViewsChart({
   points,
+  previousPoints,
   start,
   end,
   grain,
@@ -95,11 +148,31 @@ export function ViewsChart({
     () => fillSeries(points, start, end, grain, metric),
     [points, start, end, grain, metric]
   )
+  const previousSeries = useMemo(() => {
+    const duration = Date.parse(end) - Date.parse(start)
+    const previousStartMs = Date.parse(start) - duration
+    return fillSeries(
+      previousPoints,
+      new Date(previousStartMs).toISOString(),
+      start,
+      grain,
+      metric
+    )
+  }, [previousPoints, start, end, grain, metric])
+  const chartData = useMemo(
+    () => withTrajectory(series, grain),
+    [series, grain]
+  )
   const peak = Math.max(0, ...series.map((point) => point.value))
   const label = metricLabels[metric]
+  const areaType = curve === "step" ? "stepAfter" : "monotone"
 
   const chartConfig = {
-    value: {
+    solid: {
+      label,
+      color: "var(--foreground)",
+    },
+    dashed: {
       label,
       color: "var(--foreground)",
     },
@@ -150,8 +223,8 @@ export function ViewsChart({
         initialDimension={{ width: 960, height: 288 }}
       >
         <AreaChart
-          data={series}
-          margin={{ top: 12, right: 8, left: 0, bottom: 4 }}
+          data={chartData}
+          margin={{ top: 16, right: 8, left: 0, bottom: 4 }}
           accessibilityLayer
         >
           <CartesianGrid vertical={false} />
@@ -169,38 +242,77 @@ export function ViewsChart({
             tickLine={false}
             axisLine={false}
             tickMargin={8}
-            width={40}
+            width={44}
             allowDecimals={false}
-            tickFormatter={(value) => String(value)}
+            tickFormatter={(value) => formatAxisValue(Number(value))}
           />
           <ChartTooltip
             cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
-            content={
-              <ChartTooltipContent
-                className="border-border shadow-sm"
-                indicator="line"
-                labelFormatter={(_, payload) => {
-                  const bucket = Number(payload?.[0]?.payload?.bucket ?? 0)
-                  return formatTooltipDate(bucket, grain)
-                }}
-                formatter={(value) => (
-                  <span className="font-mono tabular-nums">
-                    {String(value)} {label}
-                  </span>
-                )}
-              />
-            }
+            content={({ active, payload }) => {
+              if (!active || !payload?.length) return null
+              const row = payload[0]?.payload as
+                | { bucket: number; value: number }
+                | undefined
+              if (!row) return null
+              const seriesIndex = series.findIndex(
+                (point) => point.bucket === row.bucket
+              )
+              const previousValue =
+                seriesIndex >= 0
+                  ? previousSeries[seriesIndex]?.value
+                  : undefined
+              const delta =
+                previousValue === undefined
+                  ? null
+                  : changePercent(row.value, previousValue)
+              return (
+                <div className="rounded-md border border-border bg-background px-3 py-2 shadow-sm">
+                  <p className="font-mono text-sm font-medium tabular-nums">
+                    {formatTooltipDate(row.bucket, grain)}: {row.value} {label}
+                  </p>
+                  {delta === null ? null : (
+                    <p
+                      className={`mt-0.5 font-mono text-xs font-medium tabular-nums ${
+                        delta > 0
+                          ? "text-emerald-700"
+                          : delta < 0
+                            ? "text-red-700"
+                            : "text-muted-foreground"
+                      }`}
+                    >
+                      {delta > 0 ? "+" : ""}
+                      {delta}% vs prior
+                    </p>
+                  )}
+                </div>
+              )
+            }}
           />
           <Area
-            dataKey="value"
-            type={curve === "step" ? "stepAfter" : "monotone"}
-            fill="var(--color-value)"
-            fillOpacity={0.12}
-            stroke="var(--color-value)"
+            dataKey="solid"
+            type={areaType}
+            fill="var(--color-solid)"
+            fillOpacity={0.1}
+            stroke="var(--color-solid)"
             strokeWidth={1.25}
             isAnimationActive={false}
             dot={false}
-            activeDot={{ r: 3, strokeWidth: 1 }}
+            activeDot={{ r: 3.5, strokeWidth: 1, fill: "var(--background)" }}
+            connectNulls={false}
+          />
+          <Area
+            dataKey="dashed"
+            type={areaType}
+            fill="var(--color-dashed)"
+            fillOpacity={0.04}
+            stroke="var(--color-dashed)"
+            strokeWidth={1.25}
+            strokeDasharray="5 4"
+            isAnimationActive={false}
+            dot={false}
+            activeDot={{ r: 3.5, strokeWidth: 1, fill: "var(--background)" }}
+            connectNulls={false}
+            legendType="none"
           />
         </AreaChart>
       </ChartContainer>

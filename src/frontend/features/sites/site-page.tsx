@@ -30,6 +30,8 @@ import {
 } from "@features/workspaces/role"
 
 import {
+  changePercent,
+  previousStatsRange,
   replaceWriteKey,
   simulateSiteViews,
   siteStatsQueryOptions,
@@ -150,6 +152,15 @@ export function SitePage() {
 
   const totals = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, undefined, range, filters)
+  )
+  const previousTotals = useSuspenseQuery(
+    siteStatsQueryOptions(
+      slug,
+      siteId,
+      undefined,
+      previousStatsRange(range),
+      filters
+    )
   )
   const path = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, "path", range, filters)
@@ -362,6 +373,10 @@ export function SitePage() {
       <div className="grid grid-cols-3 gap-3">
         {(["views", "visitors", "sessions"] as const).map((metric) => {
           const selected = search.metric === metric
+          const delta = changePercent(
+            totals.data[metric],
+            previousTotals.data[metric]
+          )
           return (
             <button
               key={metric}
@@ -372,8 +387,24 @@ export function SitePage() {
               <div className="text-sm text-muted-foreground">
                 {metricLabels[metric]}
               </div>
-              <div className="font-mono text-2xl font-light tracking-tight tabular-nums">
-                {totals.data[metric]}
+              <div className="mt-1 flex items-baseline gap-2">
+                <div className="font-mono text-3xl font-medium tracking-tight tabular-nums">
+                  {totals.data[metric]}
+                </div>
+                {delta === null ? null : (
+                  <span
+                    className={`rounded-md px-1.5 py-0.5 font-mono text-xs font-medium tabular-nums ${
+                      delta > 0
+                        ? "bg-emerald-500/10 text-emerald-700"
+                        : delta < 0
+                          ? "bg-red-500/10 text-red-700"
+                          : "bg-muted text-muted-foreground"
+                    }`}
+                  >
+                    {delta > 0 ? "+" : ""}
+                    {delta}%
+                  </span>
+                )}
               </div>
             </button>
           )
@@ -383,6 +414,7 @@ export function SitePage() {
       <ViewsChart
         key={search.metric}
         points={totals.data.points}
+        previousPoints={previousTotals.data.points}
         start={range.start}
         end={range.end}
         grain={range.grain}
