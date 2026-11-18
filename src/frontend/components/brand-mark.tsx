@@ -12,7 +12,7 @@ export function BrandMark({ to = "/", className }: BrandMarkProps) {
     <Link
       to={to}
       className={cn(
-        "font-brand text-xl font-bold tracking-[-0.06em] transition-opacity hover:opacity-70",
+        "font-brand text-3xl font-medium tracking-[-0.06em] transition-opacity hover:opacity-70",
         className
       )}
     >

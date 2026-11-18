@@ -41,10 +41,10 @@ export function AppShell() {
   return (
     <SidebarProvider>
       <Sidebar collapsible="offcanvas">
-        <SidebarHeader className="px-2 pt-6">
-          <BrandMark to="/businesses" className="px-2 text-2xl" />
+        <SidebarHeader className="h-14 justify-center px-2">
+          <BrandMark to="/businesses" className="px-2 text-4xl" />
         </SidebarHeader>
-        <SidebarContent className="mt-6">
+        <SidebarContent className="mt-2">
           <SidebarMenu className="px-2">
             <SidebarMenuItem>
               <SidebarMenuButton asChild isActive={sitesActive}>
@@ -58,7 +58,7 @@ export function AppShell() {
         </SidebarFooter>
       </Sidebar>
       <SidebarInset>
-        <div className="px-4 pt-3">
+        <div className="flex h-14 items-center px-4">
           <SidebarTrigger />
         </div>
         <div className="mx-auto flex w-full max-w-5xl flex-1 flex-col px-6 py-4">

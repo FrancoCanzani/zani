@@ -77,7 +77,8 @@ export function seriesColumn(
 
 export function bucketSql(grain: Grain) {
   const size = bucketSize(grain)
-  return sql<number>`(${event.timestamp} / ${size}) * ${size}`
+  // D1 binds numbers as floats, so divide-then-multiply needs an explicit floor.
+  return sql<number>`cast((${event.timestamp} / ${size}) as integer) * ${size}`
 }
 
 export function asNumber(value: unknown): number {

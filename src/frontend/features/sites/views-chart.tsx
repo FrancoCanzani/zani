@@ -9,6 +9,7 @@ type ViewsChartProps = {
 
 const hourMs = 60 * 60 * 1000
 const dayMs = 24 * hourMs
+const chartHeight = 112
 
 function bucketSize(grain: "hour" | "day") {
   return grain === "hour" ? hourMs : dayMs
@@ -46,19 +47,21 @@ export function ViewsChart({ points, start, end, grain }: ViewsChartProps) {
 
   return (
     <div className="space-y-2">
-      <div className="flex h-28 items-end gap-px">
-        {series.map((point) => (
-          <div
-            key={point.bucket}
-            className="flex min-w-0 flex-1 flex-col justify-end"
-            title={`${label.format(point.bucket)} · ${point.views}`}
-          >
+      <div className="flex items-end gap-px" style={{ height: chartHeight }}>
+        {series.map((point) => {
+          const height =
+            point.views === 0
+              ? 0
+              : Math.max(2, (point.views / max) * chartHeight)
+          return (
             <div
-              className="w-full bg-foreground/80"
-              style={{ height: `${(point.views / max) * 100}%`, minHeight: point.views > 0 ? 2 : 0 }}
+              key={point.bucket}
+              className="min-w-0 flex-1 rounded-sm bg-foreground"
+              style={{ height }}
+              title={`${label.format(point.bucket)} · ${point.views}`}
             />
-          </div>
-        ))}
+          )
+        })}
       </div>
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>{label.format(Date.parse(start))}</span>
