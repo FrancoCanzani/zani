@@ -1,3 +1,5 @@
+import { hostsMatch } from "./origin"
+
 import type { CollectBody } from "./schema"
 
 const namePattern = /^[a-z0-9_-]{1,32}$/
@@ -116,7 +118,7 @@ export function referrerHost(
   try {
     const host = new URL(input.trim()).hostname.toLowerCase().replace(/\.$/, "")
     if (!host) return ""
-    if (siteDomain && host === siteDomain.toLowerCase()) return ""
+    if (siteDomain && hostsMatch(host, siteDomain)) return ""
     return host
   } catch {
     return ""
