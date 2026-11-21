@@ -17,6 +17,7 @@ import { workspaceQueryOptions } from "@features/workspaces/api"
 import { fieldErrors } from "@lib/utils"
 
 import { createSite, sitesQueryOptions } from "./api"
+import { rememberWriteKey } from "./write-key"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/")
 
@@ -45,6 +46,7 @@ export function SitesPage() {
         name: value.name.trim(),
         domain: value.domain.trim(),
       })
+      rememberWriteKey(result.site.id, result.writeKey)
       setCreated({ name: result.site.name, writeKey: result.writeKey })
       formApi.reset()
       await queryClient.invalidateQueries({ queryKey: ["sites", slug] })
@@ -61,12 +63,12 @@ export function SitesPage() {
             <Link
               to="/businesses/$slug/sites/$siteId"
               params={{ slug, siteId: site.id }}
-              className="flex items-baseline justify-between gap-4"
+              className="flex min-w-0 items-baseline justify-between gap-4"
             >
-              <span>{site.name}</span>
-              <span className="text-sm text-muted-foreground">
-                {site.domain}
-                {site.revokedAt ? " revoked" : ""}
+              <span className="min-w-0 truncate">{site.name}</span>
+              <span className="flex shrink-0 items-baseline gap-3 text-sm text-muted-foreground">
+                <span>{site.domain}</span>
+                {site.revokedAt ? <span>Stopped</span> : null}
               </span>
             </Link>
           </li>
@@ -100,6 +102,8 @@ export function SitesPage() {
                   <FieldLabel htmlFor={field.name}>Name</FieldLabel>
                   <Input
                     id={field.name}
+                    name={field.name}
+                    autoComplete="off"
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
@@ -114,10 +118,13 @@ export function SitesPage() {
                   <FieldLabel htmlFor={field.name}>Domain</FieldLabel>
                   <Input
                     id={field.name}
+                    name={field.name}
+                    autoComplete="off"
+                    spellCheck={false}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
-                    placeholder="example.com"
+                    placeholder="example.com…"
                   />
                   <FieldError errors={fieldErrors(field.state.meta.errors)} />
                 </Field>

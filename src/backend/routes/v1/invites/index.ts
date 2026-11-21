@@ -2,6 +2,6 @@ import { Hono } from "hono"
 
 import type { AppEnv } from "../../../types"
 
-import { acceptInvite } from "./accept"
+import { post } from "./post"
 
-export const invites = new Hono<AppEnv>().route("/", acceptInvite)
+export const invites = new Hono<AppEnv>().route("/", post)

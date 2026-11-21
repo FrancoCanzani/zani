@@ -39,17 +39,7 @@ export function InstallSnippet({ label, writeKey, note }: InstallSnippetProps) {
       </div>
       <ScriptBlock source={source} />
       <p className="text-muted-foreground">
-        Check the{" "}
-        <a
-          href="#docs"
-          onClick={(event) => {
-            event.preventDefault()
-          }}
-          className="underline underline-offset-4 hover:text-foreground"
-        >
-          docs
-        </a>{" "}
-        for how to install.
+        Paste this on the site, before the closing body tag.
       </p>
       <p className="text-muted-foreground">{note}</p>
     </section>

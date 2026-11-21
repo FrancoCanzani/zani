@@ -4,18 +4,14 @@ import type { AppEnv } from "../../../types"
 
 import { sites } from "../sites"
 
-import { createWorkspace } from "./create"
-import { getWorkspace } from "./get"
-import { createInvite } from "./invite"
-import { listWorkspaces } from "./list"
-import { listMembers } from "./members"
-import { updateWorkspace } from "./update"
+import { remove } from "./delete"
+import { get } from "./get"
+import { patch } from "./patch"
+import { post } from "./post"
 
 export const workspaces = new Hono<AppEnv>()
-  .route("/", listWorkspaces)
-  .route("/", createWorkspace)
-  .route("/", getWorkspace)
-  .route("/", updateWorkspace)
-  .route("/", listMembers)
-  .route("/", createInvite)
+  .route("/", get)
+  .route("/", post)
+  .route("/", patch)
+  .route("/", remove)
   .route("/:slug/sites", sites)

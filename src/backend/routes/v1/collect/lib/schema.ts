@@ -2,8 +2,6 @@ import { z } from "zod"
 
 export const collectBodySchema = z.object({
   name: z.string().trim().max(32).optional(),
-  visitorId: z.string().trim().min(1).max(64),
-  sessionId: z.string().trim().min(1).max(64),
   path: z.string().trim().min(1).max(2048),
   referrer: z.string().trim().max(2048).optional(),
   screen: z.string().trim().max(32).optional(),

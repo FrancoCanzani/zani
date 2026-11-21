@@ -54,9 +54,9 @@ export function BusinessesPage() {
                 />
                 <div className="pointer-events-none relative flex items-baseline justify-between gap-4 px-3 py-3">
                   <span className="min-w-0 flex-1 truncate">{site.name}</span>
-                  <span className="shrink-0 font-mono text-sm text-muted-foreground">
-                    {site.domain}
-                    {site.revokedAt ? " revoked" : ""}
+                  <span className="flex shrink-0 items-baseline gap-3 font-mono text-sm text-muted-foreground">
+                    <span>{site.domain}</span>
+                    {site.revokedAt ? <span>Stopped</span> : null}
                   </span>
                 </div>
               </li>

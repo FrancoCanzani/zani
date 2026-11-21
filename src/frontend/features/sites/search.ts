@@ -17,6 +17,7 @@ export const filterKeys = [
   "device",
   "os",
   "screen",
+  "event",
   "utm_source",
   "utm_medium",
   "utm_campaign",
@@ -38,6 +39,10 @@ export const siteSearchSchema = z.object({
     .union([z.literal("true"), z.literal("false"), z.boolean()])
     .optional()
     .transform((value) => value === true || value === "true"),
+  bots: z
+    .union([z.literal("true"), z.literal("false"), z.boolean()])
+    .optional()
+    .transform((value) => value === true || value === "true"),
   path: z.string().optional(),
   referrer: z.string().optional(),
   country: z.string().optional(),
@@ -46,6 +51,7 @@ export const siteSearchSchema = z.object({
   device: z.string().optional(),
   os: z.string().optional(),
   screen: z.string().optional(),
+  event: z.string().optional(),
   utm_source: z.string().optional(),
   utm_medium: z.string().optional(),
   utm_campaign: z.string().optional(),
@@ -212,6 +218,7 @@ export const filterLabels: Record<FilterKey, string> = {
   device: "Device",
   os: "OS",
   screen: "Screen",
+  event: "Event",
   utm_source: "UTM source",
   utm_medium: "UTM medium",
   utm_campaign: "UTM campaign",

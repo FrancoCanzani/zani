@@ -11,6 +11,7 @@ import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
 import { createSite } from "@features/sites/api"
+import { rememberWriteKey } from "@features/sites/write-key"
 import {
   readLastWorkspaceSlug,
   writeLastWorkspaceSlug,
@@ -61,6 +62,7 @@ export function NewBusinessPage() {
 
       const result = await createSite(slug, value)
       writeLastWorkspaceSlug(slug)
+      rememberWriteKey(result.site.id, result.writeKey)
       return {
         slug,
         siteId: result.site.id,
@@ -144,6 +146,7 @@ export function NewBusinessPage() {
                   <Input
                     id={field.name}
                     name={field.name}
+                    autoComplete="off"
                     autoFocus
                     value={field.state.value}
                     onBlur={field.handleBlur}
@@ -160,10 +163,12 @@ export function NewBusinessPage() {
                   <Input
                     id={field.name}
                     name={field.name}
+                    autoComplete="off"
+                    spellCheck={false}
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
-                    placeholder="example.com"
+                    placeholder="example.com…"
                   />
                   <FieldError errors={fieldErrors(field.state.meta.errors)} />
                 </Field>

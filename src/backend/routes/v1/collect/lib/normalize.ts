@@ -1,14 +1,11 @@
 import type { CollectBody } from "./schema"
 
 const namePattern = /^[a-z0-9_-]{1,32}$/
-const sessionPattern = /^[A-Za-z0-9_-]{8,64}$/
 const screenPattern = /^\d{2,5}x\d{2,5}$/
 const cityPattern = /^[\p{L}\p{N} .'-]{1,80}$/u
 
 export type NormalizedEvent = {
   name: string
-  visitorId: string
-  sessionId: string
   path: string
   referrerHost: string
   utmSource: string
@@ -34,16 +31,12 @@ export function normalizeEvent(
   }
 ): NormalizedEvent | null {
   const name = normalizeName(body.name)
-  const visitorId = normalizeSessionId(body.visitorId)
-  const sessionId = normalizeSessionId(body.sessionId)
   const path = normalizePath(body.path)
-  if (!name || !visitorId || !sessionId || !path) return null
+  if (!name || !path) return null
 
   const agent = classifyAgent(input.userAgent)
   return {
     name,
-    visitorId,
-    sessionId,
     path,
     referrerHost: referrerHost(body.referrer, input.siteDomain),
     utmSource: normalizeUtm(body.utmSource),
@@ -60,16 +53,10 @@ export function normalizeEvent(
   }
 }
 
-export function normalizeName(input: string | undefined): string | null {
+function normalizeName(input: string | undefined): string | null {
   const name = (input?.trim() || "pageview").toLowerCase()
   if (!namePattern.test(name)) return null
   return name
-}
-
-export function normalizeSessionId(input: string): string | null {
-  const value = input.trim()
-  if (!sessionPattern.test(value)) return null
-  return value
 }
 
 function hashRoute(hash: string): string {
@@ -78,7 +65,7 @@ function hashRoute(hash: string): string {
   return query < 0 ? hash : hash.slice(0, query)
 }
 
-export function normalizePath(input: string): string | null {
+function normalizePath(input: string): string | null {
   const trimmed = input.trim()
   if (!trimmed || trimmed.length > 2048) return null
 
@@ -108,7 +95,7 @@ export function normalizePath(input: string): string | null {
   return path
 }
 
-export function referrerHost(
+function referrerHost(
   input: string | undefined,
   siteDomain: string | null
 ): string {
@@ -123,7 +110,7 @@ export function referrerHost(
   }
 }
 
-export function normalizeUtm(input: string | undefined): string {
+function normalizeUtm(input: string | undefined): string {
   if (!input) return ""
   const value = input.trim().slice(0, 80)
   for (const char of value) {
@@ -132,18 +119,18 @@ export function normalizeUtm(input: string | undefined): string {
   return value
 }
 
-export function normalizeCountry(input: string): string {
+function normalizeCountry(input: string): string {
   if (!/^[A-Z]{2}$/.test(input)) return ""
   return input
 }
 
-export function normalizeCity(input: string): string {
+function normalizeCity(input: string): string {
   const value = input.trim().slice(0, 80)
   if (!value || !cityPattern.test(value)) return ""
   return value
 }
 
-export function normalizeScreen(input: string | undefined): string {
+function normalizeScreen(input: string | undefined): string {
   if (!input) return ""
   const value = input.trim().toLowerCase()
   if (!screenPattern.test(value)) return ""
@@ -166,7 +153,7 @@ export function cityFromRequest(request: Request): string {
   return normalizeCity(city)
 }
 
-export function classifyAgent(userAgent: string): {
+function classifyAgent(userAgent: string): {
   browser: string
   device: string
   os: string

@@ -184,10 +184,11 @@ function EmailStep({
           type="email"
           name="email"
           autoComplete="email"
+          spellCheck={false}
           required
           value={email}
           onChange={(event) => onEmailChange(event.target.value)}
-          placeholder="you@example.com"
+          placeholder="you@example.com…"
         />
       </label>
       <Button type="submit" variant="secondary" disabled={pending}>

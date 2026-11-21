@@ -1,8 +1,8 @@
 import { Hono } from "hono"
 
-import type { AppEnv } from "../../types"
+import type { AppEnv } from "../../../types"
 
-export const health = new Hono<AppEnv>().get("/", async (c) => {
+export const get = new Hono<AppEnv>().get("/", async (c) => {
   const dbResult = await c.env.DB.prepare("select 1 as ok").first<{
     ok: number
   }>()

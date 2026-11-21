@@ -3,6 +3,14 @@ import { z } from "zod"
 const hostnamePattern =
   /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/
 
+const domainSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .max(253)
+  .transform((value) => value.toLowerCase().replace(/\.$/, ""))
+  .refine((value) => hostnamePattern.test(value), "Invalid domain")
+
 export const breakdowns = [
   "path",
   "referrer",
@@ -33,6 +41,7 @@ export const filterKeys = [
   "device",
   "os",
   "screen",
+  "event",
   "utm_source",
   "utm_medium",
   "utm_campaign",
@@ -46,14 +55,15 @@ export type FilterKey = (typeof filterKeys)[number]
 
 export const createSiteBodySchema = z.object({
   name: z.string().trim().min(1).max(80),
-  domain: z
-    .string()
-    .trim()
-    .min(1)
-    .max(253)
-    .transform((value) => value.toLowerCase().replace(/\.$/, ""))
-    .refine((value) => hostnamePattern.test(value), "Invalid domain"),
+  domain: domainSchema,
 })
+
+export const updateSiteBodySchema = z
+  .object({
+    name: z.string().trim().min(1).max(80).optional(),
+    domain: domainSchema.optional(),
+  })
+  .refine((value) => value.name !== undefined || value.domain !== undefined)
 
 const filterValue = z.string().max(2048)
 
@@ -63,6 +73,7 @@ export const statsQuerySchema = z.object({
   grain: z.enum(grains).optional(),
   breakdown: z.enum(breakdowns).optional(),
   tz: z.string().trim().min(1).max(64).optional(),
+  bots: z.enum(["0", "1"]).optional(),
   path: filterValue.optional(),
   referrer: filterValue.optional(),
   country: filterValue.optional(),
@@ -71,6 +82,7 @@ export const statsQuerySchema = z.object({
   device: filterValue.optional(),
   os: filterValue.optional(),
   screen: filterValue.optional(),
+  event: filterValue.optional(),
   utm_source: filterValue.optional(),
   utm_medium: filterValue.optional(),
   utm_campaign: filterValue.optional(),

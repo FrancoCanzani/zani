@@ -6,12 +6,15 @@ import {
 
 import { api, requireJson } from "@lib/api"
 
+import { defaultPanelBreakdowns, type Breakdown } from "./panels"
 import {
   filtersFromSearch,
   rangeFromSearch,
   type FilterKey,
   type SiteSearch,
 } from "./search"
+
+export type { Breakdown }
 
 export type Site = {
   id: string
@@ -41,26 +44,10 @@ export type SiteStats = {
   sessions: number
   bounceRate: number
   viewsPerVisit: number
+  hasEvents: boolean
   truncated: boolean
   points: StatsPoint[]
 }
-
-export type Breakdown =
-  | "path"
-  | "referrer"
-  | "country"
-  | "city"
-  | "browser"
-  | "device"
-  | "os"
-  | "screen"
-  | "utm_source"
-  | "utm_medium"
-  | "utm_campaign"
-  | "utm_content"
-  | "utm_term"
-  | "entry"
-  | "exit"
 
 export type StatsRange = {
   start: string
@@ -71,9 +58,13 @@ export type StatsRange = {
 
 export type StatsFilters = Partial<Record<FilterKey, string>>
 
-const statsStaleMs = 30_000
+export type StatsQuery = {
+  range: StatsRange
+  filters: StatsFilters
+  includeBots: boolean
+}
 
-export type AccountSite = Site & { slug: string }
+const statsStaleMs = 30_000
 
 export function accountSitesQueryOptions() {
   return queryOptions({
@@ -116,7 +107,8 @@ export function siteStatsQueryOptions(
   siteId: string,
   breakdown: Breakdown | undefined,
   range: StatsRange,
-  filters: StatsFilters = {}
+  filters: StatsFilters = {},
+  includeBots = false
 ) {
   return queryOptions({
     queryKey: [
@@ -126,6 +118,7 @@ export function siteStatsQueryOptions(
       breakdown ?? "total",
       range,
       filters,
+      includeBots,
     ] as const,
     queryFn: async () =>
       requireJson<SiteStats>(
@@ -137,6 +130,7 @@ export function siteStatsQueryOptions(
             grain: range.grain,
             ...(range.tz ? { tz: range.tz } : {}),
             ...(breakdown ? { breakdown } : {}),
+            ...(includeBots ? { bots: "1" as const } : {}),
             ...filters,
           },
         }),
@@ -182,12 +176,43 @@ export async function replaceWriteKey(slug: string, siteId: string) {
   return requireJson<{ site: Site; writeKey: string }>(response, "writeKey")
 }
 
+export async function updateSite(
+  slug: string,
+  siteId: string,
+  body: { name?: string; domain?: string }
+) {
+  const response = await api.workspaces[":slug"].sites[":siteId"].$patch({
+    param: { slug, siteId },
+    json: body,
+  })
+  if (response.status === 403) {
+    throw new Error("You cannot edit this site.")
+  }
+  if (!response.ok) {
+    throw new Error("Could not save the site.")
+  }
+  return requireJson<{ site: Site }>(response, "site")
+}
+
+export async function revokeSite(slug: string, siteId: string) {
+  const response = await api.workspaces[":slug"].sites[":siteId"].revoke.$post({
+    param: { slug, siteId },
+  })
+  if (response.status === 403) {
+    throw new Error("You cannot revoke this site.")
+  }
+  if (!response.ok) {
+    throw new Error("Could not revoke the site.")
+  }
+  return requireJson<{ site: Site }>(response, "site")
+}
+
 export async function simulateSiteViews(slug: string, siteId: string) {
-  const response = await api.workspaces[":slug"].sites[":siteId"].simulate.$post(
-    {
-      param: { slug, siteId },
-    }
-  )
+  const response = await api.workspaces[":slug"].sites[
+    ":siteId"
+  ].simulate.$post({
+    param: { slug, siteId },
+  })
   if (response.status === 404) {
     throw new Error("Simulate is only available in development.")
   }
@@ -200,19 +225,12 @@ export async function simulateSiteViews(slug: string, siteId: string) {
   return requireJson<{ inserted: number }>(response, "inserted")
 }
 
-const defaultPanelBreakdowns: Breakdown[] = [
-  "path",
-  "referrer",
-  "utm_source",
-  "country",
-  "browser",
-]
-
-export function statsQueryFromSearch(search: SiteSearch) {
+export function statsQueryFromSearch(search: SiteSearch): StatsQuery {
   const range = rangeFromSearch(search)
   return {
     range: { ...range, tz: search.tz },
     filters: filtersFromSearch(search),
+    includeBots: Boolean(search.bots),
   }
 }
 
@@ -228,7 +246,10 @@ export function previousStatsRange(range: StatsRange): StatsRange {
   }
 }
 
-export function changePercent(current: number, previous: number): number | null {
+export function changePercent(
+  current: number,
+  previous: number
+): number | null {
   if (previous <= 0) return current > 0 ? 100 : current === 0 ? 0 : null
   return Math.round(((current - previous) / previous) * 100)
 }
@@ -239,20 +260,41 @@ export async function preloadSiteStats(
   siteId: string,
   search: SiteSearch
 ) {
-  const { range, filters } = statsQueryFromSearch(search)
+  const { range, filters, includeBots } = statsQueryFromSearch(search)
   const previous = previousStatsRange(range)
   await Promise.all([
     queryClient.query({
-      ...siteStatsQueryOptions(slug, siteId, undefined, range, filters),
+      ...siteStatsQueryOptions(
+        slug,
+        siteId,
+        undefined,
+        range,
+        filters,
+        includeBots
+      ),
       staleTime: statsStaleMs,
     }),
     queryClient.query({
-      ...siteStatsQueryOptions(slug, siteId, undefined, previous, filters),
+      ...siteStatsQueryOptions(
+        slug,
+        siteId,
+        undefined,
+        previous,
+        filters,
+        includeBots
+      ),
       staleTime: statsStaleMs,
     }),
     ...defaultPanelBreakdowns.map((breakdown) =>
       queryClient.query({
-        ...siteStatsQueryOptions(slug, siteId, breakdown, range, filters),
+        ...siteStatsQueryOptions(
+          slug,
+          siteId,
+          breakdown,
+          range,
+          filters,
+          includeBots
+        ),
         staleTime: statsStaleMs,
       })
     ),

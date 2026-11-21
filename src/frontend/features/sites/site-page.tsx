@@ -3,25 +3,13 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { getRouteApi } from "@tanstack/react-router"
-import { EllipsisIcon, XIcon } from "lucide-react"
-import { Suspense, startTransition, useEffect, useState } from "react"
+import { Link, getRouteApi } from "@tanstack/react-router"
+import { XIcon } from "lucide-react"
+import { startTransition } from "react"
 import { toast } from "sonner"
 
 import { InstallSnippet } from "@components/install-snippet"
 import { Button } from "@components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from "@components/ui/dialog"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@components/ui/dropdown-menu"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import {
   canManageBusiness,
@@ -31,88 +19,32 @@ import {
 import {
   changePercent,
   previousStatsRange,
-  replaceWriteKey,
   simulateSiteViews,
   siteStatsQueryOptions,
   statsQueryFromSearch,
-  type Breakdown,
   type SiteStats,
   type StatsFilters,
   type StatsRange,
 } from "./api"
+import { BreakdownPanel } from "./breakdown-panel"
+import { breakdownPanels } from "./panels"
+import { RangePicker } from "./range-picker"
 import {
   activeFilterChips,
+  filterKeys,
   filterLabels,
   isChartMetric,
   metricLabels,
   rangeLabels,
+  type ChartMetric,
   type FilterKey,
   type Metric,
   type SiteSearch,
 } from "./search"
-import { CountriesMap } from "./countries-map"
-import { RangePicker } from "./range-picker"
 import { ViewsChart } from "./views-chart"
+import { useRememberedWriteKey } from "./write-key"
 
-const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId")
-
-type BreakdownTab = {
-  key: Breakdown | "map"
-  label: string
-  filterKey: FilterKey
-  view?: "list" | "map"
-}
-
-const breakdownPanels: Array<{
-  id: string
-  title: string
-  tabs: BreakdownTab[]
-}> = [
-  {
-    id: "pages",
-    title: "Pages",
-    tabs: [
-      { key: "path", label: "Path", filterKey: "path" },
-      { key: "entry", label: "Entry", filterKey: "path" },
-      { key: "exit", label: "Exit", filterKey: "path" },
-    ],
-  },
-  {
-    id: "referrers",
-    title: "Referrers",
-    tabs: [{ key: "referrer", label: "Referrer", filterKey: "referrer" }],
-  },
-  {
-    id: "utm",
-    title: "UTM",
-    tabs: [
-      { key: "utm_source", label: "Source", filterKey: "utm_source" },
-      { key: "utm_medium", label: "Medium", filterKey: "utm_medium" },
-      { key: "utm_campaign", label: "Campaign", filterKey: "utm_campaign" },
-      { key: "utm_content", label: "Content", filterKey: "utm_content" },
-      { key: "utm_term", label: "Term", filterKey: "utm_term" },
-    ],
-  },
-  {
-    id: "countries",
-    title: "Countries",
-    tabs: [
-      { key: "map", label: "Map", filterKey: "country", view: "map" },
-      { key: "country", label: "List", filterKey: "country", view: "list" },
-      { key: "city", label: "City", filterKey: "city", view: "list" },
-    ],
-  },
-  {
-    id: "devices",
-    title: "Devices",
-    tabs: [
-      { key: "browser", label: "Browser", filterKey: "browser" },
-      { key: "os", label: "OS", filterKey: "os" },
-      { key: "device", label: "Device", filterKey: "device" },
-      { key: "screen", label: "Screen", filterKey: "screen" },
-    ],
-  },
-]
+const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId/")
 
 const quickRanges = ["1d", "7d", "30d"] as const
 
@@ -122,7 +54,7 @@ const kpiMetrics = [
   "sessions",
   "bounce",
   "views_per_visit",
-] as const
+] as const satisfies readonly Metric[]
 
 function formatStatsRange(start: string, end: string, timeZone: string) {
   const startDate = new Date(start)
@@ -194,207 +126,12 @@ function dateInputValue(iso: string, timeZone: string) {
   return `${year}-${month}-${day}`
 }
 
-function BreakdownTable({
-  filterKey,
-  data,
-  activeValue,
-  onSelect,
-}: {
-  filterKey: FilterKey
-  data: SiteStats
-  activeValue: string | undefined
-  onSelect: (key: FilterKey, value: string) => void
-}) {
-  const maxViews = Math.max(1, ...data.points.map((point) => point.views))
-  const totalViews = data.points.reduce((sum, point) => sum + point.views, 0)
-
-  return (
-    <div className="space-y-1.5">
-      <ul className="space-y-1.5">
-        {data.points.length === 0 ? (
-          <li className="py-2 text-xs text-muted-foreground">No data</li>
-        ) : (
-          data.points.map((point) => {
-            const value = point.series
-            const selected = activeValue === value
-            const share = totalViews === 0 ? 0 : point.views / totalViews
-            return (
-              <li key={value || "(none)"}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(filterKey, value)}
-                  className={`relative flex h-[30px] w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-[13px] transition-colors hover:bg-muted/60 ${selected ? "bg-muted/60" : ""}`}
-                >
-                  <span
-                    aria-hidden
-                    className="absolute inset-y-0 left-0 bg-foreground/[0.06]"
-                    style={{ width: `${(point.views / maxViews) * 100}%` }}
-                  />
-                  <span className="relative min-w-0 flex-1 truncate font-mono">
-                    {value || "(none)"}
-                  </span>
-                  <span className="relative font-mono text-[13px] tabular-nums text-muted-foreground">
-                    {point.views}
-                  </span>
-                  <span className="relative w-8 text-right font-mono text-[13px] tabular-nums text-muted-foreground">
-                    {Math.round(share * 100)}%
-                  </span>
-                </button>
-              </li>
-            )
-          })
-        )}
-      </ul>
-      {data.truncated ? (
-        <p className="text-xs text-muted-foreground">Truncated.</p>
-      ) : null}
-    </div>
-  )
-}
-
-function breakdownKey(tab: BreakdownTab): Breakdown {
-  return tab.key === "map" ? "country" : tab.key
-}
-
-function BreakdownBodyFallback() {
-  return <p className="py-2 text-xs text-muted-foreground">Loading…</p>
-}
-
-function BreakdownBody({
-  tab,
-  slug,
-  siteId,
-  range,
-  filters,
-  search,
-  onSelect,
-}: {
-  tab: BreakdownTab
-  slug: string
-  siteId: string
-  range: StatsRange
-  filters: StatsFilters
-  search: SiteSearch
-  onSelect: (key: FilterKey, value: string) => void
-}) {
-  const dataKey = breakdownKey(tab)
-  const { data } = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, dataKey, range, filters)
-  )
-
-  if (tab.view === "map") {
-    return (
-      <CountriesMap
-        points={data.points}
-        activeValue={search.country}
-        onSelect={(country) => onSelect("country", country)}
-      />
-    )
+function clearFiltersPatch(): Partial<SiteSearch> {
+  const patch: Partial<SiteSearch> = {}
+  for (const key of filterKeys) {
+    patch[key] = undefined
   }
-
-  return (
-    <BreakdownTable
-      filterKey={tab.filterKey}
-      data={data}
-      activeValue={search[tab.filterKey]}
-      onSelect={onSelect}
-    />
-  )
-}
-
-function BreakdownPanel({
-  title,
-  tabs,
-  slug,
-  siteId,
-  range,
-  filters,
-  search,
-  onSelect,
-}: {
-  title: string
-  tabs: BreakdownTab[]
-  slug: string
-  siteId: string
-  range: StatsRange
-  filters: StatsFilters
-  search: SiteSearch
-  onSelect: (key: FilterKey, value: string) => void
-}) {
-  const queryClient = useQueryClient()
-  const [active, setActive] = useState(tabs[0]!.key)
-  const tab = tabs.find((item) => item.key === active) ?? tabs[0]!
-  const dataKey = breakdownKey(tab)
-  const showTabs = tabs.length > 1
-
-  function prefetch(breakdown: Breakdown) {
-    void queryClient.prefetchQuery(
-      siteStatsQueryOptions(slug, siteId, breakdown, range, filters)
-    )
-  }
-
-  useEffect(() => {
-    const { range: idleRange, filters: idleFilters } =
-      statsQueryFromSearch(search)
-    const handle = window.setTimeout(() => {
-      for (const item of tabs) {
-        const key = breakdownKey(item)
-        if (key === dataKey) continue
-        void queryClient.prefetchQuery(
-          siteStatsQueryOptions(slug, siteId, key, idleRange, idleFilters)
-        )
-      }
-    }, 150)
-    return () => window.clearTimeout(handle)
-  }, [slug, siteId, search, dataKey, queryClient, tabs])
-
-  return (
-    <section className="rounded-lg border border-border/70 p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
-        <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
-        {showTabs ? (
-          <div
-            role="radiogroup"
-            aria-label={`${title} breakdown`}
-            className="flex h-[26px] items-center gap-0.5 rounded-[7px] bg-muted p-0.5"
-          >
-            {tabs.map((item) => {
-              const selected = item.key === active
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onMouseEnter={() => prefetch(breakdownKey(item))}
-                  onFocus={() => prefetch(breakdownKey(item))}
-                  onClick={() => setActive(item.key)}
-                  className={`h-[22px] shrink-0 rounded-[5px] px-2 text-[12px] leading-4 transition-colors ${
-                    selected
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              )
-            })}
-          </div>
-        ) : null}
-      </div>
-      <Suspense fallback={<BreakdownBodyFallback />}>
-        <BreakdownBody
-          tab={tab}
-          slug={slug}
-          siteId={siteId}
-          range={range}
-          filters={filters}
-          search={search}
-          onSelect={onSelect}
-        />
-      </Suspense>
-    </section>
-  )
+  return patch
 }
 
 export function SitePage() {
@@ -402,13 +139,13 @@ export function SitePage() {
   const search = routeApi.useSearch()
   const navigate = routeApi.useNavigate()
   const queryClient = useQueryClient()
-  const { range, filters } = statsQueryFromSearch(search)
+  const { range, filters, includeBots } = statsQueryFromSearch(search)
   const chips = activeFilterChips(search)
   const timeZone = search.tz || "UTC"
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
   const totals = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, undefined, range, filters)
+    siteStatsQueryOptions(slug, siteId, undefined, range, filters, includeBots)
   )
   const previousTotals = useSuspenseQuery(
     siteStatsQueryOptions(
@@ -416,17 +153,16 @@ export function SitePage() {
       siteId,
       undefined,
       previousStatsRange(range),
-      filters
+      filters,
+      includeBots
     )
   )
 
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
   const role = parseWorkspaceRole(workspaceData.workspace.role)
-  const canReplace =
-    role !== null &&
-    canManageBusiness(role) &&
-    totals.data.site.revokedAt === null
-  const [writeKey, setWriteKey] = useState<string | null>(null)
+  const canManage = role !== null && canManageBusiness(role)
+  const revoked = totals.data.site.revokedAt !== null
+  const { writeKey } = useRememberedWriteKey(siteId)
 
   function patchSearch(patch: Partial<SiteSearch>) {
     startTransition(() => {
@@ -448,12 +184,6 @@ export function SitePage() {
     })
   }
 
-  const replace = useMutation({
-    mutationFn: () => replaceWriteKey(slug, siteId),
-    onSuccess: (result) => {
-      setWriteKey(result.writeKey)
-    },
-  })
   const simulate = useMutation({
     mutationFn: () => simulateSiteViews(slug, siteId),
     onSuccess: async (result) => {
@@ -488,66 +218,149 @@ export function SitePage() {
             <Button
               type="button"
               variant="outline"
-              disabled={
-                simulate.isPending || totals.data.site.revokedAt !== null
-              }
+              disabled={simulate.isPending || revoked}
               onClick={() => simulate.mutate()}
             >
               {simulate.isPending ? "Simulating…" : "Simulate views"}
             </Button>
           ) : null}
-          {canReplace ? (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Site actions"
-                >
-                  <EllipsisIcon />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="min-w-40">
-                <DropdownMenuItem
-                  disabled={replace.isPending}
-                  onClick={() => {
-                    replace.reset()
-                    void replace.mutate()
-                  }}
-                >
-                  {replace.isPending ? "Rotating…" : "Rotate key"}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          ) : null}
+          <Button asChild variant="outline" size="sm">
+            <Link
+              to="/businesses/$slug/sites/$siteId/settings"
+              params={{ slug, siteId }}
+            >
+              Settings
+            </Link>
+          </Button>
         </div>
       </div>
 
-      <Dialog
-        open={writeKey !== null}
-        onOpenChange={(open) => {
-          if (!open) setWriteKey(null)
-        }}
-      >
-        <DialogContent className="sm:max-w-xl">
-          <DialogHeader className="sr-only">
-            <DialogTitle>Write key</DialogTitle>
-          </DialogHeader>
-          {writeKey ? (
-            <InstallSnippet
-              label="Write key"
-              writeKey={writeKey}
-              note="Shown once. The previous key no longer works."
-            />
-          ) : null}
-        </DialogContent>
-      </Dialog>
-
-      {replace.error ? (
-        <p className="text-sm text-muted-foreground">{replace.error.message}</p>
+      {revoked ? (
+        <p className="text-sm text-muted-foreground">
+          Collection is stopped. New pageviews are not recorded.
+        </p>
       ) : null}
 
+      {totals.data.hasEvents ? (
+        <SiteDashboard
+          search={search}
+          timeZone={timeZone}
+          localTz={localTz}
+          range={range}
+          chips={chips}
+          chartMetric={chartMetric}
+          totals={totals.data}
+          previousTotals={previousTotals.data}
+          slug={slug}
+          siteId={siteId}
+          filters={filters}
+          includeBots={includeBots}
+          patchSearch={patchSearch}
+          toggleFilter={toggleFilter}
+        />
+      ) : revoked ? (
+        <p className="text-sm text-muted-foreground">
+          No pageviews were recorded.
+        </p>
+      ) : (
+        <WaitingForViews
+          domain={totals.data.site.domain}
+          writeKey={writeKey}
+          canManage={canManage}
+          slug={slug}
+          siteId={siteId}
+        />
+      )}
+    </div>
+  )
+}
+
+function WaitingForViews({
+  domain,
+  writeKey,
+  canManage,
+  slug,
+  siteId,
+}: {
+  domain: string
+  writeKey: string | null
+  canManage: boolean
+  slug: string
+  siteId: string
+}) {
+  return (
+    <section className="space-y-4">
+      <div className="space-y-1">
+        <h2 className="text-sm text-muted-foreground">
+          Waiting for the first pageview
+        </h2>
+        {writeKey ? (
+          <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
+            Paste the script on {domain}, then load a page.
+          </p>
+        ) : canManage ? (
+          <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
+            The write key was shown once. Rotate it to copy a new script.
+          </p>
+        ) : (
+          <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
+            An owner or admin installs the script.
+          </p>
+        )}
+      </div>
+      {writeKey ? (
+        <InstallSnippet
+          label="Write key"
+          writeKey={writeKey}
+          note="Shown once."
+        />
+      ) : canManage ? (
+        <Button asChild variant="outline">
+          <Link
+            to="/businesses/$slug/sites/$siteId/settings"
+            params={{ slug, siteId }}
+            hash="install"
+          >
+            Get a new write key
+          </Link>
+        </Button>
+      ) : null}
+    </section>
+  )
+}
+function SiteDashboard({
+  search,
+  timeZone,
+  localTz,
+  range,
+  chips,
+  chartMetric,
+  totals,
+  previousTotals,
+  slug,
+  siteId,
+  filters,
+  includeBots,
+  patchSearch,
+  toggleFilter,
+}: {
+  search: SiteSearch
+  timeZone: string
+  localTz: string
+  range: StatsRange
+  chips: ReturnType<typeof activeFilterChips>
+  chartMetric: ChartMetric
+  totals: SiteStats
+  previousTotals: SiteStats
+  slug: string
+  siteId: string
+  filters: StatsFilters
+  includeBots: boolean
+  patchSearch: (patch: Partial<SiteSearch>) => void
+  toggleFilter: (key: FilterKey, value: string) => void
+}) {
+  return (
+    <>
       <div className="flex flex-wrap items-center gap-1.5">
         {quickRanges.map((preset) => (
           <Button
@@ -596,6 +409,14 @@ export function SitePage() {
         >
           Compare
         </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant={search.bots ? "default" : "outline"}
+          onClick={() => patchSearch({ bots: search.bots ? undefined : true })}
+        >
+          Bots
+        </Button>
         {chips.map((chip) => (
           <Button
             key={`${chip.key}:${chip.value}`}
@@ -613,23 +434,7 @@ export function SitePage() {
             type="button"
             size="xs"
             variant="ghost"
-            onClick={() =>
-              patchSearch({
-                path: undefined,
-                referrer: undefined,
-                country: undefined,
-                city: undefined,
-                browser: undefined,
-                device: undefined,
-                os: undefined,
-                screen: undefined,
-                utm_source: undefined,
-                utm_medium: undefined,
-                utm_campaign: undefined,
-                utm_content: undefined,
-                utm_term: undefined,
-              })
-            }
+            onClick={() => patchSearch(clearFiltersPatch())}
           >
             Clear filters
           </Button>
@@ -639,15 +444,15 @@ export function SitePage() {
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
         {kpiMetrics.map((metric) => {
           const selected = search.metric === metric
-          const current = metricValue(totals.data, metric)
-          const previous = metricValue(previousTotals.data, metric)
+          const current = metricValue(totals, metric)
+          const previous = metricValue(previousTotals, metric)
           const delta = changePercent(current, previous)
           return (
             <button
               key={metric}
               type="button"
-              onClick={() => patchSearch({ metric: metric as Metric })}
-              className={`rounded-xl border px-3 py-3 text-left transition-colors ${selected ? "border-foreground/30 bg-muted/50" : "border-border/80 hover:bg-muted/30"}`}
+              onClick={() => patchSearch({ metric })}
+              className={`rounded-xl border px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${selected ? "border-foreground/30 bg-muted/50" : "border-border/80 hover:bg-muted/30"}`}
             >
               <div className="text-sm text-muted-foreground">
                 {metricLabels[metric]}
@@ -678,8 +483,8 @@ export function SitePage() {
 
       <ViewsChart
         key={`${chartMetric}-${timeZone}-${search.compare ? "cmp" : "solo"}`}
-        points={totals.data.points}
-        previousPoints={previousTotals.data.points}
+        points={totals.points}
+        previousPoints={previousTotals.points}
         start={range.start}
         end={range.end}
         grain={range.grain}
@@ -698,11 +503,12 @@ export function SitePage() {
             siteId={siteId}
             range={range}
             filters={filters}
+            includeBots={includeBots}
             search={search}
             onSelect={toggleFilter}
           />
         ))}
       </div>
-    </div>
+    </>
   )
 }

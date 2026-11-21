@@ -109,7 +109,7 @@ export function CountriesMap({
               <span>{hover.name}</span>
             </div>
             <div className="mt-0.5 text-[12px] text-muted-foreground">
-              {formatCompact(hover.views)} Visitors ·{" "}
+              {formatCompact(hover.views)} views ·{" "}
               {(hover.share * 100).toFixed(1)}%
             </div>
           </div>,

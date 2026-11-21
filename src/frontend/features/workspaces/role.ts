@@ -29,6 +29,47 @@ export function canInvite(role: WorkspaceRole) {
   return canManageBusiness(role)
 }
 
+export function canSetMemberRole(actor: WorkspaceRole, target: WorkspaceRole) {
+  switch (actor) {
+    case "owner":
+      return target === "admin" || target === "member"
+    case "admin":
+      return target === "member"
+    case "member":
+      return false
+    default: {
+      const exhaustive: never = actor
+      return exhaustive
+    }
+  }
+}
+
+export function canRemoveMember(
+  actor: WorkspaceRole,
+  target: WorkspaceRole,
+  isSelf: boolean,
+  ownerCount: number
+) {
+  if (isSelf) {
+    if (target === "owner") {
+      return ownerCount > 1
+    }
+    return true
+  }
+  switch (actor) {
+    case "owner":
+      return target !== "owner"
+    case "admin":
+      return target === "member"
+    case "member":
+      return false
+    default: {
+      const exhaustive: never = actor
+      return exhaustive
+    }
+  }
+}
+
 export function roleLabel(role: string) {
   const parsed = parseWorkspaceRole(role)
   if (!parsed) {

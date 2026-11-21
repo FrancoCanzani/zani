@@ -7,7 +7,7 @@ import { newId, nowMs, sha256Hex } from "../../../lib/utils"
 import { requireSession } from "../../../middleware/session"
 import type { AppEnv } from "../../../types"
 
-export const acceptInvite = new Hono<AppEnv>().post(
+export const post = new Hono<AppEnv>().post(
   "/:token/accept",
   requireSession,
   async (c) => {

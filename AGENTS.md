@@ -46,7 +46,7 @@ Hono on the Worker is native — no HTTP adapter. Keep these trees:
 - `/api/v1/*` — chained Hono app exported as `AppType` / `V1Api` for `hc`
 - SPA fallback — `ASSETS.fetch` from Worker `notFound` for non-API paths
 
-Each resource lives in `backend/routes/v1/<resource>/` and exports a chained `new Hono<AppEnv>().get(...)` (or `.post`, …) mounted with `.route()`. Helpers for that resource live in its `lib` folder. Auth, email, and other cross-cutting helpers stay in `backend/lib`. Do not mutate routers with `registerX(app)` helpers — that drops RPC inference.
+Each resource lives in `backend/routes/v1/<resource>/{index,get,post,patch,delete}.ts` — verb files; don’t force-split tiny resources. Export `get` / `post` / `patch` / `remove` (`delete.ts` → `remove`). Mount with `.route("/", get)`. Helpers for that resource live in its `lib` folder. Auth, email, and other cross-cutting helpers stay in `backend/lib`. Do not mutate routers with `registerX(app)` helpers — that drops RPC inference.
 
 Validate `json` / `query` / `param` with `@hono/zod-validator`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, collect, `/script.js`) must not use it.
 
@@ -99,4 +99,4 @@ Install shadcn/ui components with the CLI. Do not copy component source by hand.
 
 Prefer shadcn primitives over custom markup. Keep `globals.css` to theme tokens + base only.
 
-The site page is a raw list of numbers. Do not add charts or extra chrome unless asked.
+The site page is an overview dashboard (KPIs, chart, breakdown panels, map). Do not add session replay, heatmaps, or unrelated chrome unless asked.
