@@ -1,12 +1,12 @@
-# Analytics
+# Zani
 
-Development foundation for a SaaS that records pageviews for a site you own.
+Acquisition → Stripe revenue attribution for a site you own.
 
-Product line: **Pageviews for a site you own.**
+Product line: **which channels bring paying customers**, not vanity pageviews.
 
-The first slice is versioned HTTP APIs, email OTP sign-in, display-name completion, sites, `/script.js`, and raw pageview numbers. Subscriptions are not implemented yet.
+v1 records sites, pageviews, durable anonymous visitors, first-touch, `zani.identify`, and Stripe MRR attributed to that first touch. Subscriptions for Zani itself are not implemented yet. We do not take a cut of your Stripe payments.
 
-Flow: sign in → `/welcome` (name) → `/businesses` (sites) → add a site. A site page is `/businesses/$slug/sites/$siteId`. Invite links are `/invites/$token`.
+Flow: sign in → `/welcome` (name) → `/businesses` (sites) → add a site → install `/script.js` → call `zani.identify(userId)` after signup → connect Stripe on **Revenue**. A site page is `/businesses/$slug/sites/$siteId`. Revenue is `/businesses/$slug/revenue`. Invite links are `/invites/$token`.
 
 ## Stack
 
@@ -22,12 +22,33 @@ Flow: sign in → `/welcome` (name) → `/businesses` (sites) → add a site. A 
 
 The TanStack Router SPA lives in `src/frontend` and the Hono Worker lives in `src/backend`. The typed API is `src/backend/api.ts`; Better Auth is mounted on the Worker entry beside it. shadcn/ui lives in `src/frontend`. The Drizzle schema and D1 migrations live in `src/backend/db`.
 
+## Tracking
+
+Paste the install snippet before `</body>`. The script:
+
+- Sends pageviews (and SPA navigations) to `/api/v1/collect`
+- Persists an anonymous id + first-touch (landing, referrer, UTMs) in `localStorage`
+- Exposes `zani.track(name, props?)` and `zani.identify(userId, { email }?)`
+
+Identify with the same user id or email you put on the Stripe customer (`metadata.userId` or email) so Revenue can join first-touch → MRR.
+
+## Revenue
+
+On `/businesses/$slug/revenue`:
+
+1. Connect a Stripe **restricted or secret key** plus a webhook signing secret (`whsec_…`). Keys are encrypted at rest.
+2. Point Stripe webhooks at the endpoint shown after connect (`customer.*`, `customer.subscription.*`, `invoice.paid`).
+3. Read MRR, customers, signups, ARPU, churn, and the **Source → Signups → Customers → MRR** table.
+
+In development, **Simulate** seeds identified visitors and attributed subscriptions without a real Stripe account.
+
 ## Local development
 
 ```bash
 bun install
 cp .dev.vars.example .dev.vars
 # Set BETTER_AUTH_SECRET to a long random value, e.g. `openssl rand -base64 32`
+bun run db:migrate:dev
 bun run dev
 ```
 
@@ -43,7 +64,7 @@ Smoke checks:
 - Sites: [http://localhost:5173/businesses](http://localhost:5173/businesses)
 - Health: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health)
 
-D1 (`DB`) and Email (`EMAIL`) are local Wrangler bindings. Generate migrations with `bun run db:generate`; apply locally yourself with `bun run db:migrate:dev` when ready. No remote Cloudflare resources are required.
+D1 (`DB`) and Email (`EMAIL`) are local Wrangler bindings. Generate migrations with `bun run db:generate`; apply locally with `bun run db:migrate:dev` when ready. No remote Cloudflare resources are required for day-to-day work.
 
 ## Checks
 
