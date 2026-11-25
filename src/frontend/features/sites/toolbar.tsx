@@ -1,8 +1,13 @@
 import { XIcon } from "lucide-react"
 
 import { Button } from "@components/ui/button"
-
-import { Segmented } from "@components/segmented"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@components/ui/select"
 
 import type { StatsRange } from "./api"
 import { RangePicker } from "./range-picker"
@@ -82,15 +87,24 @@ export function Toolbar({
         </>
       ) : (
         <>
-          <Segmented
-            label="Range"
-            options={quickRanges}
-            value={preset}
-            labels={rangeLabels}
-            onChange={(next) =>
-              patchSearch({ range: next, from: undefined, to: undefined })
-            }
-          />
+          <Select
+            value={preset ?? ""}
+            onValueChange={(next) => {
+              const range = quickRanges.find((option) => option === next)
+              if (range) patchSearch({ range, from: undefined, to: undefined })
+            }}
+          >
+            <SelectTrigger size="xs" aria-label="Range" className="min-w-28">
+              <SelectValue placeholder="Custom" />
+            </SelectTrigger>
+            <SelectContent position="popper" align="start">
+              {quickRanges.map((option) => (
+                <SelectItem key={option} value={option} className="text-xs">
+                  {rangeLabels[option]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <RangePicker
             from={search.from ?? dateInputValue(range.start, timeZone)}
             to={search.to ?? dateInputValue(range.end, timeZone)}
