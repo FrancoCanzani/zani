@@ -1,10 +1,22 @@
 # Analytics
 
-Development foundation for a SaaS that records pageviews for a site you own.
+Revenue attribution for small SaaS teams, self-hostable on Cloudflare.
 
-Product line: **Pageviews for a site you own.**
+Product line: **See which sources bring paying customers.**
 
-The first slice is versioned HTTP APIs, email OTP sign-in, display-name completion, sites, `/script.js`, and raw pageview numbers. Subscriptions are not implemented yet.
+A site gets cookieless pageviews from `/script.js`, signups with first- and last-touch attribution through `zani.identify()`, and MRR from a read-only Stripe connection. The Revenue page joins them: MRR, new, expansion, contraction and churn, revenue by source, campaign and landing page, and a customer list.
+
+## Revenue setup
+
+1. Install the script on your site.
+2. After signup, call `zani.identify(user.id, { email: user.email })`. The script sends the first and last source it kept in local storage on your domain.
+3. Pass the same id to Stripe as Checkout `client_reference_id` or customer `metadata.zani_user_id`. Customers with a matching email are linked too.
+4. In site settings, connect Stripe with a restricted key that can read Customers, Checkout Sessions, Subscriptions, and Invoices, then run a sync.
+5. Optionally add a webhook endpoint at `/api/v1/stripe-webhooks/<siteId>` for `customer.created`, `customer.updated`, `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.paid`, and save its signing secret.
+
+Stripe keys and webhook secrets are encrypted with a key derived from `BETTER_AUTH_SECRET`. Rotating that secret means re-entering them.
+
+In development, **Simulate data** on a site fills pageviews, 360 signups across sources, about 50 customers, and seven months of MRR history.
 
 Flow: sign in → `/welcome` (name) → `/businesses` (sites) → add a site. A site page is `/businesses/$slug/sites/$siteId`. Invite links are `/invites/$token`.
 

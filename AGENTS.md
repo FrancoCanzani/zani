@@ -2,21 +2,21 @@
 
 ## Scope
 
-This repository is a development foundation for an analytics SaaS.
+This repository is revenue attribution for small SaaS teams.
 
-One-line product: pageviews for a site you own.
+One-line product: see which sources bring paying customers.
 
 Do not implement product features unless the current task asks for them.
 
-Do not add URL shortening, link redirects, click maps, session replay, campaigns, escrow, marketplaces, dispute resolution, or dashboards unless explicitly requested.
+Do not add URL shortening, link redirects, click maps, session replay, heatmaps, escrow, marketplaces, or dispute resolution unless explicitly requested.
 
-v1 is sites and pageviews stored in D1. Prefer a subscription later. Do not take a cut of payments. Do not build invoicing.
+v1 is sites, cookieless pageviews, signups with first/last-touch attribution, and Stripe revenue (read-only, restricted key) stored in D1. Pageviews stay cookieless; only attribution touches use first-party storage. Do not take a cut of payments. Do not build invoicing. Do not write to the connected Stripe account.
 
 Authentication is Better Auth email OTP on `/api/v1/auth`. Do not add passwords, OAuth, or extra auth providers unless asked.
 
-## Attribution
+## Credits
 
-Do not add attribution.
+Do not add tool or author credits.
 
 No `Co-authored-by` trailers, generated-by lines, or tool credits in commits, source, comments, UI, or docs. Do not author commits as Cursor Agent. If a hook appends a trailer, delete it before pushing.
 
@@ -48,7 +48,7 @@ Hono on the Worker is native — no HTTP adapter. Keep these trees:
 
 Each resource lives in `backend/routes/v1/<resource>/{index,get,post,patch,delete}.ts` — verb files; don’t force-split tiny resources. Export `get` / `post` / `patch` / `remove` (`delete.ts` → `remove`). Mount with `.route("/", get)`. Helpers for that resource live in its `lib` folder. Auth, email, and other cross-cutting helpers stay in `backend/lib`. Do not mutate routers with `registerX(app)` helpers — that drops RPC inference.
 
-Validate `json` / `query` / `param` with `@hono/zod-validator`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, collect, `/script.js`) must not use it.
+Validate `json` / `query` / `param` with `@hono/zod-validator`. Session-gated routes use `requireSession` from `backend/middleware/session.ts`. Public routes (health, collect, identify, stripe-webhooks, `/script.js`) must not use it. Stripe webhooks verify the signature and re-fetch objects with the pinned API version instead of trusting the payload.
 
 The SPA talks to the versioned API through `hc<V1Api>` in `frontend/lib/api.ts`. Auth cookies still go through the Better Auth client.
 
@@ -71,9 +71,9 @@ Agents may edit `src/backend/db/schema.ts` only. Do not generate, edit, apply, o
 
 Never run remote DB commands (`wrangler d1 … --remote`) unless the user explicitly asks.
 
-Auth, workspace, site, and event tables are the v1 domain. Do not create payment, subscription, or invoice tables unless the task asks.
+Auth, workspace, site, event, visitor identity, Stripe connection/customer, MRR snapshot, and revenue movement tables are the v1 domain. MRR comes from paid subscription invoices; movements are derived per customer and can always be rebuilt from snapshots.
 
-Do not implement Stripe, PDF export, or subscriptions unless the current task asks for them.
+Do not implement billing for this product, PDF export, or invoicing unless the current task asks for them.
 
 Workspace is the tenant. UI copy says **site**. Code, API, and URLs may still say workspace or business. A workspace is created with the first site and is not named in the UI. URLs stay `/businesses/$slug`. Auth flow: sign in → `/welcome` if display name empty → `/businesses` (sites) → add a site. Load session, workspace lists, and membership through TanStack Router `beforeLoad` / `loader` plus `queryClient.query({ ...options, staleTime: "static" })` — do not fetch with `useEffect`.
 
@@ -99,4 +99,6 @@ Install shadcn/ui components with the CLI. Do not copy component source by hand.
 
 Prefer shadcn primitives over custom markup. Keep `globals.css` to theme tokens + base only.
 
-The site page is an overview dashboard (KPIs, chart, breakdown panels, map). Do not add session replay, heatmaps, or unrelated chrome unless asked.
+A site has a Traffic page (KPIs, chart, breakdown panels, map) and a Revenue page (MRR KPIs, MRR chart, attribution table, customers). Do not add session replay, heatmaps, or unrelated chrome unless asked.
+
+In development, the site's "Simulate data" action fills pageviews, signups, Stripe-like customers, and MRR history. Keep it working when the data model changes.
