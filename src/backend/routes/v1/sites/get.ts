@@ -18,6 +18,7 @@ import {
   parseRange,
   pointLimit,
   siteWhere,
+  sourceCondition,
 } from "./lib/stats"
 
 export const get = new Hono<AppEnv>()
@@ -65,7 +66,14 @@ export const get = new Hono<AppEnv>()
       }
 
       const range = parsed.range
-      const where = siteWhere(matched.id, range, query)
+      const where = siteWhere(
+        matched.id,
+        range,
+        query,
+        query.source
+          ? [await sourceCondition(db, matched.id, range, query.source)]
+          : []
+      )
       const views = sql<number>`count(*)`
       const visitors = sql<number>`count(distinct ${event.visitorId})`
       const sessions = sql<number>`count(distinct ${event.sessionId})`

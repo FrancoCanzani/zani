@@ -12,6 +12,7 @@ const domainSchema = z
   .refine((value) => hostnamePattern.test(value), "Invalid domain")
 
 export const breakdowns = [
+  "source",
   "path",
   "referrer",
   "country",
@@ -30,9 +31,10 @@ export const breakdowns = [
   "exit",
 ] as const
 
-export const grains = ["hour", "day"] as const
+export const grains = ["hour", "day", "week"] as const
 
 export const filterKeys = [
+  "source",
   "path",
   "referrer",
   "country",
@@ -74,6 +76,7 @@ export const statsQuerySchema = z.object({
   breakdown: z.enum(breakdowns).optional(),
   tz: z.string().trim().min(1).max(64).optional(),
   bots: z.enum(["0", "1"]).optional(),
+  source: filterValue.optional(),
   path: filterValue.optional(),
   referrer: filterValue.optional(),
   country: filterValue.optional(),

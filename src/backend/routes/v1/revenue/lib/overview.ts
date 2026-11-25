@@ -1,9 +1,6 @@
 import type { MovementKind } from "../../../../lib/revenue"
-
-import type { RevenueRange } from "./schema"
-
-const dayMs = 24 * 60 * 60 * 1000
-const maxPoints = 180
+import type { Grain } from "../../sites/lib/schema"
+import { bucketSize, timezoneOffsetMs } from "../../sites/lib/stats"
 
 export type MovementRow = {
   customerId: string
@@ -13,26 +10,24 @@ export type MovementRow = {
   at: number
 }
 
-export function rangeStart(range: RevenueRange, now: number, earliest: number) {
-  switch (range) {
-    case "30d":
-      return now - 30 * dayMs
-    case "90d":
-      return now - 90 * dayMs
-    case "12m":
-      return now - 365 * dayMs
-    case "all":
-      return Math.min(earliest, now - 30 * dayMs)
-    default: {
-      const exhaustive: never = range
-      return exhaustive
-    }
-  }
+export type RevenuePoint = {
+  bucket: number
+  signups: number
+  newMrr: number
+  newCustomers: number
+  mrr: number
+}
+
+export function bucketer(grain: Grain, timeZone: string | undefined) {
+  const size = bucketSize(grain)
+  const offset =
+    timeZone && timeZone !== "UTC" ? timezoneOffsetMs(timeZone, Date.now()) : 0
+  return (at: number) => Math.floor((at + offset) / size) * size - offset
 }
 
 export function primaryCurrency(
   mrrByCurrency: Array<{ currency: string; mrr: number }>,
-  movements: MovementRow[]
+  movements: Array<{ currency: string }>
 ) {
   const ranked = mrrByCurrency
     .filter((row) => row.currency)
@@ -49,52 +44,74 @@ function emptyTotals(): Record<MovementKind, number> {
   return { new: 0, expansion: 0, contraction: 0, churn: 0, reactivation: 0 }
 }
 
-export function summarize(
-  movements: MovementRow[],
-  start: number,
+export function summarize(input: {
+  movements: MovementRow[]
+  signups: Array<{ bucket: number; signups: number }>
+  start: number
   end: number
-) {
+  bucketOf: (at: number) => number
+  size: number
+}) {
+  const { movements, start, end, bucketOf, size } = input
   const totals = emptyTotals()
   const counts = emptyTotals()
-  let mrrStart = 0
-  let mrrEnd = 0
+  const mrrAtStart = new Map<string, number>()
+  const mrrAtEnd = new Map<string, number>()
 
-  const span = Math.max(dayMs, end - start)
-  const bucket = Math.max(dayMs, Math.ceil(span / maxPoints / dayMs) * dayMs)
-  const firstBucket = Math.floor(start / dayMs) * dayMs
-  const points: Array<{
-    at: number
-    mrr: number
-    gained: number
-    lost: number
-  }> = []
-  for (let at = firstBucket; at < end; at += bucket) {
-    points.push({ at, mrr: 0, gained: 0, lost: 0 })
+  const points = new Map<number, RevenuePoint & { change: number }>()
+  for (let bucket = bucketOf(start); bucket < end; bucket += size) {
+    points.set(bucket, {
+      bucket,
+      signups: 0,
+      newMrr: 0,
+      newCustomers: 0,
+      mrr: 0,
+      change: 0,
+    })
+  }
+  for (const row of input.signups) {
+    const point = points.get(row.bucket)
+    if (point) point.signups += row.signups
   }
 
   for (const row of movements) {
-    if (row.at < start) mrrStart += row.amount
-    if (row.at < end) mrrEnd += row.amount
-    if (row.at < start || row.at >= end) continue
+    if (row.at < start) {
+      mrrAtStart.set(
+        row.customerId,
+        (mrrAtStart.get(row.customerId) ?? 0) + row.amount
+      )
+    }
+    if (row.at >= end) continue
+    mrrAtEnd.set(
+      row.customerId,
+      (mrrAtEnd.get(row.customerId) ?? 0) + row.amount
+    )
+    if (row.at < start) continue
     const kind = row.kind as MovementKind
     if (kind in totals) {
       totals[kind] += row.amount
       counts[kind] += 1
     }
-    const index = Math.min(
-      points.length - 1,
-      Math.floor((row.at - firstBucket) / bucket)
-    )
-    const point = points[index]
+    const point = points.get(bucketOf(row.at))
     if (!point) continue
-    if (row.amount > 0) point.gained += row.amount
-    else point.lost += row.amount
+    point.change += row.amount
+    if (kind === "new" || kind === "reactivation") {
+      point.newMrr += row.amount
+      point.newCustomers += 1
+    }
   }
 
+  const sum = (values: Map<string, number>) =>
+    [...values.values()].reduce((total, value) => total + value, 0)
+  const mrrStart = sum(mrrAtStart)
+  const mrrEnd = sum(mrrAtEnd)
+  const paying = [...mrrAtEnd.values()].filter((value) => value > 0).length
+
   let running = mrrStart
-  for (const point of points) {
-    running += point.gained + point.lost
-    point.mrr = running
+  const series: RevenuePoint[] = []
+  for (const { change, ...point } of points.values()) {
+    running += change
+    series.push({ ...point, mrr: running })
   }
 
   const churned = -totals.churn
@@ -102,6 +119,8 @@ export function summarize(
   return {
     mrr: mrrEnd,
     mrrStart,
+    payingCustomers: paying,
+    arpa: paying > 0 ? Math.round(mrrEnd / paying) : 0,
     newMrr: totals.new + totals.reactivation,
     expansionMrr: totals.expansion,
     contractionMrr: contraction,
@@ -113,6 +132,7 @@ export function summarize(
       mrrStart > 0
         ? Math.round(((churned + contraction) / mrrStart) * 1000) / 10
         : 0,
-    points,
+    signups: input.signups.reduce((total, row) => total + row.signups, 0),
+    points: series,
   }
 }

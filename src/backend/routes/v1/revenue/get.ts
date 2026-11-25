@@ -1,5 +1,17 @@
 import { zValidator } from "@hono/zod-validator"
-import { and, asc, count, desc, eq, gt, gte, lt, min, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  desc,
+  eq,
+  gt,
+  gte,
+  lt,
+  sql,
+  type SQL,
+} from "drizzle-orm"
+import type { SQLiteColumn } from "drizzle-orm/sqlite-core"
 import { Hono } from "hono"
 
 import {
@@ -13,15 +25,22 @@ import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"
 import type { AppEnv } from "../../../types"
 import { loadSite } from "../sites/lib/load"
-import { asNumber } from "../sites/lib/stats"
+import {
+  asNumber,
+  bucketSize,
+  bucketSql,
+  parseRange,
+  type StatsRange,
+} from "../sites/lib/stats"
 import { workspaceFromContext } from "../workspaces/lib/context"
 
-import { primaryCurrency, rangeStart, summarize } from "./lib/overview"
+import { identityColumnFor, identityFilters } from "./lib/filters"
+import { bucketer, primaryCurrency, summarize } from "./lib/overview"
 import {
   attributionQuerySchema,
-  overviewQuerySchema,
+  revenueBreakdownQuerySchema,
+  revenueQuerySchema,
   type AttributionDimension,
-  type RevenueRange,
   type Touch,
 } from "./lib/schema"
 
@@ -30,7 +49,7 @@ type Database = ReturnType<typeof createDb>
 const unidentified = "(not identified)"
 const customerLimit = 50
 
-function identityColumn(by: AttributionDimension, touch: Touch) {
+function attributionColumn(by: AttributionDimension, touch: Touch) {
   switch (by) {
     case "source":
       return touch === "first"
@@ -66,13 +85,7 @@ async function currencyFor(db: Database, siteId: string) {
       .where(and(eq(stripeCustomer.siteId, siteId), gt(stripeCustomer.mrr, 0)))
       .groupBy(stripeCustomer.currency),
     db
-      .select({
-        customerId: revenueMovement.customerId,
-        kind: revenueMovement.kind,
-        amount: revenueMovement.amount,
-        currency: revenueMovement.currency,
-        at: revenueMovement.at,
-      })
+      .select({ currency: revenueMovement.currency })
       .from(revenueMovement)
       .where(eq(revenueMovement.siteId, siteId))
       .limit(200),
@@ -89,29 +102,55 @@ async function currencyFor(db: Database, siteId: string) {
   }
 }
 
-async function windowFor(db: Database, siteId: string, range: RevenueRange) {
-  const now = Date.now()
-  if (range !== "all") return { start: rangeStart(range, now, now), end: now }
-  const [[movement], [identity]] = await Promise.all([
-    db
-      .select({ value: min(revenueMovement.at) })
-      .from(revenueMovement)
-      .where(eq(revenueMovement.siteId, siteId)),
-    db
-      .select({ value: min(visitorIdentity.signedUpAt) })
-      .from(visitorIdentity)
-      .where(eq(visitorIdentity.siteId, siteId)),
-  ])
-  const earliest = Math.min(movement?.value ?? now, identity?.value ?? now)
-  return { start: rangeStart(range, now, earliest), end: now }
+function signupConditions(siteId: string, range: StatsRange, filters: SQL[]) {
+  return and(
+    eq(visitorIdentity.siteId, siteId),
+    gte(visitorIdentity.signedUpAt, range.start),
+    lt(visitorIdentity.signedUpAt, range.end),
+    ...filters
+  )
 }
 
-async function siteFromRequest(
+function newCustomerRows(
   db: Database,
-  workspaceId: string,
-  siteId: string | undefined
+  input: {
+    siteId: string
+    currency: string
+    range: StatsRange
+    filters: SQL[]
+    key: SQLiteColumn
+  }
 ) {
-  return siteId ? loadSite(db, workspaceId, siteId) : null
+  return db
+    .select({
+      key: input.key,
+      customers: count(),
+      newMrr: sql<number>`sum(${revenueMovement.amount})`,
+      mrr: sql<number>`sum(${stripeCustomer.mrr})`,
+    })
+    .from(revenueMovement)
+    .innerJoin(
+      stripeCustomer,
+      and(
+        eq(stripeCustomer.siteId, revenueMovement.siteId),
+        eq(stripeCustomer.id, revenueMovement.customerId)
+      )
+    )
+    .leftJoin(
+      visitorIdentity,
+      eq(visitorIdentity.id, stripeCustomer.identityId)
+    )
+    .where(
+      and(
+        eq(revenueMovement.siteId, input.siteId),
+        eq(revenueMovement.kind, "new"),
+        eq(revenueMovement.currency, input.currency),
+        gte(revenueMovement.at, input.range.start),
+        lt(revenueMovement.at, input.range.end),
+        ...input.filters
+      )
+    )
+    .groupBy(input.key)
 }
 
 export const get = new Hono<AppEnv>()
@@ -119,59 +158,86 @@ export const get = new Hono<AppEnv>()
     "/",
     requireSession,
     requireWorkspaceMember,
-    zValidator("query", overviewQuerySchema),
+    zValidator("query", revenueQuerySchema),
     async (c) => {
+      const query = c.req.valid("query")
+      const parsed = parseRange(query)
+      if (!parsed.ok) {
+        return c.json(
+          { error: "invalid_range" as const, message: parsed.message },
+          400
+        )
+      }
+      const range = parsed.range
       const current = workspaceFromContext(c.var)
       const db = createDb(c.env)
-      const matched = await siteFromRequest(
+      const matched = await loadSite(
         db,
         current.workspace.id,
-        c.req.param("siteId")
+        c.req.param("siteId") ?? ""
       )
       if (!matched) {
         return c.json({ error: "not_found" as const }, 404)
       }
 
-      const { range } = c.req.valid("query")
-      const [{ currency, otherCurrencies }, window, [connection]] =
+      const { conditions: filters, ignored } = identityFilters(query)
+      const [{ currency, otherCurrencies }, [connection], [anyMovement]] =
         await Promise.all([
           currencyFor(db, matched.id),
-          windowFor(db, matched.id, range),
           db
             .select({ siteId: stripeConnection.siteId })
             .from(stripeConnection)
             .where(eq(stripeConnection.siteId, matched.id))
             .limit(1),
+          db
+            .select({ id: revenueMovement.id })
+            .from(revenueMovement)
+            .where(eq(revenueMovement.siteId, matched.id))
+            .limit(1),
         ])
 
-      const [movements, [customers], [identified]] = await Promise.all([
+      const movementQuery = db
+        .select({
+          customerId: revenueMovement.customerId,
+          kind: revenueMovement.kind,
+          amount: revenueMovement.amount,
+          currency: revenueMovement.currency,
+          at: revenueMovement.at,
+        })
+        .from(revenueMovement)
+      const movementWhere = and(
+        eq(revenueMovement.siteId, matched.id),
+        eq(revenueMovement.currency, currency),
+        lt(revenueMovement.at, range.end)
+      )
+      const bucket = bucketSql(
+        range.grain,
+        query.tz,
+        visitorIdentity.signedUpAt
+      )
+
+      const [movements, signups, [identified]] = await Promise.all([
+        filters.length === 0
+          ? movementQuery.where(movementWhere).orderBy(asc(revenueMovement.at))
+          : movementQuery
+              .innerJoin(
+                stripeCustomer,
+                and(
+                  eq(stripeCustomer.siteId, revenueMovement.siteId),
+                  eq(stripeCustomer.id, revenueMovement.customerId)
+                )
+              )
+              .innerJoin(
+                visitorIdentity,
+                eq(visitorIdentity.id, stripeCustomer.identityId)
+              )
+              .where(and(movementWhere, ...filters))
+              .orderBy(asc(revenueMovement.at)),
         db
-          .select({
-            customerId: revenueMovement.customerId,
-            kind: revenueMovement.kind,
-            amount: revenueMovement.amount,
-            currency: revenueMovement.currency,
-            at: revenueMovement.at,
-          })
-          .from(revenueMovement)
-          .where(
-            and(
-              eq(revenueMovement.siteId, matched.id),
-              eq(revenueMovement.currency, currency),
-              lt(revenueMovement.at, window.end)
-            )
-          )
-          .orderBy(asc(revenueMovement.at)),
-        db
-          .select({ value: count() })
-          .from(stripeCustomer)
-          .where(
-            and(
-              eq(stripeCustomer.siteId, matched.id),
-              eq(stripeCustomer.currency, currency),
-              gt(stripeCustomer.mrr, 0)
-            )
-          ),
+          .select({ bucket, signups: count() })
+          .from(visitorIdentity)
+          .where(signupConditions(matched.id, range, filters))
+          .groupBy(bucket),
         db
           .select({ value: count() })
           .from(stripeCustomer)
@@ -185,21 +251,104 @@ export const get = new Hono<AppEnv>()
           ),
       ])
 
-      const summary = summarize(movements, window.start, window.end)
-      const paying = customers?.value ?? 0
+      const summary = summarize({
+        movements,
+        signups: signups.map((row) => ({
+          bucket: asNumber(row.bucket),
+          signups: row.signups,
+        })),
+        start: range.start,
+        end: range.end,
+        bucketOf: bucketer(range.grain, query.tz),
+        size: bucketSize(range.grain),
+      })
+
       return c.json(
         {
           connected: connection !== undefined,
-          hasData: movements.length > 0,
+          hasData: anyMovement !== undefined,
           currency,
           otherCurrencies,
-          start: window.start,
-          end: window.end,
-          payingCustomers: paying,
-          identifiedCustomers: identified?.value ?? 0,
-          arpa: paying > 0 ? Math.round(summary.mrr / paying) : 0,
+          identifiedCustomers:
+            filters.length > 0
+              ? summary.payingCustomers
+              : (identified?.value ?? 0),
+          ignoredFilters: ignored,
           ...summary,
         },
+        200
+      )
+    }
+  )
+  .get(
+    "/breakdown",
+    requireSession,
+    requireWorkspaceMember,
+    zValidator("query", revenueBreakdownQuerySchema),
+    async (c) => {
+      const query = c.req.valid("query")
+      const parsed = parseRange(query)
+      if (!parsed.ok) {
+        return c.json(
+          { error: "invalid_range" as const, message: parsed.message },
+          400
+        )
+      }
+      const current = workspaceFromContext(c.var)
+      const db = createDb(c.env)
+      const matched = await loadSite(
+        db,
+        current.workspace.id,
+        c.req.param("siteId") ?? ""
+      )
+      if (!matched) {
+        return c.json({ error: "not_found" as const }, 404)
+      }
+
+      const key = identityColumnFor(query.by)
+      const { currency } = await currencyFor(db, matched.id)
+      if (!key) {
+        return c.json({ currency, supported: false, rows: [] }, 200)
+      }
+
+      const { conditions: filters } = identityFilters(query)
+      const [signups, converted] = await Promise.all([
+        db
+          .select({ key, signups: count() })
+          .from(visitorIdentity)
+          .where(signupConditions(matched.id, parsed.range, filters))
+          .groupBy(key),
+        newCustomerRows(db, {
+          siteId: matched.id,
+          currency,
+          range: parsed.range,
+          filters,
+          key,
+        }),
+      ])
+
+      const rows = new Map<
+        string,
+        { key: string; signups: number; customers: number; newMrr: number }
+      >()
+      const rowFor = (value: unknown) => {
+        const label = typeof value === "string" ? value : String(value ?? "")
+        const existing = rows.get(label)
+        if (existing) return existing
+        const created = { key: label, signups: 0, customers: 0, newMrr: 0 }
+        rows.set(label, created)
+        return created
+      }
+      for (const row of signups) rowFor(row.key).signups += row.signups
+      for (const row of converted) {
+        if (row.key === null) continue
+        const target = rowFor(row.key)
+        target.customers += row.customers
+        target.newMrr += asNumber(row.newMrr)
+      }
+
+      return c.json(
+        { currency, supported: true, rows: [...rows.values()] },
         200
       )
     }
@@ -210,65 +359,42 @@ export const get = new Hono<AppEnv>()
     requireWorkspaceMember,
     zValidator("query", attributionQuerySchema),
     async (c) => {
+      const query = c.req.valid("query")
+      const parsed = parseRange(query)
+      if (!parsed.ok) {
+        return c.json(
+          { error: "invalid_range" as const, message: parsed.message },
+          400
+        )
+      }
       const current = workspaceFromContext(c.var)
       const db = createDb(c.env)
-      const matched = await siteFromRequest(
+      const matched = await loadSite(
         db,
         current.workspace.id,
-        c.req.param("siteId")
+        c.req.param("siteId") ?? ""
       )
       if (!matched) {
         return c.json({ error: "not_found" as const }, 404)
       }
 
-      const query = c.req.valid("query")
-      const [{ currency }, window] = await Promise.all([
-        currencyFor(db, matched.id),
-        windowFor(db, matched.id, query.range),
-      ])
-      const key = identityColumn(query.by, query.touch)
+      const { currency } = await currencyFor(db, matched.id)
+      const key = attributionColumn(query.by, query.touch)
+      const { conditions: filters } = identityFilters(query)
 
       const [signups, converted] = await Promise.all([
         db
           .select({ key, signups: count() })
           .from(visitorIdentity)
-          .where(
-            and(
-              eq(visitorIdentity.siteId, matched.id),
-              gte(visitorIdentity.signedUpAt, window.start),
-              lt(visitorIdentity.signedUpAt, window.end)
-            )
-          )
+          .where(signupConditions(matched.id, parsed.range, filters))
           .groupBy(key),
-        db
-          .select({
-            key,
-            customers: count(),
-            newMrr: sql<number>`sum(${revenueMovement.amount})`,
-            mrr: sql<number>`sum(${stripeCustomer.mrr})`,
-          })
-          .from(revenueMovement)
-          .innerJoin(
-            stripeCustomer,
-            and(
-              eq(stripeCustomer.siteId, revenueMovement.siteId),
-              eq(stripeCustomer.id, revenueMovement.customerId)
-            )
-          )
-          .leftJoin(
-            visitorIdentity,
-            eq(visitorIdentity.id, stripeCustomer.identityId)
-          )
-          .where(
-            and(
-              eq(revenueMovement.siteId, matched.id),
-              eq(revenueMovement.kind, "new"),
-              eq(revenueMovement.currency, currency),
-              gte(revenueMovement.at, window.start),
-              lt(revenueMovement.at, window.end)
-            )
-          )
-          .groupBy(key),
+        newCustomerRows(db, {
+          siteId: matched.id,
+          currency,
+          range: parsed.range,
+          filters,
+          key,
+        }),
       ])
 
       const rows = new Map<
@@ -295,9 +421,7 @@ export const get = new Hono<AppEnv>()
         rows.set(label, created)
         return created
       }
-      for (const row of signups) {
-        rowFor(row.key).signups += row.signups
-      }
+      for (const row of signups) rowFor(row.key).signups += row.signups
       for (const row of converted) {
         const target = rowFor(row.key)
         target.customers += row.customers
@@ -312,7 +436,7 @@ export const get = new Hono<AppEnv>()
           touch: query.touch,
           rows: [...rows.values()].sort(
             (a, b) =>
-              b.mrr - a.mrr ||
+              b.newMrr - a.newMrr ||
               b.customers - a.customers ||
               b.signups - a.signups
           ),
@@ -324,10 +448,10 @@ export const get = new Hono<AppEnv>()
   .get("/customers", requireSession, requireWorkspaceMember, async (c) => {
     const current = workspaceFromContext(c.var)
     const db = createDb(c.env)
-    const matched = await siteFromRequest(
+    const matched = await loadSite(
       db,
       current.workspace.id,
-      c.req.param("siteId")
+      c.req.param("siteId") ?? ""
     )
     if (!matched) {
       return c.json({ error: "not_found" as const }, 404)

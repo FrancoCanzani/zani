@@ -1,5 +1,7 @@
 import { z } from "zod"
 
+import { sourceFor } from "../../../../lib/source"
+
 const text = (max: number) => z.string().trim().max(max).optional()
 
 export const touchSchema = z.object({
@@ -29,21 +31,6 @@ export type Touch = {
   seenAt: number
 }
 
-const knownReferrers: Array<[RegExp, string]> = [
-  [/(^|\.)google\./, "google"],
-  [/(^|\.)bing\.com$/, "bing"],
-  [/(^|\.)duckduckgo\.com$/, "duckduckgo"],
-  [/(^|\.)(t\.co|twitter\.com|x\.com)$/, "twitter"],
-  [/(^|\.)reddit\.com$/, "reddit"],
-  [/^news\.ycombinator\.com$/, "hacker news"],
-  [/(^|\.)producthunt\.com$/, "product hunt"],
-  [/(^|\.)(linkedin\.com|lnkd\.in)$/, "linkedin"],
-  [/(^|\.)(facebook\.com|fb\.com)$/, "facebook"],
-  [/(^|\.)github\.com$/, "github"],
-  [/(^|\.)youtube\.com$/, "youtube"],
-  [/(^|\.)(chatgpt\.com|openai\.com)$/, "chatgpt"],
-]
-
 function hostOf(url: string | undefined, siteDomain: string) {
   if (!url) return ""
   try {
@@ -70,15 +57,6 @@ function clean(value: string | undefined) {
     if (char.charCodeAt(0) < 32) return ""
   }
   return value.trim().slice(0, 80)
-}
-
-export function sourceFor(utmSource: string, referrerHost: string) {
-  if (utmSource) return utmSource.toLowerCase()
-  if (!referrerHost) return "direct"
-  for (const [pattern, name] of knownReferrers) {
-    if (pattern.test(referrerHost)) return name
-  }
-  return referrerHost
 }
 
 export function normalizeTouch(

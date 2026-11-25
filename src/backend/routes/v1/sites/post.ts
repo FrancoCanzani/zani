@@ -27,12 +27,12 @@ import { canManageBusiness, parseWorkspaceRole } from "../workspaces/lib/schema"
 import { loadSite } from "./lib/load"
 import { createSiteBodySchema } from "./lib/schema"
 import { serializeSite } from "./lib/serialize"
-import { batchSize, buildSimulateRows } from "./lib/simulate"
 import {
-  buildRevenueSimulation,
+  buildSimulation,
   simCustomerPrefix,
   simUserPrefix,
-} from "./lib/simulate-revenue"
+  simVisitorPrefix,
+} from "./lib/simulate"
 
 export const post = new Hono<AppEnv>()
   .post(
@@ -168,10 +168,17 @@ export const post = new Hono<AppEnv>()
         return c.json({ error: "revoked" as const }, 409)
       }
 
-      const rows = buildSimulateRows(matched.id)
-      const revenue = buildRevenueSimulation(matched.id)
+      const simulation = buildSimulation(matched.id)
       const simCustomer = `${simCustomerPrefix}%`
       const statements = [
+        db
+          .delete(event)
+          .where(
+            and(
+              eq(event.siteId, matched.id),
+              like(event.visitorId, `${simVisitorPrefix}%`)
+            )
+          ),
         db
           .delete(revenueMovement)
           .where(
@@ -204,29 +211,31 @@ export const post = new Hono<AppEnv>()
               like(visitorIdentity.userRef, `${simUserPrefix}%`)
             )
           ),
-        ...chunk(rows, batchSize).map((part) => db.insert(event).values(part)),
-        ...chunk(revenue.identities, rowsPerInsert(20)).map((part) =>
+        ...chunk(simulation.events, rowsPerInsert(19)).map((part) =>
+          db.insert(event).values(part)
+        ),
+        ...chunk(simulation.identities, rowsPerInsert(20)).map((part) =>
           db.insert(visitorIdentity).values(part)
         ),
-        ...chunk(revenue.customers, rowsPerInsert(13)).map((part) =>
+        ...chunk(simulation.customers, rowsPerInsert(13)).map((part) =>
           db.insert(stripeCustomer).values(part)
         ),
-        ...chunk(revenue.snapshots, rowsPerInsert(7)).map((part) =>
+        ...chunk(simulation.snapshots, rowsPerInsert(7)).map((part) =>
           db.insert(mrrSnapshot).values(part)
         ),
       ]
       for (const part of chunk(statements, 50)) {
         await runBatch(db, part)
       }
-      for (const customer of revenue.customers) {
+      for (const customer of simulation.customers) {
         await recomputeCustomer(db, matched.id, customer.id)
       }
 
       return c.json(
         {
-          inserted: rows.length,
-          signups: revenue.identities.length,
-          customers: revenue.customers.length,
+          inserted: simulation.events.length,
+          signups: simulation.identities.length,
+          customers: simulation.customers.length,
         },
         200
       )

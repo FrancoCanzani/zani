@@ -1,8 +1,9 @@
 import type { AnyColumn, SQL } from "drizzle-orm"
-import { and, asc, desc, eq, gte, lt, ne, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, inArray, lt, ne, or, sql } from "drizzle-orm"
 
 import { event } from "../../../../db/schema"
 import type { createDb } from "../../../../lib/db"
+import { sourceFor } from "../../../../lib/source"
 
 import {
   filterKeys,
@@ -11,9 +12,9 @@ import {
   type Grain,
 } from "./schema"
 
-const maxRangeMs = 31 * 24 * 60 * 60 * 1000
 const hourMs = 60 * 60 * 1000
 const dayMs = 24 * hourMs
+const maxRangeMs = 400 * dayMs
 const botBrowser = "bot"
 const pageviewName = "pageview"
 const pointLimit = 500
@@ -24,8 +25,10 @@ export type StatsRange = {
   grain: Grain
 }
 
+type Database = ReturnType<typeof createDb>
+
 const dimensionColumns: Record<
-  Exclude<Breakdown, "entry" | "exit"> | FilterKey,
+  Exclude<Breakdown | FilterKey, "entry" | "exit" | "source">,
   AnyColumn
 > = {
   path: event.path,
@@ -55,17 +58,19 @@ export function parseRange(input: {
     return { ok: false, message: "end must be after start." }
   }
   if (end - start > maxRangeMs) {
-    return { ok: false, message: "The range can be at most 31 days." }
+    return { ok: false, message: "The range can be at most 400 days." }
   }
   return { ok: true, range: { start, end, grain: input.grain ?? "day" } }
 }
 
-function bucketSize(grain: Grain): number {
+export function bucketSize(grain: Grain): number {
   switch (grain) {
     case "hour":
       return hourMs
     case "day":
       return dayMs
+    case "week":
+      return 7 * dayMs
     default: {
       const exhaustive: never = grain
       return exhaustive
@@ -77,7 +82,8 @@ function seriesColumn(breakdown: Breakdown | undefined): AnyColumn | null {
   if (
     breakdown === undefined ||
     breakdown === "entry" ||
-    breakdown === "exit"
+    breakdown === "exit" ||
+    breakdown === "source"
   ) {
     return null
   }
@@ -90,7 +96,7 @@ export function filterConditions(
   const conditions: SQL[] = []
   for (const key of filterKeys) {
     const value = filters[key]
-    if (value === undefined) continue
+    if (value === undefined || key === "source") continue
     conditions.push(eq(dimensionColumns[key], value))
   }
   return conditions
@@ -114,17 +120,21 @@ export function trafficConditions(input: {
   return conditions
 }
 
-export function bucketSql(grain: Grain, timeZone?: string) {
+export function bucketSql(
+  grain: Grain,
+  timeZone?: string,
+  column: AnyColumn = event.timestamp
+) {
   const size = bucketSize(grain)
   if (!timeZone || timeZone === "UTC") {
     // D1 binds numbers as floats, so divide-then-multiply needs an explicit floor.
-    return sql<number>`cast((${event.timestamp} / ${size}) as integer) * ${size}`
+    return sql<number>`cast((${column} / ${size}) as integer) * ${size}`
   }
   const offsetMs = timezoneOffsetMs(timeZone, Date.now())
-  return sql<number>`cast(((${event.timestamp} + ${offsetMs}) / ${size}) as integer) * ${size} - ${offsetMs}`
+  return sql<number>`cast(((${column} + ${offsetMs}) / ${size}) as integer) * ${size} - ${offsetMs}`
 }
 
-function timezoneOffsetMs(timeZone: string, atMs: number): number {
+export function timezoneOffsetMs(timeZone: string, atMs: number): number {
   try {
     const parts = new Intl.DateTimeFormat("en-US", {
       timeZone,
@@ -156,13 +166,15 @@ export function siteWhere(
     breakdown?: Breakdown
     event?: string
     bots?: string
-  }
+  },
+  extra: SQL[] = []
 ) {
   return and(
     eq(event.siteId, siteId),
     gte(event.timestamp, range.start),
     lt(event.timestamp, range.end),
     ...filterConditions(query),
+    ...extra,
     ...trafficConditions({
       breakdown: query.breakdown,
       eventFilter: query.event,
@@ -171,8 +183,79 @@ export function siteWhere(
   )
 }
 
+// Channels come from a regex over referrer hosts, so resolve the matching hosts first.
+export async function sourceCondition(
+  db: Database,
+  siteId: string,
+  range: StatsRange,
+  source: string
+): Promise<SQL> {
+  if (source === "direct") {
+    return and(eq(event.utmSource, ""), eq(event.referrerHost, ""))!
+  }
+  const hosts = await db
+    .selectDistinct({ host: event.referrerHost })
+    .from(event)
+    .where(
+      and(
+        eq(event.siteId, siteId),
+        gte(event.timestamp, range.start),
+        lt(event.timestamp, range.end),
+        eq(event.utmSource, ""),
+        ne(event.referrerHost, "")
+      )
+    )
+  const matching = hosts
+    .map((row) => row.host)
+    .filter((host) => sourceFor("", host) === source)
+  const byUtm = sql`lower(${event.utmSource}) = ${source}`
+  if (matching.length === 0) return byUtm
+  return or(
+    byUtm,
+    and(eq(event.utmSource, ""), inArray(event.referrerHost, matching))
+  )!
+}
+
+async function loadSourceBreakdown(
+  db: Database,
+  where: ReturnType<typeof and>
+) {
+  const rows = await db
+    .select({
+      utmSource: event.utmSource,
+      referrerHost: event.referrerHost,
+      views: sql<number>`count(*)`,
+      visitors: sql<number>`count(distinct ${event.visitorId})`,
+      sessions: sql<number>`count(distinct ${event.sessionId})`,
+    })
+    .from(event)
+    .where(where)
+    .groupBy(event.utmSource, event.referrerHost)
+
+  const merged = new Map<
+    string,
+    { series: string; views: number; visitors: number; sessions: number }
+  >()
+  for (const row of rows) {
+    const series = sourceFor(row.utmSource, row.referrerHost)
+    const current = merged.get(series) ?? {
+      series,
+      views: 0,
+      visitors: 0,
+      sessions: 0,
+    }
+    current.views += asNumber(row.views)
+    current.visitors += asNumber(row.visitors)
+    current.sessions += asNumber(row.sessions)
+    merged.set(series, current)
+  }
+  return [...merged.values()]
+    .sort((a, b) => b.visitors - a.visitors)
+    .slice(0, pointLimit)
+}
+
 export async function loadBreakdownRows(
-  db: ReturnType<typeof createDb>,
+  db: Database,
   input: {
     breakdown: Breakdown | undefined
     where: ReturnType<typeof and>
@@ -188,6 +271,9 @@ export async function loadBreakdownRows(
   if (breakdown === "entry" || breakdown === "exit") {
     return loadEdgeBreakdown(db, { breakdown, where })
   }
+  if (breakdown === "source") {
+    return loadSourceBreakdown(db, where)
+  }
 
   const column = seriesColumn(breakdown)
   const series = column ? sql<string>`${column}` : sql<string>`''`
@@ -199,7 +285,7 @@ export async function loadBreakdownRows(
       .from(event)
       .where(where)
       .groupBy(series)
-      .orderBy(desc(views))
+      .orderBy(desc(visitors))
       .limit(pointLimit)
   }
 
@@ -213,7 +299,7 @@ export async function loadBreakdownRows(
 }
 
 async function loadEdgeBreakdown(
-  db: ReturnType<typeof createDb>,
+  db: Database,
   input: {
     breakdown: "entry" | "exit"
     where: ReturnType<typeof and>
@@ -272,7 +358,7 @@ async function loadEdgeBreakdown(
       visitors: value.visitors.size,
       sessions: value.sessions.size,
     }))
-    .sort((a, b) => b.sessions - a.sessions)
+    .sort((a, b) => b.visitors - a.visitors)
     .slice(0, pointLimit)
 }
 

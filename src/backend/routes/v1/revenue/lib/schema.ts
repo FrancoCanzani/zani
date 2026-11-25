@@ -1,6 +1,7 @@
 import { z } from "zod"
 
-export const revenueRanges = ["30d", "90d", "12m", "all"] as const
+import { breakdowns, statsQuerySchema } from "../../sites/lib/schema"
+
 export const attributionDimensions = [
   "source",
   "medium",
@@ -9,16 +10,18 @@ export const attributionDimensions = [
 ] as const
 export const touches = ["first", "last"] as const
 
-export type RevenueRange = (typeof revenueRanges)[number]
 export type AttributionDimension = (typeof attributionDimensions)[number]
 export type Touch = (typeof touches)[number]
 
-export const overviewQuerySchema = z.object({
-  range: z.enum(revenueRanges).default("90d"),
+export const revenueQuerySchema = statsQuerySchema.omit({ breakdown: true })
+
+export type RevenueQuery = z.infer<typeof revenueQuerySchema>
+
+export const revenueBreakdownQuerySchema = revenueQuerySchema.extend({
+  by: z.enum(breakdowns),
 })
 
-export const attributionQuerySchema = z.object({
-  range: z.enum(revenueRanges).default("90d"),
+export const attributionQuerySchema = revenueQuerySchema.extend({
   by: z.enum(attributionDimensions).default("source"),
   touch: z.enum(touches).default("first"),
 })
