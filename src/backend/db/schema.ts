@@ -227,5 +227,91 @@ export const visitor = sqliteTable(
       table.anonymousId
     ),
     index("visitor_site_userId_idx").on(table.siteId, table.userId),
+    index("visitor_site_email_idx").on(table.siteId, table.email),
+  ]
+)
+
+export const stripeConnection = sqliteTable(
+  "stripe_connection",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" })
+      .unique(),
+    stripeAccountId: text("stripe_account_id").notNull().default(""),
+    apiKeyCipher: text("api_key_cipher").notNull(),
+    webhookSecretCipher: text("webhook_secret_cipher").notNull(),
+    livemode: integer("livemode", { mode: "boolean" }).notNull().default(false),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("stripe_connection_workspaceId_idx").on(table.workspaceId)]
+)
+
+export const stripeCustomer = sqliteTable(
+  "stripe_customer",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    stripeCustomerId: text("stripe_customer_id").notNull(),
+    email: text("email").notNull().default(""),
+    name: text("name").notNull().default(""),
+    metadataUserId: text("metadata_user_id").notNull().default(""),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("stripe_customer_workspace_stripe_idx").on(
+      table.workspaceId,
+      table.stripeCustomerId
+    ),
+    index("stripe_customer_workspace_email_idx").on(
+      table.workspaceId,
+      table.email
+    ),
+    index("stripe_customer_workspace_userId_idx").on(
+      table.workspaceId,
+      table.metadataUserId
+    ),
+  ]
+)
+
+export const stripeSubscription = sqliteTable(
+  "stripe_subscription",
+  {
+    id: text("id").primaryKey(),
+    workspaceId: text("workspace_id")
+      .notNull()
+      .references(() => workspace.id, { onDelete: "cascade" }),
+    stripeSubscriptionId: text("stripe_subscription_id").notNull(),
+    stripeCustomerId: text("stripe_customer_id").notNull(),
+    status: text("status").notNull(),
+    mrrCents: integer("mrr_cents").notNull().default(0),
+    currency: text("currency").notNull().default("usd"),
+    interval: text("interval").notNull().default(""),
+    cancelAtPeriodEnd: integer("cancel_at_period_end", {
+      mode: "boolean",
+    })
+      .notNull()
+      .default(false),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("stripe_subscription_workspace_stripe_idx").on(
+      table.workspaceId,
+      table.stripeSubscriptionId
+    ),
+    index("stripe_subscription_workspace_customer_idx").on(
+      table.workspaceId,
+      table.stripeCustomerId
+    ),
+    index("stripe_subscription_workspace_status_idx").on(
+      table.workspaceId,
+      table.status
+    ),
   ]
 )

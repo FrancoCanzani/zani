@@ -55,7 +55,23 @@ export function SitesPage() {
 
   return (
     <div className="flex flex-col gap-10">
-      <h1 className="text-4xl font-light tracking-tight">Sites</h1>
+      <div className="flex items-start justify-between gap-4">
+        <h1 className="text-4xl font-light tracking-tight">Sites</h1>
+        <div className="flex items-center gap-1.5">
+          <Button asChild variant="outline" size="xs">
+            <Link to="/businesses/$slug/revenue" params={{ slug }}>
+              Revenue
+            </Link>
+          </Button>
+          {canAdd ? (
+            <Button asChild variant="outline" size="xs">
+              <Link to="/businesses/$slug/manage" params={{ slug }}>
+                Manage
+              </Link>
+            </Button>
+          ) : null}
+        </div>
+      </div>
 
       <ul className="divide-y border-y">
         {data.sites.map((site) => (

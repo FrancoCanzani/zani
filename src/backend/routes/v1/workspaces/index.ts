@@ -3,6 +3,7 @@ import { Hono } from "hono"
 import type { AppEnv } from "../../../types"
 
 import { sites } from "../sites"
+import { stripeWorkspace } from "../stripe"
 
 import { remove } from "./delete"
 import { get } from "./get"
@@ -14,4 +15,5 @@ export const workspaces = new Hono<AppEnv>()
   .route("/", post)
   .route("/", patch)
   .route("/", remove)
+  .route("/", stripeWorkspace)
   .route("/:slug/sites", sites)

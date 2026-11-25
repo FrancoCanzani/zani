@@ -4,7 +4,7 @@
 
 This repository is a development foundation for an analytics SaaS.
 
-One-line product: acquisition → revenue attribution for a site you own (pageviews + identify now; Stripe later).
+One-line product: acquisition → Stripe revenue attribution for a site you own.
 
 Do not implement product features unless the current task asks for them.
 
@@ -12,7 +12,7 @@ Do not add URL shortening, link redirects, click maps, session replay, campaigns
 
 Do not add web vitals / RUM / Speed unless explicitly requested.
 
-v1 is sites, pageviews, durable anonymous visitors, first-touch, and identify in D1. Prefer a subscription later. Do not take a cut of payments. Do not build invoicing. Do not implement Stripe unless the current task asks.
+v1 is sites, pageviews, durable anonymous visitors, first-touch, identify, and Stripe revenue attribution in D1. Prefer a subscription later. Do not take a cut of payments. Do not build invoicing. Stripe connect uses the customer’s own secret/restricted key — no Connect platform fees.
 
 Authentication is Better Auth email OTP on `/api/v1/auth`. Do not add passwords, OAuth, or extra auth providers unless asked.
 
