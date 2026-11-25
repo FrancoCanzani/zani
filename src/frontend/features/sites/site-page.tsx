@@ -236,6 +236,33 @@ export function SitePage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          {totals.data.hasEvents ? (
+            <div
+              role="tablist"
+              aria-label="Site view"
+              className="flex h-8 items-center gap-0.5 rounded-lg bg-muted p-0.5"
+            >
+              {siteViewOrder.map((item) => {
+                const selected = view === item
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    role="tab"
+                    aria-selected={selected}
+                    onClick={() => patchSearch({ view: item })}
+                    className={`h-7 min-w-[5.75rem] rounded-md px-2.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+                      selected
+                        ? "bg-background text-foreground shadow-sm"
+                        : "text-muted-foreground hover:text-foreground"
+                    }`}
+                  >
+                    {siteViewLabels[item]}
+                  </button>
+                )
+              })}
+            </div>
+          ) : null}
           {import.meta.env.DEV ? (
             <Button
               type="button"
@@ -507,32 +534,6 @@ function SiteDashboard({
 }) {
   return (
     <>
-      <div
-        role="tablist"
-        aria-label="Site view"
-        className="flex h-9 w-fit items-center gap-0.5 rounded-lg bg-muted p-1"
-      >
-        {siteViewOrder.map((item) => {
-          const selected = view === item
-          return (
-            <button
-              key={item}
-              type="button"
-              role="tab"
-              aria-selected={selected}
-              onClick={() => patchSearch({ view: item })}
-              className={`h-7 rounded-md px-3 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-                selected
-                  ? "bg-background text-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground"
-              }`}
-            >
-              {siteViewLabels[item]}
-            </button>
-          )
-        })}
-      </div>
-
       <SiteToolbar
         search={search}
         view={view}
