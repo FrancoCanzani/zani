@@ -3,6 +3,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
+import { ArrowDownIcon } from "lucide-react"
 import { Suspense, useEffect, useMemo, useState } from "react"
 
 import { Button } from "@components/ui/button"
@@ -79,10 +80,13 @@ function ColumnHeader({
       type="button"
       onClick={onClick}
       aria-pressed={active}
-      className={`${className} rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${active ? "text-foreground" : ""}`}
+      className={`${className} inline-flex items-center justify-end gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${active ? "text-foreground" : ""}`}
     >
+      <ArrowDownIcon
+        aria-hidden
+        className={`size-3 transition-opacity ${active ? "opacity-100" : "opacity-0"}`}
+      />
       {label}
-      {active ? " ↓" : ""}
     </button>
   )
 }
@@ -114,20 +118,20 @@ function RowList({
 
   return (
     <div>
-      <div className="flex h-6 items-center gap-2 px-2 text-[11px] text-muted-foreground uppercase">
+      <div className="mt-3 mb-1 flex h-6 items-center gap-3 border-b border-border/60 px-2 pb-1 text-xs text-muted-foreground">
         <span className="flex-1" />
         <ColumnHeader
           label="Visitors"
           active={showRevenue && sort === "visitors"}
           onClick={showRevenue && onSort ? () => onSort("visitors") : undefined}
-          className="w-16 text-right"
+          className="w-20 text-right"
         />
         {showRevenue ? (
           <ColumnHeader
             label="Revenue"
             active={sort === "revenue"}
             onClick={onSort ? () => onSort("revenue") : undefined}
-            className="w-20 text-right"
+            className="w-24 text-right"
           />
         ) : null}
       </div>
@@ -144,7 +148,7 @@ function RowList({
                 type="button"
                 title={perVisitor}
                 onClick={() => onSelect(filterKey, row.value)}
-                className={`group relative flex h-[30px] w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-[13px] transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${selected ? "bg-muted/70" : ""}`}
+                className={`group relative flex h-[30px] w-full items-center gap-3 overflow-hidden rounded-md px-2 text-left text-[13px] transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${selected ? "bg-muted/70" : ""}`}
               >
                 <span
                   aria-hidden
@@ -159,12 +163,12 @@ function RowList({
                     {dimensionLabel(dimension, row.value)}
                   </span>
                 </span>
-                <span className="relative w-16 text-right font-mono text-muted-foreground tabular-nums">
+                <span className="relative w-20 text-right font-mono text-muted-foreground tabular-nums">
                   {row.visitors.toLocaleString()}
                 </span>
                 {showRevenue ? (
                   <span
-                    className={`relative w-20 text-right font-mono tabular-nums ${row.newMrr > 0 ? "text-foreground" : "text-muted-foreground/60"}`}
+                    className={`relative w-24 text-right font-mono tabular-nums ${row.newMrr > 0 ? "text-foreground" : "text-muted-foreground/60"}`}
                   >
                     {row.newMrr > 0
                       ? formatCompactMoney(row.newMrr, currency)

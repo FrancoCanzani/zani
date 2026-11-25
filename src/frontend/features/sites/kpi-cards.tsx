@@ -1,10 +1,6 @@
 import { Area, AreaChart } from "recharts"
 
-import {
-  formatCompactMoney,
-  formatMoney,
-  type RevenueOverview,
-} from "@features/revenue/api"
+import { formatCompactMoney, type RevenueOverview } from "@features/revenue/api"
 
 import { changePercent, type SiteStats } from "./api"
 import { metricLabels, type Metric } from "./search"
@@ -14,7 +10,6 @@ type Kpi = {
   value: string
   delta: number | null
   invert?: boolean
-  hint: string
   series: number[]
 }
 
@@ -65,12 +60,6 @@ function Sparkline({ values, accent }: { values: number[]; accent: boolean }) {
 
 const revenueMetrics = new Set<Metric>(["signups", "new_mrr", "mrr"])
 
-function percent(part: number, whole: number) {
-  if (whole <= 0) return "0%"
-  const value = (part / whole) * 100
-  return `${value < 10 ? value.toFixed(1) : Math.round(value)}%`
-}
-
 export function KpiCards({
   totals,
   previousTotals,
@@ -89,22 +78,18 @@ export function KpiCards({
   const currency = revenue.currency
   const trafficSeries = (key: "visitors" | "views") =>
     totals.points.map((point) => point[key])
-  const perVisitor =
-    totals.visitors > 0 ? Math.round(revenue.newMrr / totals.visitors) : 0
 
   const kpis: Kpi[] = [
     {
       metric: "visitors",
       value: totals.visitors.toLocaleString(),
       delta: changePercent(totals.visitors, previousTotals.visitors),
-      hint: `${totals.sessions.toLocaleString()} visits`,
       series: trafficSeries("visitors"),
     },
     {
       metric: "views",
       value: totals.views.toLocaleString(),
       delta: changePercent(totals.views, previousTotals.views),
-      hint: `${totals.viewsPerVisit} per visit`,
       series: trafficSeries("views"),
     },
     {
@@ -112,21 +97,18 @@ export function KpiCards({
       value: `${totals.bounceRate}%`,
       delta: changePercent(totals.bounceRate, previousTotals.bounceRate),
       invert: true,
-      hint: "left after one page",
       series: [],
     },
     {
       metric: "signups",
       value: revenue.signups.toLocaleString(),
       delta: changePercent(revenue.signups, previousRevenue.signups),
-      hint: `${percent(revenue.signups, totals.visitors)} of visitors`,
       series: revenue.points.map((point) => point.signups),
     },
     {
       metric: "new_mrr",
       value: formatCompactMoney(revenue.newMrr, currency),
       delta: changePercent(revenue.newMrr, previousRevenue.newMrr),
-      hint: `${formatMoney(perVisitor, currency)} per visitor`,
       series: revenue.points.map((point) => point.newMrr),
     },
     {
@@ -136,7 +118,6 @@ export function KpiCards({
         revenue.mrrStart > 0
           ? changePercent(revenue.mrr, revenue.mrrStart)
           : null,
-      hint: `${revenue.payingCustomers} paying · ${formatCompactMoney(revenue.arpa, currency)} avg`,
       series: revenue.points.map((point) => point.mrr),
     },
   ]
@@ -152,7 +133,7 @@ export function KpiCards({
             type="button"
             aria-pressed={active}
             onClick={() => onSelect(kpi.metric)}
-            className={`relative min-w-0 overflow-hidden rounded-xl border bg-card px-3 pt-3 pb-9 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+            className={`relative min-w-0 overflow-hidden rounded-xl border bg-card px-3 pt-3 pb-10 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
               active
                 ? "border-foreground/40 ring-1 ring-foreground/10"
                 : "border-border/70 hover:border-foreground/20 hover:bg-muted/30"
@@ -174,9 +155,6 @@ export function KpiCards({
               {kpi.delta === null ? null : (
                 <DeltaBadge value={kpi.delta} invert={kpi.invert} />
               )}
-            </div>
-            <div className="mt-0.5 truncate text-xs text-muted-foreground">
-              {kpi.hint}
             </div>
             <Sparkline values={kpi.series} accent={accent} />
           </button>

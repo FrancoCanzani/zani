@@ -1,10 +1,12 @@
 import {
+  BotIcon,
   GlobeIcon,
   LinkIcon,
   MailIcon,
   MonitorIcon,
   SmartphoneIcon,
   TabletIcon,
+  TerminalIcon,
 } from "lucide-react"
 import { getName, registerLocale } from "i18n-iso-countries"
 import enLocale from "i18n-iso-countries/langs/en.json"
@@ -33,6 +35,23 @@ const channelHosts: Record<string, string> = {
   github: "github.com",
   youtube: "youtube.com",
   chatgpt: "chatgpt.com",
+}
+
+const browserHosts: Record<string, string> = {
+  chrome: "chrome.com",
+  safari: "apple.com",
+  firefox: "firefox.com",
+  edge: "microsoftedge.com",
+  samsung: "samsung.com",
+  opera: "opera.com",
+  brave: "brave.com",
+}
+
+const osHosts: Record<string, string> = {
+  macos: "apple.com",
+  ios: "apple.com",
+  windows: "microsoft.com",
+  android: "android.com",
 }
 
 const iconClass = "size-3.5 shrink-0 text-muted-foreground"
@@ -106,12 +125,29 @@ export function DimensionIcon({
       if (value === "tablet")
         return <TabletIcon aria-hidden className={iconClass} />
       return <MonitorIcon aria-hidden className={iconClass} />
+    case "browser": {
+      if (value === "bot") return <BotIcon aria-hidden className={iconClass} />
+      const host = browserHosts[value]
+      return host ? (
+        <Favicon key={host} host={host} />
+      ) : (
+        <GlobeIcon aria-hidden className={iconClass} />
+      )
+    }
+    case "os": {
+      if (value === "linux")
+        return <TerminalIcon aria-hidden className={iconClass} />
+      const host = osHosts[value]
+      return host ? (
+        <Favicon key={host} host={host} />
+      ) : (
+        <MonitorIcon aria-hidden className={iconClass} />
+      )
+    }
     case "path":
     case "entry":
     case "exit":
     case "city":
-    case "browser":
-    case "os":
     case "screen":
     case "event":
     case "utm_source":
