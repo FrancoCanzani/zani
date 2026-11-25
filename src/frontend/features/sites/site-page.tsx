@@ -29,6 +29,7 @@ import {
 import { BreakdownPanel } from "./breakdown-panel"
 import { breakdownPanels } from "./panels"
 import { RangePicker } from "./range-picker"
+import { SiteTabs } from "./site-tabs"
 import {
   activeFilterChips,
   filterKeys,
@@ -187,10 +188,15 @@ export function SitePage() {
   const simulate = useMutation({
     mutationFn: () => simulateSiteViews(slug, siteId),
     onSuccess: async (result) => {
-      toast.success(`Inserted ${result.inserted} views`)
-      await queryClient.invalidateQueries({
-        queryKey: ["site-stats", slug, siteId],
-      })
+      toast.success(
+        `Simulated ${result.inserted} views, ${result.signups} signups, and ${result.customers} customers`
+      )
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["site-stats", slug, siteId],
+        }),
+        queryClient.invalidateQueries({ queryKey: ["revenue", slug, siteId] }),
+      ])
     },
     onError: (error) => {
       toast.error(error.message)
@@ -221,7 +227,7 @@ export function SitePage() {
               disabled={simulate.isPending || revoked}
               onClick={() => simulate.mutate()}
             >
-              {simulate.isPending ? "Simulating…" : "Simulate views"}
+              {simulate.isPending ? "Simulating…" : "Simulate data"}
             </Button>
           ) : null}
           <Button asChild variant="outline" size="sm">
@@ -234,6 +240,8 @@ export function SitePage() {
           </Button>
         </div>
       </div>
+
+      <SiteTabs slug={slug} siteId={siteId} active="traffic" />
 
       {revoked ? (
         <p className="text-sm text-muted-foreground">

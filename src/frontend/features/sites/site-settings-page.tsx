@@ -24,6 +24,7 @@ import { Button } from "@components/ui/button"
 import { Field, FieldError, FieldGroup, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
+import { RevenueSettings } from "@features/revenue/revenue-settings"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import { PeoplePanel } from "@features/workspaces/people-panel"
 import {
@@ -292,6 +293,8 @@ export function SiteSettingsPage() {
           )}
         </section>
       ) : null}
+
+      <RevenueSettings slug={slug} siteId={siteId} canManage={canManage} />
 
       <PeoplePanel slug={slug} email={session.user.email} />
 

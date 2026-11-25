@@ -222,7 +222,10 @@ export async function simulateSiteViews(slug: string, siteId: string) {
   if (!response.ok) {
     throw new Error("Could not simulate views.")
   }
-  return requireJson<{ inserted: number }>(response, "inserted")
+  return requireJson<{ inserted: number; signups: number; customers: number }>(
+    response,
+    "inserted"
+  )
 }
 
 export function statsQueryFromSearch(search: SiteSearch): StatsQuery {

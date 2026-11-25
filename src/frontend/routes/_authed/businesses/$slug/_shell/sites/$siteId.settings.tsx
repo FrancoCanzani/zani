@@ -3,6 +3,7 @@ import { createFileRoute, notFound } from "@tanstack/react-router"
 import { NotFoundScreen } from "@components/not-found-screen"
 import { pendingScreen } from "@components/pending-screen"
 
+import { stripeStatusQueryOptions } from "@features/revenue/api"
 import { sitesQueryOptions } from "@features/sites/api"
 import { SiteSettingsPage } from "@features/sites/site-settings-page"
 import {
@@ -33,6 +34,10 @@ export const Route = createFileRoute(
     }
     const role = parseWorkspaceRole(workspaceData.workspace.role)
     await Promise.all([
+      context.queryClient.query({
+        ...stripeStatusQueryOptions(params.slug, params.siteId),
+        staleTime: "static",
+      }),
       context.queryClient.query({
         ...workspaceMembersQueryOptions(params.slug),
         staleTime: "static",
