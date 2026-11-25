@@ -77,6 +77,57 @@ const source = `(() => {
     if (!path) path = pagePath()
     send(trimmed, document.referrer)
   }
+  const store = {
+    read(name) {
+      try {
+        const raw = localStorage.getItem("zani:" + name)
+        return raw ? JSON.parse(raw) : null
+      } catch {
+        return null
+      }
+    },
+    write(name, value) {
+      try {
+        localStorage.setItem("zani:" + name, JSON.stringify(value))
+      } catch {}
+    },
+  }
+  const recordTouch = () => {
+    captureUtms()
+    let referrer = ""
+    try {
+      const host = new URL(document.referrer).hostname
+      if (host && host !== location.hostname) referrer = document.referrer
+    } catch {}
+    const touch = {
+      utmSource: utms.utmSource,
+      utmMedium: utms.utmMedium,
+      utmCampaign: utms.utmCampaign,
+      referrer,
+      landing: location.pathname,
+      at: Date.now(),
+    }
+    const direct = !touch.utmSource && !touch.referrer
+    if (!store.read("first")) store.write("first", touch)
+    if (!direct || !store.read("last")) store.write("last", touch)
+  }
+  const identify = (userId, traits) => {
+    if (typeof userId !== "string" && typeof userId !== "number") return
+    const id = String(userId).trim()
+    if (!id) return
+    const email = traits && typeof traits.email === "string" ? traits.email : undefined
+    void fetch(new URL("/api/v1/identify", el.src), {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-write-key": key },
+      body: JSON.stringify({
+        userId: id.slice(0, 128),
+        email,
+        firstTouch: store.read("first") || undefined,
+        lastTouch: store.read("last") || undefined,
+      }),
+      keepalive: true,
+    })
+  }
   const push = history.pushState
   const replace = history.replaceState
   history.pushState = function () {
@@ -91,8 +142,9 @@ const source = `(() => {
   }
   addEventListener("popstate", trackPage)
   addEventListener("hashchange", trackPage)
+  recordTouch()
   trackPage()
-  window.zani = { track }
+  window.zani = { track, identify }
 })()
 `
 

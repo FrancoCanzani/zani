@@ -1,9 +1,22 @@
 import { zValidator } from "@hono/zod-validator"
-import { eq } from "drizzle-orm"
+import { and, eq, like } from "drizzle-orm"
 import { Hono } from "hono"
 
-import { event, site } from "../../../db/schema"
+import {
+  event,
+  mrrSnapshot,
+  revenueMovement,
+  site,
+  stripeCustomer,
+  visitorIdentity,
+} from "../../../db/schema"
 import { createDb } from "../../../lib/db"
+import {
+  chunk,
+  recomputeCustomer,
+  rowsPerInsert,
+  runBatch,
+} from "../../../lib/revenue"
 import {
   newId,
   nowMs,
@@ -20,6 +33,11 @@ import { loadSite } from "./lib/load"
 import { createSiteBodySchema } from "./lib/schema"
 import { serializeSite } from "./lib/serialize"
 import { batchSize, buildSimulateRows } from "./lib/simulate"
+import {
+  buildRevenueSimulation,
+  simCustomerPrefix,
+  simUserPrefix,
+} from "./lib/simulate-revenue"
 
 export const post = new Hono<AppEnv>()
   .post(
@@ -156,10 +174,66 @@ export const post = new Hono<AppEnv>()
       }
 
       const rows = buildSimulateRows(matched.id)
-      for (let offset = 0; offset < rows.length; offset += batchSize) {
-        await db.insert(event).values(rows.slice(offset, offset + batchSize))
+      const revenue = buildRevenueSimulation(matched.id)
+      const simCustomer = `${simCustomerPrefix}%`
+      const statements = [
+        db
+          .delete(revenueMovement)
+          .where(
+            and(
+              eq(revenueMovement.siteId, matched.id),
+              like(revenueMovement.customerId, simCustomer)
+            )
+          ),
+        db
+          .delete(mrrSnapshot)
+          .where(
+            and(
+              eq(mrrSnapshot.siteId, matched.id),
+              like(mrrSnapshot.customerId, simCustomer)
+            )
+          ),
+        db
+          .delete(stripeCustomer)
+          .where(
+            and(
+              eq(stripeCustomer.siteId, matched.id),
+              like(stripeCustomer.id, simCustomer)
+            )
+          ),
+        db
+          .delete(visitorIdentity)
+          .where(
+            and(
+              eq(visitorIdentity.siteId, matched.id),
+              like(visitorIdentity.userRef, `${simUserPrefix}%`)
+            )
+          ),
+        ...chunk(rows, batchSize).map((part) => db.insert(event).values(part)),
+        ...chunk(revenue.identities, rowsPerInsert(20)).map((part) =>
+          db.insert(visitorIdentity).values(part)
+        ),
+        ...chunk(revenue.customers, rowsPerInsert(13)).map((part) =>
+          db.insert(stripeCustomer).values(part)
+        ),
+        ...chunk(revenue.snapshots, rowsPerInsert(7)).map((part) =>
+          db.insert(mrrSnapshot).values(part)
+        ),
+      ]
+      for (const part of chunk(statements, 50)) {
+        await runBatch(db, part)
+      }
+      for (const customer of revenue.customers) {
+        await recomputeCustomer(db, matched.id, customer.id)
       }
 
-      return c.json({ inserted: rows.length }, 200)
+      return c.json(
+        {
+          inserted: rows.length,
+          signups: revenue.identities.length,
+          customers: revenue.customers.length,
+        },
+        200
+      )
     }
   )
