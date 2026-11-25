@@ -38,6 +38,7 @@ import {
 } from "./api"
 import { BreakdownPanel } from "./breakdown-panel"
 import { DashboardChart } from "./dashboard-chart"
+import { InstallStatus } from "./install-status"
 import { KpiCards } from "./kpi-cards"
 import { breakdownPanels } from "./panels"
 import { RangePicker } from "./range-picker"
@@ -557,22 +558,19 @@ function WaitingForViews({
   siteId: string
 }) {
   return (
-    <section className="space-y-4 rounded-xl border border-dashed border-border p-6">
-      <div className="space-y-1">
-        <h2 className="flex items-center gap-2 text-[15px] font-medium tracking-tight">
-          <span className="relative flex size-2">
-            <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
-            <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
-          </span>
-          Waiting for the first pageview
+    <section className="space-y-4 rounded-xl border border-border/70 bg-card p-6">
+      <div className="space-y-2">
+        <h2 className="text-[15px] font-medium tracking-tight">
+          Install the script
         </h2>
+        <InstallStatus slug={slug} siteId={siteId} domain={domain} />
         {writeKey ? (
-          <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-            Paste the script on {domain}, then load a page.
-            {import.meta.env.DEV
-              ? " Or press Simulate data to fill the dashboard with fake traffic and revenue."
-              : ""}
-          </p>
+          import.meta.env.DEV ? (
+            <p className="text-sm text-muted-foreground">
+              Or press Simulate data to fill the dashboard with fake traffic and
+              revenue.
+            </p>
+          ) : null
         ) : canManage ? (
           <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
             The write key was shown once. Rotate it to copy a new script.

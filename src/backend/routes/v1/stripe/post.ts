@@ -4,7 +4,7 @@ import { Hono } from "hono"
 
 import { stripeConnection } from "../../../db/schema"
 import { createDb } from "../../../lib/db"
-import { decryptSecret, encryptSecret } from "../../../lib/secrets"
+import { decryptSecret } from "../../../lib/secrets"
 import { StripeError, stripeGet } from "../../../lib/stripe"
 import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"
@@ -13,7 +13,11 @@ import { loadSite } from "../sites/lib/load"
 import { workspaceFromContext } from "../workspaces/lib/context"
 import { canManageBusiness, parseWorkspaceRole } from "../workspaces/lib/schema"
 
-import { loadConnection, serializeConnection } from "./lib/connection"
+import {
+  loadConnection,
+  saveConnection,
+  serializeConnection,
+} from "./lib/connection"
 import { connectBodySchema, syncQuerySchema } from "./lib/schema"
 import { parseSyncPhase, runSyncStep } from "./lib/sync"
 
@@ -50,36 +54,17 @@ export const post = new Hono<AppEnv>()
         return c.json({ error: "stripe" as const, message }, 400)
       }
 
-      const now = Date.now()
-      const values = {
+      await saveConnection(db, c.env.BETTER_AUTH_SECRET, {
         siteId: matched.id,
-        apiKeyCipher: await encryptSecret(
-          c.env.BETTER_AUTH_SECRET,
-          body.apiKey
-        ),
+        apiKey: body.apiKey,
         apiKeyHint: body.apiKey.slice(-4),
-        webhookSecretCipher: body.webhookSecret
-          ? await encryptSecret(c.env.BETTER_AUTH_SECRET, body.webhookSecret)
-          : null,
         livemode: body.apiKey.includes("_live_"),
-        syncPhase: "customers",
-        syncCursor: null,
-        syncedAt: null,
-        syncError: null,
-        createdAt: now,
-        updatedAt: now,
-      }
-      await db
-        .insert(stripeConnection)
-        .values(values)
-        .onConflictDoUpdate({
-          target: stripeConnection.siteId,
-          set: { ...values, createdAt: undefined },
-        })
+        webhookSecret: body.webhookSecret,
+      })
 
       const row = await loadConnection(db, matched.id)
       return c.json(
-        { stripe: await serializeConnection(db, matched.id, row) },
+        { stripe: await serializeConnection(db, c.env, matched.id, row) },
         200
       )
     }

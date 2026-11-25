@@ -5,7 +5,12 @@ import {
   useSuspenseQuery,
   type QueryClient,
 } from "@tanstack/react-query"
-import { Link, getRouteApi, notFound } from "@tanstack/react-router"
+import {
+  Link,
+  getRouteApi,
+  notFound,
+  useNavigate,
+} from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -39,12 +44,19 @@ import {
   sitesQueryOptions,
   updateSite,
 } from "./api"
+import { InstallStatus } from "./install-status"
 import { useRememberedWriteKey } from "./write-key"
 
 const routeApi = getRouteApi(
   "/_authed/businesses/$slug/_shell/sites/$siteId/settings"
 )
 const sessionApi = getRouteApi("/_authed")
+
+const stripeResultMessages = {
+  connected: "Stripe connected. Run the first sync to import history.",
+  denied: "Stripe connection was cancelled.",
+  error: "Could not connect Stripe. Try again or use a restricted key.",
+} as const
 
 const hostnamePattern =
   /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$/
@@ -79,6 +91,8 @@ async function refreshSite(
 
 export function SiteSettingsPage() {
   const { slug, siteId } = routeApi.useParams()
+  const { stripe: stripeResult } = routeApi.useSearch()
+  const navigate = useNavigate()
   const { session } = sessionApi.useRouteContext()
   const queryClient = useQueryClient()
   const { data } = useSuspenseQuery(sitesQueryOptions(slug))
@@ -149,6 +163,22 @@ export function SiteSettingsPage() {
       formApi.setFieldValue("domain", domain)
     },
   })
+
+  useEffect(() => {
+    if (!stripeResult) return
+    if (stripeResult === "connected") {
+      toast.success(stripeResultMessages.connected)
+    } else {
+      toast.error(stripeResultMessages[stripeResult])
+    }
+    void navigate({
+      to: ".",
+      search: {},
+      hash: "revenue",
+      replace: true,
+      resetScroll: false,
+    })
+  }, [navigate, stripeResult])
 
   useEffect(() => {
     form.reset({ name: site.name, domain: site.domain })
@@ -266,6 +296,7 @@ export function SiteSettingsPage() {
             </p>
           ) : (
             <>
+              <InstallStatus slug={slug} siteId={siteId} domain={site.domain} />
               {writeKey ? (
                 <InstallSnippet
                   label="Write key"
@@ -294,7 +325,12 @@ export function SiteSettingsPage() {
         </section>
       ) : null}
 
-      <RevenueSettings slug={slug} siteId={siteId} canManage={canManage} />
+      <RevenueSettings
+        slug={slug}
+        siteId={siteId}
+        domain={site.domain}
+        canManage={canManage}
+      />
 
       <PeoplePanel slug={slug} email={session.user.email} />
 

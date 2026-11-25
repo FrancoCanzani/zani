@@ -53,7 +53,7 @@ export const patch = new Hono<AppEnv>().patch(
 
     const row = await loadConnection(db, matched.id)
     return c.json(
-      { stripe: await serializeConnection(db, matched.id, row) },
+      { stripe: await serializeConnection(db, c.env, matched.id, row) },
       200
     )
   }

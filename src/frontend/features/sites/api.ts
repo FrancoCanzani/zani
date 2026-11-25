@@ -208,6 +208,29 @@ export async function revokeSite(slug: string, siteId: string) {
   return requireJson<{ site: Site }>(response, "site")
 }
 
+export type SiteSetup = {
+  firstPageviewAt: number | null
+  firstPageviewPath: string | null
+  lastPageviewAt: number | null
+  signups: number
+  firstIdentifyAt: number | null
+  lastIdentifyAt: number | null
+  linkedCustomers: number
+}
+
+export function siteSetupQueryOptions(slug: string, siteId: string) {
+  return queryOptions({
+    queryKey: ["site-setup", slug, siteId] as const,
+    queryFn: async () =>
+      requireJson<{ setup: SiteSetup }>(
+        await api.workspaces[":slug"].sites[":siteId"].setup.$get({
+          param: { slug, siteId },
+        }),
+        "setup"
+      ),
+  })
+}
+
 export async function simulateSiteViews(slug: string, siteId: string) {
   const response = await api.workspaces[":slug"].sites[
     ":siteId"

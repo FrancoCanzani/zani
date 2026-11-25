@@ -15,6 +15,9 @@ import { loadSite } from "../sites/lib/load"
 import { workspaceFromContext } from "../workspaces/lib/context"
 import { canManageBusiness, parseWorkspaceRole } from "../workspaces/lib/schema"
 
+import { loadConnection } from "./lib/connection"
+import { deauthorize, oauthAccount, oauthConfig } from "./lib/oauth"
+
 export const remove = new Hono<AppEnv>().delete(
   "/",
   requireSession,
@@ -35,6 +38,12 @@ export const remove = new Hono<AppEnv>().delete(
       return c.json({ error: "not_found" as const }, 404)
     }
 
+    const existing = await loadConnection(db, matched.id)
+    const account = existing ? oauthAccount(existing.apiKeyHint) : null
+    if (account) {
+      await deauthorize(c.env, account)
+    }
+
     // Revenue data is derived from the connected account; keeping it would mix accounts on reconnect.
     await db.batch([
       db
@@ -45,6 +54,14 @@ export const remove = new Hono<AppEnv>().delete(
       db.delete(stripeCustomer).where(eq(stripeCustomer.siteId, matched.id)),
     ])
 
-    return c.json({ stripe: { connected: false as const } }, 200)
+    return c.json(
+      {
+        stripe: {
+          connected: false as const,
+          oauthAvailable: oauthConfig(c.env) !== null,
+        },
+      },
+      200
+    )
   }
 )

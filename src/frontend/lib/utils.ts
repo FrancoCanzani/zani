@@ -18,3 +18,21 @@ export function fieldErrors(
     return { message: "Invalid value" }
   })
 }
+
+const relativeUnits: Array<[Intl.RelativeTimeFormatUnit, number]> = [
+  ["year", 365 * 24 * 60 * 60 * 1000],
+  ["month", 30 * 24 * 60 * 60 * 1000],
+  ["day", 24 * 60 * 60 * 1000],
+  ["hour", 60 * 60 * 1000],
+  ["minute", 60 * 1000],
+]
+
+export function formatRelative(ms: number, now = Date.now()) {
+  const diff = ms - now
+  const format = new Intl.RelativeTimeFormat(undefined, { numeric: "auto" })
+  for (const [unit, size] of relativeUnits) {
+    if (Math.abs(diff) >= size)
+      return format.format(Math.round(diff / size), unit)
+  }
+  return "just now"
+}

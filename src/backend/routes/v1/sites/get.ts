@@ -1,8 +1,14 @@
 import { zValidator } from "@hono/zod-validator"
-import { and, asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, isNotNull, notLike, sql } from "drizzle-orm"
 import { Hono } from "hono"
 
-import { event, eventProp, site } from "../../../db/schema"
+import {
+  event,
+  eventProp,
+  site,
+  stripeCustomer,
+  visitorIdentity,
+} from "../../../db/schema"
 import { createDb } from "../../../lib/db"
 import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"
@@ -10,6 +16,11 @@ import type { AppEnv } from "../../../types"
 import { workspaceFromContext } from "../workspaces/lib/context"
 
 import { loadSite } from "./lib/load"
+import {
+  simCustomerPrefix,
+  simUserPrefix,
+  simVisitorPrefix,
+} from "./lib/simulate"
 import { statsQuerySchema } from "./lib/schema"
 import { serializeSite } from "./lib/serialize"
 import {
@@ -39,6 +50,79 @@ export const get = new Hono<AppEnv>()
       .orderBy(asc(site.name))
 
     return c.json({ sites: rows.map(serializeSite) }, 200)
+  })
+  .get("/:siteId/setup", requireSession, requireWorkspaceMember, async (c) => {
+    const current = workspaceFromContext(c.var)
+    const db = createDb(c.env)
+    const matched = await loadSite(
+      db,
+      current.workspace.id,
+      c.req.param("siteId")
+    )
+    if (!matched) {
+      return c.json({ error: "not_found" as const }, 404)
+    }
+
+    const [[firstView], [lastView], [signups], [linked]] = await Promise.all([
+      db
+        .select({ at: event.timestamp, path: event.path })
+        .from(event)
+        .where(
+          and(
+            eq(event.siteId, matched.id),
+            notLike(event.visitorId, `${simVisitorPrefix}%`)
+          )
+        )
+        .orderBy(asc(event.timestamp))
+        .limit(1),
+      db
+        .select({ at: sql<number | null>`max(${event.timestamp})` })
+        .from(event)
+        .where(
+          and(
+            eq(event.siteId, matched.id),
+            notLike(event.visitorId, `${simVisitorPrefix}%`)
+          )
+        ),
+      db
+        .select({
+          count: sql<number>`count(*)`,
+          first: sql<number | null>`min(${visitorIdentity.signedUpAt})`,
+          last: sql<number | null>`max(${visitorIdentity.signedUpAt})`,
+        })
+        .from(visitorIdentity)
+        .where(
+          and(
+            eq(visitorIdentity.siteId, matched.id),
+            notLike(visitorIdentity.userRef, `${simUserPrefix}%`)
+          )
+        ),
+      db
+        .select({ count: sql<number>`count(*)` })
+        .from(stripeCustomer)
+        .where(
+          and(
+            eq(stripeCustomer.siteId, matched.id),
+            isNotNull(stripeCustomer.identityId),
+            notLike(stripeCustomer.id, `${simCustomerPrefix}%`)
+          )
+        ),
+    ])
+
+    return c.json(
+      {
+        setup: {
+          firstPageviewAt: firstView?.at ?? null,
+          firstPageviewPath: firstView?.path ?? null,
+          lastPageviewAt: lastView?.at ?? null,
+          signups: asNumber(signups?.count ?? 0),
+          firstIdentifyAt: signups?.first ?? null,
+          lastIdentifyAt: signups?.last ?? null,
+          linkedCustomers: asNumber(linked?.count ?? 0),
+        },
+      },
+      200
+    )
   })
   .get(
     "/:siteId/stats",

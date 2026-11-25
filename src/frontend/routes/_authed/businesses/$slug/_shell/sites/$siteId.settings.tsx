@@ -5,6 +5,7 @@ import { pendingScreen } from "@components/pending-screen"
 
 import { stripeStatusQueryOptions } from "@features/revenue/api"
 import { sitesQueryOptions } from "@features/sites/api"
+import { siteSettingsSearchSchema } from "@features/sites/settings-search"
 import { SiteSettingsPage } from "@features/sites/site-settings-page"
 import {
   workspaceInvitesQueryOptions,
@@ -16,6 +17,7 @@ import { canInvite, parseWorkspaceRole } from "@features/workspaces/role"
 export const Route = createFileRoute(
   "/_authed/businesses/$slug/_shell/sites/$siteId/settings"
 )({
+  validateSearch: siteSettingsSearchSchema,
   pendingComponent: pendingScreen("Loading settings…"),
   notFoundComponent: NotFoundScreen,
   loader: async ({ context, params }) => {

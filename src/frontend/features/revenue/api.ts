@@ -84,9 +84,12 @@ export type SyncPhase =
   | "done"
 
 export type StripeStatus =
-  | { connected: false }
+  | { connected: false; oauthAvailable: boolean }
   | {
       connected: true
+      oauthAvailable: boolean
+      method: "oauth" | "key"
+      account: string | null
       apiKeyHint: string
       livemode: boolean
       webhookConfigured: boolean
@@ -282,6 +285,17 @@ export async function connectStripe(
     throw new Error(await errorMessage(response, "Could not connect Stripe."))
   }
   return requireJson<{ stripe: StripeStatus }>(response, "stripe")
+}
+
+export async function stripeOauthUrl(slug: string, siteId: string) {
+  const response = await api.workspaces[":slug"].sites[
+    ":siteId"
+  ].stripe.oauth.$get({
+    param: { slug, siteId },
+  })
+  if (response.status === 403) throw new Error("You cannot connect Stripe.")
+  if (!response.ok) throw new Error("Stripe Connect is not configured.")
+  return requireJson<{ url: string }>(response, "url")
 }
 
 export async function updateStripeWebhookSecret(
