@@ -24,15 +24,78 @@ type Channel = {
 }
 
 const channels: Channel[] = [
-  { weight: 26, conversion: 0.12, source: "google", medium: "", campaign: "", referrer: "google.com" },
-  { weight: 18, conversion: 0.1, source: "direct", medium: "", campaign: "", referrer: "" },
-  { weight: 12, conversion: 0.05, source: "reddit", medium: "", campaign: "", referrer: "reddit.com" },
-  { weight: 8, conversion: 0.09, source: "hacker news", medium: "", campaign: "", referrer: "news.ycombinator.com" },
-  { weight: 8, conversion: 0.04, source: "product hunt", medium: "", campaign: "", referrer: "producthunt.com" },
-  { weight: 10, conversion: 0.07, source: "twitter", medium: "social", campaign: "launch", referrer: "t.co" },
-  { weight: 7, conversion: 0.2, source: "newsletter", medium: "email", campaign: "weekly", referrer: "" },
-  { weight: 6, conversion: 0.15, source: "google", medium: "cpc", campaign: "brand", referrer: "google.com" },
-  { weight: 5, conversion: 0.11, source: "chatgpt", medium: "", campaign: "", referrer: "chatgpt.com" },
+  {
+    weight: 26,
+    conversion: 0.12,
+    source: "google",
+    medium: "",
+    campaign: "",
+    referrer: "google.com",
+  },
+  {
+    weight: 18,
+    conversion: 0.1,
+    source: "direct",
+    medium: "",
+    campaign: "",
+    referrer: "",
+  },
+  {
+    weight: 12,
+    conversion: 0.05,
+    source: "reddit",
+    medium: "",
+    campaign: "",
+    referrer: "reddit.com",
+  },
+  {
+    weight: 8,
+    conversion: 0.09,
+    source: "hacker news",
+    medium: "",
+    campaign: "",
+    referrer: "news.ycombinator.com",
+  },
+  {
+    weight: 8,
+    conversion: 0.04,
+    source: "product hunt",
+    medium: "",
+    campaign: "",
+    referrer: "producthunt.com",
+  },
+  {
+    weight: 10,
+    conversion: 0.07,
+    source: "twitter",
+    medium: "social",
+    campaign: "launch",
+    referrer: "t.co",
+  },
+  {
+    weight: 7,
+    conversion: 0.2,
+    source: "newsletter",
+    medium: "email",
+    campaign: "weekly",
+    referrer: "",
+  },
+  {
+    weight: 6,
+    conversion: 0.15,
+    source: "google",
+    medium: "cpc",
+    campaign: "brand",
+    referrer: "google.com",
+  },
+  {
+    weight: 5,
+    conversion: 0.11,
+    source: "chatgpt",
+    medium: "",
+    campaign: "",
+    referrer: "chatgpt.com",
+  },
 ]
 
 const landings = [
@@ -53,8 +116,40 @@ const plans = [
 
 const countries = ["US", "GB", "DE", "FR", "CA", "BR", "ES", "NL", "IN", "AU"]
 const devices = ["desktop", "desktop", "desktop", "mobile"]
-const firstNames = ["Ada", "Ben", "Chloe", "Dan", "Eva", "Finn", "Gia", "Hugo", "Iris", "Jon", "Kai", "Lena", "Max", "Nora", "Omar", "Pia", "Raj", "Sara", "Tom", "Uma"]
-const lastNames = ["Park", "Silva", "Novak", "Reyes", "Okafor", "Berg", "Rossi", "Kim", "Dubois", "Shah"]
+const firstNames = [
+  "Ada",
+  "Ben",
+  "Chloe",
+  "Dan",
+  "Eva",
+  "Finn",
+  "Gia",
+  "Hugo",
+  "Iris",
+  "Jon",
+  "Kai",
+  "Lena",
+  "Max",
+  "Nora",
+  "Omar",
+  "Pia",
+  "Raj",
+  "Sara",
+  "Tom",
+  "Uma",
+]
+const lastNames = [
+  "Park",
+  "Silva",
+  "Novak",
+  "Reyes",
+  "Okafor",
+  "Berg",
+  "Rossi",
+  "Kim",
+  "Dubois",
+  "Shah",
+]
 
 function seeded(seed: number) {
   let state = seed >>> 0
@@ -120,7 +215,8 @@ export function buildRevenueSimulation(siteId: string, now = Date.now()) {
       lastSeenAt: signedUpAt - Math.round(random() * dayMs),
     })
 
-    const paidAt = signedUpAt + trialDays * dayMs + Math.round(random() * 7 * dayMs)
+    const paidAt =
+      signedUpAt + trialDays * dayMs + Math.round(random() * 7 * dayMs)
     if (random() > first.conversion * 1.6 || paidAt > now) continue
 
     const customerId = `${simCustomerPrefix}${index}`
@@ -155,7 +251,8 @@ export function buildRevenueSimulation(siteId: string, now = Date.now()) {
       }
       const change = random()
       if (cycle > 1 && change < 0.06) mrr = Math.min(9900, mrr * 2 + 100)
-      else if (cycle > 1 && change < 0.08) mrr = Math.max(1900, Math.round(mrr / 2))
+      else if (cycle > 1 && change < 0.08)
+        mrr = Math.max(1900, Math.round(mrr / 2))
       snapshots.push({
         siteId,
         sourceId: `inv:in_sim_${index}_${cycle}`,

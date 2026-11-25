@@ -37,7 +37,9 @@ export const remove = new Hono<AppEnv>().delete(
 
     // Revenue data is derived from the connected account; keeping it would mix accounts on reconnect.
     await db.batch([
-      db.delete(stripeConnection).where(eq(stripeConnection.siteId, matched.id)),
+      db
+        .delete(stripeConnection)
+        .where(eq(stripeConnection.siteId, matched.id)),
       db.delete(revenueMovement).where(eq(revenueMovement.siteId, matched.id)),
       db.delete(mrrSnapshot).where(eq(mrrSnapshot.siteId, matched.id)),
       db.delete(stripeCustomer).where(eq(stripeCustomer.siteId, matched.id)),

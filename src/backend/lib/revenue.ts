@@ -82,7 +82,10 @@ export function movementsFromSnapshots(snapshots: Snapshot[]): Movement[] {
   return movements
 }
 
-export async function runBatch(db: Database, statements: BatchItem<"sqlite">[]) {
+export async function runBatch(
+  db: Database,
+  statements: BatchItem<"sqlite">[]
+) {
   const [first, ...rest] = statements
   if (!first) return
   await db.batch([first, ...rest])
@@ -116,7 +119,10 @@ export async function recomputeCustomer(
     })
     .from(mrrSnapshot)
     .where(
-      and(eq(mrrSnapshot.siteId, siteId), eq(mrrSnapshot.customerId, customerId))
+      and(
+        eq(mrrSnapshot.siteId, siteId),
+        eq(mrrSnapshot.customerId, customerId)
+      )
     )
 
   const movements = movementsFromSnapshots(snapshots)
@@ -150,7 +156,10 @@ export async function recomputeCustomer(
         churnedAt: last?.kind === "churn" ? last.at : null,
       })
       .where(
-        and(eq(stripeCustomer.siteId, siteId), eq(stripeCustomer.id, customerId))
+        and(
+          eq(stripeCustomer.siteId, siteId),
+          eq(stripeCustomer.id, customerId)
+        )
       ),
   ])
 }

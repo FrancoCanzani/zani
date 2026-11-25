@@ -49,7 +49,11 @@ function emptyTotals(): Record<MovementKind, number> {
   return { new: 0, expansion: 0, contraction: 0, churn: 0, reactivation: 0 }
 }
 
-export function summarize(movements: MovementRow[], start: number, end: number) {
+export function summarize(
+  movements: MovementRow[],
+  start: number,
+  end: number
+) {
   const totals = emptyTotals()
   const counts = emptyTotals()
   let mrrStart = 0

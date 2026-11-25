@@ -17,12 +17,7 @@ import {
   rowsPerInsert,
   runBatch,
 } from "../../../lib/revenue"
-import {
-  newId,
-  nowMs,
-  randomToken,
-  sha256Hex,
-} from "../../../lib/utils"
+import { newId, nowMs, randomToken, sha256Hex } from "../../../lib/utils"
 import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"
 import type { AppEnv } from "../../../types"

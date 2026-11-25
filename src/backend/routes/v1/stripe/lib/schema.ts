@@ -18,3 +18,7 @@ export const connectBodySchema = z.object({
 export const updateConnectionBodySchema = z.object({
   webhookSecret: webhookSecret.nullable(),
 })
+
+export const syncQuerySchema = z.object({
+  restart: z.literal("1").optional(),
+})

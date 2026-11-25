@@ -102,10 +102,7 @@ async function windowFor(db: Database, siteId: string, range: RevenueRange) {
       .from(visitorIdentity)
       .where(eq(visitorIdentity.siteId, siteId)),
   ])
-  const earliest = Math.min(
-    movement?.value ?? now,
-    identity?.value ?? now
-  )
+  const earliest = Math.min(movement?.value ?? now, identity?.value ?? now)
   return { start: rangeStart(range, now, earliest), end: now }
 }
 
@@ -288,7 +285,13 @@ export const get = new Hono<AppEnv>()
         const label = value === null ? unidentified : value
         const existing = rows.get(label)
         if (existing) return existing
-        const created = { key: label, signups: 0, customers: 0, newMrr: 0, mrr: 0 }
+        const created = {
+          key: label,
+          signups: 0,
+          customers: 0,
+          newMrr: 0,
+          mrr: 0,
+        }
         rows.set(label, created)
         return created
       }
@@ -309,7 +312,9 @@ export const get = new Hono<AppEnv>()
           touch: query.touch,
           rows: [...rows.values()].sort(
             (a, b) =>
-              b.mrr - a.mrr || b.customers - a.customers || b.signups - a.signups
+              b.mrr - a.mrr ||
+              b.customers - a.customers ||
+              b.signups - a.signups
           ),
         },
         200
