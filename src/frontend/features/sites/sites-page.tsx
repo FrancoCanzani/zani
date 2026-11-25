@@ -88,7 +88,7 @@ export function SitesPage() {
       {created ? (
         <section className="space-y-4 rounded-xl border border-border/70 bg-card p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="text-[15px] font-semibold tracking-tight">
+            <p className="text-[15px] font-medium tracking-tight">
               {created.name} is ready
             </p>
             <Button asChild size="sm">
@@ -117,9 +117,7 @@ export function SitesPage() {
             void form.handleSubmit()
           }}
         >
-          <h2 className="text-[15px] font-semibold tracking-tight">
-            Add a site
-          </h2>
+          <h2 className="text-[15px] font-medium tracking-tight">Add a site</h2>
           <FieldGroup>
             <form.Field name="name">
               {(field) => (

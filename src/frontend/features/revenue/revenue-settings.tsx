@@ -84,7 +84,7 @@ function Step({
         <span className="flex size-5 items-center justify-center rounded-full bg-muted font-mono text-[11px] text-muted-foreground">
           {index}
         </span>
-        <h3 className="text-[15px] font-semibold tracking-tight">{title}</h3>
+        <h3 className="text-[15px] font-medium tracking-tight">{title}</h3>
         {done ? (
           <Badge variant="secondary" className="ml-auto">
             Connected

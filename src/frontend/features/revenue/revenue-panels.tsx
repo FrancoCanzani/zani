@@ -107,7 +107,7 @@ export function Panel({
     <section className="min-w-0 rounded-xl border border-border/70 bg-card p-4">
       <div className="mb-3 flex flex-wrap items-start justify-between gap-2">
         <div className="space-y-0.5">
-          <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+          <h2 className="text-[15px] font-medium tracking-tight">{title}</h2>
           {description ? (
             <p className="text-xs text-muted-foreground">{description}</p>
           ) : null}

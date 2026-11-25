@@ -271,6 +271,7 @@ function BreakdownBody({
         points={rows.map((row) => ({
           series: row.value,
           value: row.visitors,
+          weight: row.newMrr,
           detail:
             row.newMrr > 0
               ? `${formatMoney(row.newMrr, currency)} new MRR · ${row.customers} ${row.customers === 1 ? "customer" : "customers"}`
@@ -416,7 +417,7 @@ export function BreakdownPanel({
   return (
     <section className="flex min-w-0 flex-col rounded-xl border border-border/70 bg-card p-4">
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
+        <h2 className="text-[15px] font-medium tracking-tight">{title}</h2>
         {showTabs ? (
           <div
             role="radiogroup"

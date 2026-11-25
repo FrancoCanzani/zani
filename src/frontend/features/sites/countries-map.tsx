@@ -16,7 +16,12 @@ import countries110m from "world-atlas/countries-110m.json"
 registerLocale(enLocale)
 
 type CountriesMapProps = {
-  points: Array<{ series: string; value: number; detail?: string }>
+  points: Array<{
+    series: string
+    value: number
+    weight?: number
+    detail?: string
+  }>
   valueLabel: string
   formatValue?: (value: number) => string
   activeValue: string | undefined
@@ -43,8 +48,8 @@ const countriesGeo = feature(
 ) as FeatureCollection<Geometry, GeoJsonProperties>
 
 const emptyFill = "#E8EAED"
-const dataBlue = "#5B8DEF"
-const selectedBlue = "#3B6FD4"
+const dataGreen = "#10B981"
+const selectedGreen = "#047857"
 
 function formatCompact(value: number) {
   return new Intl.NumberFormat(undefined, {
@@ -81,8 +86,9 @@ export function CountriesMap({
 }: CountriesMapProps) {
   const [hover, setHover] = useState<HoverState | null>(null)
 
-  const { byNumeric, details, totalViews, maxViews } = useMemo(() => {
+  const { byNumeric, weights, details, totalViews, maxWeight } = useMemo(() => {
     const map = new Map<string, number>()
+    const weightMap = new Map<string, number>()
     const detailMap = new Map<string, string>()
     let total = 0
     for (const point of points) {
@@ -92,14 +98,19 @@ export function CountriesMap({
       if (numeric == null) continue
       const id = String(numeric).padStart(3, "0")
       map.set(id, (map.get(id) ?? 0) + point.value)
+      weightMap.set(
+        id,
+        (weightMap.get(id) ?? 0) + (point.weight ?? point.value)
+      )
       if (point.detail) detailMap.set(id, point.detail)
       total += point.value
     }
     return {
       byNumeric: map,
+      weights: weightMap,
       details: detailMap,
       totalViews: total,
-      maxViews: Math.max(1, ...map.values()),
+      maxWeight: Math.max(0, ...weightMap.values()),
     }
   }, [points])
 
@@ -110,7 +121,7 @@ export function CountriesMap({
             className="pointer-events-none fixed z-50 min-w-[160px] -translate-x-1/2 -translate-y-[calc(100%+12px)] rounded-md border border-border/80 bg-popover px-2.5 py-2 shadow-md"
             style={{ left: hover.x, top: hover.y }}
           >
-            <div className="text-[13px] font-semibold tracking-tight text-foreground">
+            <div className="text-[13px] font-medium tracking-tight text-foreground">
               <span className="font-mono">{hover.code}</span>{" "}
               <span>{hover.name}</span>
             </div>
@@ -149,12 +160,13 @@ export function CountriesMap({
                 (typeof geo.properties?.name === "string"
                   ? geo.properties.name
                   : alpha2)
+              const weight = weights.get(numeric) ?? 0
               const fill =
                 views == null
                   ? emptyFill
                   : selected
-                    ? selectedBlue
-                    : `color-mix(in srgb, ${dataBlue} ${Math.max(45, Math.round((views / maxViews) * 100))}%, ${emptyFill})`
+                    ? selectedGreen
+                    : `color-mix(in srgb, ${dataGreen} ${maxWeight > 0 ? Math.round(18 + (weight / maxWeight) * 82) : 18}%, ${emptyFill})`
 
               return (
                 <Geography

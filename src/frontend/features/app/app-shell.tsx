@@ -1,9 +1,4 @@
-import {
-  Link,
-  Outlet,
-  getRouteApi,
-  useRouterState,
-} from "@tanstack/react-router"
+import { Outlet, getRouteApi, useRouterState } from "@tanstack/react-router"
 
 import { BrandMark } from "@components/brand-mark"
 
@@ -25,17 +20,9 @@ export function AppShell() {
 
   return (
     <div className="flex min-h-svh flex-col">
-      <header className="sticky top-0 z-20 h-14 border-b border-border/60 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      <header className="sticky top-0 z-20 h-14 bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/70">
         <div className="mx-auto flex h-full w-full max-w-6xl items-center gap-6 px-4 sm:px-6">
           <BrandMark to="/businesses" className="text-3xl" />
-          <nav className="flex items-center gap-1 text-sm">
-            <Link
-              to="/businesses"
-              className="rounded-md px-2 py-1 text-muted-foreground transition-colors hover:text-foreground data-[status=active]:text-foreground"
-            >
-              Sites
-            </Link>
-          </nav>
           <div className="ml-auto">
             <UserMenu name={session.user.name} email={session.user.email} />
           </div>

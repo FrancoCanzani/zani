@@ -187,7 +187,7 @@ export function SitePage() {
             <Button
               type="button"
               variant="outline"
-              size="sm"
+              size="xs"
               disabled={simulate.isPending || revoked}
               onClick={() => simulate.mutate()}
             >
@@ -195,7 +195,7 @@ export function SitePage() {
               {simulate.isPending ? "Simulating…" : "Simulate data"}
             </Button>
           ) : null}
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="xs">
             <Link
               to="/businesses/$slug/sites/$siteId/settings"
               params={{ slug, siteId }}
@@ -501,7 +501,7 @@ function RevenueSetup({
   return (
     <section className="flex flex-col gap-4 rounded-xl border border-dashed border-border p-6 sm:flex-row sm:items-center sm:justify-between">
       <div className="max-w-lg space-y-1">
-        <h3 className="text-[15px] font-semibold tracking-tight">
+        <h3 className="text-[15px] font-medium tracking-tight">
           {connected
             ? "Waiting for revenue"
             : "See which channels bring paying customers"}
@@ -541,7 +541,7 @@ function WaitingForViews({
   return (
     <section className="space-y-4 rounded-xl border border-dashed border-border p-6">
       <div className="space-y-1">
-        <h2 className="flex items-center gap-2 text-[15px] font-semibold tracking-tight">
+        <h2 className="flex items-center gap-2 text-[15px] font-medium tracking-tight">
           <span className="relative flex size-2">
             <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
             <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />

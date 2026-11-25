@@ -1,5 +1,3 @@
-import { Area, AreaChart } from "recharts"
-
 import { formatCompactMoney, type RevenueOverview } from "@features/revenue/api"
 
 import { changePercent, type SiteStats } from "./api"
@@ -10,7 +8,6 @@ type Kpi = {
   value: string
   delta: number | null
   invert?: boolean
-  series: number[]
 }
 
 function DeltaBadge({ value, invert }: { value: number; invert?: boolean }) {
@@ -32,32 +29,6 @@ function DeltaBadge({ value, invert }: { value: number; invert?: boolean }) {
   )
 }
 
-function Sparkline({ values, accent }: { values: number[]; accent: boolean }) {
-  if (values.length < 2 || values.every((value) => value === 0)) return null
-  const data = values.map((value, index) => ({ index, value }))
-  const color = accent ? "var(--color-emerald-600)" : "var(--foreground)"
-  return (
-    <AreaChart
-      width={120}
-      height={28}
-      data={data}
-      margin={{ top: 2, right: 0, bottom: 0, left: 0 }}
-      className="pointer-events-none !absolute right-3 bottom-3 opacity-70"
-    >
-      <Area
-        dataKey="value"
-        type="monotone"
-        stroke={color}
-        strokeWidth={1.25}
-        fill={color}
-        fillOpacity={0.08}
-        isAnimationActive={false}
-        dot={false}
-      />
-    </AreaChart>
-  )
-}
-
 const revenueMetrics = new Set<Metric>(["signups", "new_mrr", "mrr"])
 
 export function KpiCards({
@@ -76,40 +47,33 @@ export function KpiCards({
   onSelect: (metric: Metric) => void
 }) {
   const currency = revenue.currency
-  const trafficSeries = (key: "visitors" | "views") =>
-    totals.points.map((point) => point[key])
 
   const kpis: Kpi[] = [
     {
       metric: "visitors",
       value: totals.visitors.toLocaleString(),
       delta: changePercent(totals.visitors, previousTotals.visitors),
-      series: trafficSeries("visitors"),
     },
     {
       metric: "views",
       value: totals.views.toLocaleString(),
       delta: changePercent(totals.views, previousTotals.views),
-      series: trafficSeries("views"),
     },
     {
       metric: "bounce",
       value: `${totals.bounceRate}%`,
       delta: changePercent(totals.bounceRate, previousTotals.bounceRate),
       invert: true,
-      series: [],
     },
     {
       metric: "signups",
       value: revenue.signups.toLocaleString(),
       delta: changePercent(revenue.signups, previousRevenue.signups),
-      series: revenue.points.map((point) => point.signups),
     },
     {
       metric: "new_mrr",
       value: formatCompactMoney(revenue.newMrr, currency),
       delta: changePercent(revenue.newMrr, previousRevenue.newMrr),
-      series: revenue.points.map((point) => point.newMrr),
     },
     {
       metric: "mrr",
@@ -118,7 +82,6 @@ export function KpiCards({
         revenue.mrrStart > 0
           ? changePercent(revenue.mrr, revenue.mrrStart)
           : null,
-      series: revenue.points.map((point) => point.mrr),
     },
   ]
 
@@ -133,7 +96,7 @@ export function KpiCards({
             type="button"
             aria-pressed={active}
             onClick={() => onSelect(kpi.metric)}
-            className={`relative min-w-0 overflow-hidden rounded-xl border bg-card px-3 pt-3 pb-10 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+            className={`relative min-w-0 overflow-hidden rounded-xl border bg-card px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
               active
                 ? "border-foreground/40 ring-1 ring-foreground/10"
                 : "border-border/70 hover:border-foreground/20 hover:bg-muted/30"
@@ -156,7 +119,6 @@ export function KpiCards({
                 <DeltaBadge value={kpi.delta} invert={kpi.invert} />
               )}
             </div>
-            <Sparkline values={kpi.series} accent={accent} />
           </button>
         )
       })}
