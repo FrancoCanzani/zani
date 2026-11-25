@@ -131,6 +131,7 @@ export function LiveDashboard() {
           filters={filters}
           includeBots={includeBots}
           live
+          framed
           now={now}
           onSelect={toggleFilter}
         />

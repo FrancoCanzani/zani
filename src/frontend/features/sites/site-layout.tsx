@@ -3,7 +3,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { Link, Outlet, useNavigate } from "@tanstack/react-router"
+import { Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router"
 import { SettingsIcon, SparklesIcon } from "lucide-react"
 import { startTransition } from "react"
 import { toast } from "sonner"
@@ -56,6 +56,10 @@ export function SiteLayout() {
     patchSearch,
   } = useSiteSearch()
   const navigate = useNavigate()
+  const onOverview = useMatch({
+    from: "/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/",
+    shouldThrow: false,
+  })
   const queryClient = useQueryClient()
 
   const totals = useSuspenseQuery(
@@ -169,6 +173,7 @@ export function SiteLayout() {
             search={search}
             range={range}
             timeZone={timeZone}
+            showCompare={onOverview !== undefined}
             patchSearch={patchSearch}
           />
           <Outlet />

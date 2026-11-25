@@ -16,6 +16,7 @@ export function ActivityPage() {
       filters={filters}
       includeBots={includeBots}
       live={false}
+      framed={false}
       now={now}
       onSelect={toggleFilter}
     />
