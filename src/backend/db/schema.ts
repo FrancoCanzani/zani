@@ -1,6 +1,7 @@
 import {
   index,
   integer,
+  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -196,5 +197,37 @@ export const eventProp = sqliteTable(
     index("event_prop_eventId_idx").on(table.eventId),
     index("event_prop_site_timestamp_idx").on(table.siteId, table.timestamp),
     index("event_prop_site_key_idx").on(table.siteId, table.key),
+  ]
+)
+
+export const vital = sqliteTable(
+  "vital",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => site.id, { onDelete: "cascade" }),
+    timestamp: integer("timestamp").notNull(),
+    metric: text("metric").notNull(),
+    value: real("value").notNull(),
+    rating: text("rating").notNull(),
+    path: text("path").notNull(),
+    element: text("element").notNull().default(""),
+    navType: text("nav_type").notNull().default(""),
+    visitorId: text("visitor_id").notNull(),
+    sessionId: text("session_id").notNull(),
+    country: text("country").notNull().default(""),
+    city: text("city").notNull().default(""),
+    browser: text("browser").notNull().default(""),
+    device: text("device").notNull().default(""),
+    os: text("os").notNull().default(""),
+  },
+  (table) => [
+    index("vital_site_timestamp_idx").on(table.siteId, table.timestamp),
+    index("vital_site_metric_timestamp_idx").on(
+      table.siteId,
+      table.metric,
+      table.timestamp
+    ),
   ]
 )

@@ -64,7 +64,49 @@ export type StatsQuery = {
   includeBots: boolean
 }
 
+export type VitalMetric = "load" | "lcp" | "inp" | "cls"
+
+export type VitalSummary = {
+  metric: VitalMetric
+  samples: number
+  p75: number | null
+  good: number
+  needsImprovement: number
+  poor: number
+}
+
+export type VitalPathRow = {
+  path: string
+  samples: number
+  p75: number | null
+  good: number
+  needsImprovement: number
+  poor: number
+}
+
+export type SiteVitals = {
+  site: {
+    id: string
+    name: string
+    domain: string
+    revokedAt: number | null
+  }
+  metrics: VitalSummary[]
+  paths: VitalPathRow[]
+  pathMetric: VitalMetric
+  truncated: boolean
+}
+
 const statsStaleMs = 30_000
+
+const vitalFilterKeys = [
+  "path",
+  "country",
+  "city",
+  "browser",
+  "device",
+  "os",
+] as const satisfies readonly FilterKey[]
 
 export function accountSitesQueryOptions() {
   return queryOptions({
@@ -135,6 +177,50 @@ export function siteStatsQueryOptions(
           },
         }),
         "views"
+      ),
+    staleTime: statsStaleMs,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function siteVitalsQueryOptions(
+  slug: string,
+  siteId: string,
+  range: StatsRange,
+  filters: StatsFilters = {},
+  includeBots = false,
+  metric: VitalMetric = "lcp"
+) {
+  const vitalFilters: Partial<Record<(typeof vitalFilterKeys)[number], string>> =
+    {}
+  for (const key of vitalFilterKeys) {
+    if (filters[key] !== undefined) vitalFilters[key] = filters[key]
+  }
+  return queryOptions({
+    queryKey: [
+      "site-vitals",
+      slug,
+      siteId,
+      range,
+      vitalFilters,
+      includeBots,
+      metric,
+    ] as const,
+    queryFn: async () =>
+      requireJson<SiteVitals>(
+        await api.workspaces[":slug"].sites[":siteId"].vitals.$get({
+          param: { slug, siteId },
+          query: {
+            start: range.start,
+            end: range.end,
+            grain: range.grain,
+            ...(range.tz ? { tz: range.tz } : {}),
+            ...(includeBots ? { bots: "1" as const } : {}),
+            metric,
+            ...vitalFilters,
+          },
+        }),
+        "metrics"
       ),
     staleTime: statsStaleMs,
     placeholderData: keepPreviousData,

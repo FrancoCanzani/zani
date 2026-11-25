@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query"
 import { Link, getRouteApi } from "@tanstack/react-router"
 import { XIcon } from "lucide-react"
-import { startTransition } from "react"
+import { Suspense, startTransition } from "react"
 import { toast } from "sonner"
 
 import { InstallSnippet } from "@components/install-snippet"
@@ -42,6 +42,7 @@ import {
   type SiteSearch,
 } from "./search"
 import { ViewsChart } from "./views-chart"
+import { VitalsPanel } from "./vitals-panel"
 import { useRememberedWriteKey } from "./write-key"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId/")
@@ -202,6 +203,9 @@ export function SitePage() {
       toast.success(`Inserted ${result.inserted} views`)
       await queryClient.invalidateQueries({
         queryKey: ["site-stats", slug, siteId],
+      })
+      await queryClient.invalidateQueries({
+        queryKey: ["site-vitals", slug, siteId],
       })
     },
     onError: (error) => {
@@ -515,6 +519,27 @@ function SiteDashboard({
         timeZone={timeZone}
         compare={Boolean(search.compare)}
       />
+
+      <Suspense
+        fallback={
+          <section className="rounded-lg border border-border/70 p-4">
+            <h2 className="text-[15px] font-semibold tracking-tight">
+              Web vitals
+            </h2>
+            <p className="mt-2 text-xs text-muted-foreground">Loading…</p>
+          </section>
+        }
+      >
+        <VitalsPanel
+          slug={slug}
+          siteId={siteId}
+          range={range}
+          filters={filters}
+          includeBots={includeBots}
+          activePath={search.path}
+          onSelectPath={(path) => toggleFilter("path", path)}
+        />
+      </Suspense>
 
       <div className="grid gap-3 md:grid-cols-2">
         {breakdownPanels.map((panel) => (

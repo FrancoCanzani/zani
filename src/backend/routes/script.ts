@@ -53,22 +53,22 @@ const source = `(() => {
     let count = 0
     for (const [rawKey, rawValue] of Object.entries(input)) {
       if (count >= maxPropKeys) break
-      const key = String(rawKey).trim().toLowerCase()
-      if (!propKeyPattern.test(key)) continue
+      const keyName = String(rawKey).trim().toLowerCase()
+      if (!propKeyPattern.test(keyName)) continue
       if (rawValue === null) {
-        props[key] = null
+        props[keyName] = null
         count += 1
         continue
       }
       const type = typeof rawValue
       if (type === "boolean") {
-        props[key] = rawValue
+        props[keyName] = rawValue
         count += 1
         continue
       }
       if (type === "number") {
         if (!Number.isFinite(rawValue)) continue
-        props[key] = rawValue
+        props[keyName] = rawValue
         count += 1
         continue
       }
@@ -82,10 +82,18 @@ const source = `(() => {
         }
       }
       if (!ok) continue
-      props[key] = value
+      props[keyName] = value
       count += 1
     }
     return count > 0 ? props : undefined
+  }
+  const post = (body) => {
+    void fetch(endpoint, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-write-key": key },
+      body: JSON.stringify(body),
+      keepalive: true,
+    })
   }
   const send = (name, referrer, props) => {
     captureUtms()
@@ -101,12 +109,7 @@ const source = `(() => {
       utmTerm: utms.utmTerm || undefined,
     }
     if (props) body.props = props
-    void fetch(endpoint, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-write-key": key },
-      body: JSON.stringify(body),
-      keepalive: true,
-    })
+    post(body)
   }
   const trackPage = () => {
     const next = pagePath()
@@ -138,6 +141,128 @@ const source = `(() => {
   addEventListener("hashchange", trackPage)
   trackPage()
   window.zani = { track }
+
+  const cssPath = (node) => {
+    if (!node || !node.tagName) return ""
+    let value = String(node.tagName).toLowerCase()
+    if (node.id) return (value + "#" + node.id).slice(0, 200)
+    if (node.classList && node.classList.length) {
+      value +=
+        "." +
+        Array.from(node.classList)
+          .slice(0, 2)
+          .join(".")
+    }
+    return value.slice(0, 200)
+  }
+  const navType = () => {
+    try {
+      const entry = performance.getEntriesByType("navigation")[0]
+      if (!entry || !entry.type) return
+      if (
+        entry.type === "navigate" ||
+        entry.type === "reload" ||
+        entry.type === "back_forward" ||
+        entry.type === "prerender"
+      ) {
+        return entry.type
+      }
+    } catch (_) {}
+  }
+  const pageLoadMs = () => {
+    try {
+      const entry = performance.getEntriesByType("navigation")[0]
+      if (!entry) return
+      const value =
+        entry.loadEventEnd > 0
+          ? entry.loadEventEnd
+          : entry.duration > 0
+            ? entry.duration
+            : 0
+      if (!value || value < 0) return
+      return Math.round(value)
+    } catch (_) {}
+  }
+
+  let lcpValue = null
+  let lcpElement = ""
+  let clsValue = 0
+  let inpValue = null
+  let flushed = false
+  const navigation = navType()
+
+  try {
+    const lcpObserver = new PerformanceObserver((list) => {
+      const entries = list.getEntries()
+      const last = entries[entries.length - 1]
+      if (!last) return
+      lcpValue = last.startTime
+      lcpElement = cssPath(last.element)
+    })
+    lcpObserver.observe({ type: "largest-contentful-paint", buffered: true })
+  } catch (_) {}
+
+  try {
+    const clsObserver = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.hadRecentInput) continue
+        clsValue += entry.value
+      }
+    })
+    clsObserver.observe({ type: "layout-shift", buffered: true })
+  } catch (_) {}
+
+  try {
+    const eventObserver = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.interactionId === 0) continue
+        const duration = entry.duration
+        if (!Number.isFinite(duration)) continue
+        if (inpValue === null || duration > inpValue) inpValue = duration
+      }
+    })
+    eventObserver.observe({ type: "event", buffered: true, durationThreshold: 16 })
+  } catch (_) {}
+
+  const flushVitals = () => {
+    if (flushed) return
+    const samples = []
+    const load = pageLoadMs()
+    if (load !== undefined) samples.push({ metric: "load", value: load, navType: navigation })
+    if (lcpValue !== null) {
+      samples.push({
+        metric: "lcp",
+        value: Math.round(lcpValue),
+        element: lcpElement || undefined,
+        navType: navigation,
+      })
+    }
+    if (inpValue !== null) {
+      samples.push({
+        metric: "inp",
+        value: Math.round(inpValue),
+        navType: navigation,
+      })
+    }
+    if (clsValue > 0) {
+      samples.push({
+        metric: "cls",
+        value: Math.round(clsValue * 10000) / 10000,
+        navType: navigation,
+      })
+    }
+    if (!samples.length) return
+    flushed = true
+    post({
+      path: path || pagePath(),
+      vitals: samples,
+    })
+  }
+
+  addEventListener("visibilitychange", () => {
+    if (document.visibilityState === "hidden") flushVitals()
+  })
+  addEventListener("pagehide", flushVitals)
 })()
 `
 

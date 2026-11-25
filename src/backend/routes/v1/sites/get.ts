@@ -10,7 +10,7 @@ import type { AppEnv } from "../../../types"
 import { workspaceFromContext } from "../workspaces/lib/context"
 
 import { loadSite } from "./lib/load"
-import { statsQuerySchema } from "./lib/schema"
+import { statsQuerySchema, vitalsQuerySchema } from "./lib/schema"
 import { serializeSite } from "./lib/serialize"
 import {
   asNumber,
@@ -20,6 +20,7 @@ import {
   propFilterConditions,
   siteWhere,
 } from "./lib/stats"
+import { loadVitalsStats } from "./lib/vitals-stats"
 
 export const get = new Hono<AppEnv>()
   .get("/", requireSession, requireWorkspaceMember, async (c) => {
@@ -151,6 +152,64 @@ export const get = new Hono<AppEnv>()
             visitors: asNumber(row.visitors),
             sessions: asNumber(row.sessions),
           })),
+        },
+        200
+      )
+    }
+  )
+  .get(
+    "/:siteId/vitals",
+    requireSession,
+    requireWorkspaceMember,
+    zValidator("query", vitalsQuerySchema),
+    async (c) => {
+      const query = c.req.valid("query")
+      const parsed = parseRange(query)
+      if (!parsed.ok) {
+        return c.json(
+          { error: "invalid_range" as const, message: parsed.message },
+          400
+        )
+      }
+
+      const current = workspaceFromContext(c.var)
+      const db = createDb(c.env)
+      const matched = await loadSite(
+        db,
+        current.workspace.id,
+        c.req.param("siteId")
+      )
+      if (!matched) {
+        return c.json({ error: "not_found" as const }, 404)
+      }
+
+      const range = parsed.range
+      const stats = await loadVitalsStats(db, {
+        siteId: matched.id,
+        range,
+        filters: {
+          path: query.path,
+          country: query.country,
+          city: query.city,
+          browser: query.browser,
+          device: query.device,
+          os: query.os,
+        },
+        includeBots: query.bots === "1",
+        grain: range.grain,
+        timeZone: query.tz,
+        metric: query.metric,
+      })
+
+      return c.json(
+        {
+          site: {
+            id: matched.id,
+            name: matched.name,
+            domain: matched.domain,
+            revokedAt: matched.revokedAt,
+          },
+          ...stats,
         },
         200
       )

@@ -95,7 +95,7 @@ function hashRoute(hash: string): string {
   return query < 0 ? hash : hash.slice(0, query)
 }
 
-function normalizePath(input: string): string | null {
+export function normalizePath(input: string): string | null {
   const trimmed = input.trim()
   if (!trimmed || trimmed.length > 2048) return null
 

@@ -106,6 +106,13 @@
       "when": 1795597586247,
       "tag": "0014_perpetual_lifeguard",
       "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "6",
+      "when": 1795598456663,
+      "tag": "0015_broad_paladin",
+      "breakpoints": true
     }
   ]
 }
