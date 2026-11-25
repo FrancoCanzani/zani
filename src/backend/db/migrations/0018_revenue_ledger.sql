@@ -1,3 +1,32 @@
+DROP TABLE `stripe_subscription`;--> statement-breakpoint
+DROP TABLE `stripe_customer`;--> statement-breakpoint
+DROP TABLE `stripe_connection`;--> statement-breakpoint
+CREATE TABLE `visitor_identity` (
+	`id` text PRIMARY KEY NOT NULL,
+	`site_id` text NOT NULL,
+	`user_ref` text NOT NULL,
+	`email_hash` text,
+	`signed_up_at` integer NOT NULL,
+	`country` text DEFAULT '' NOT NULL,
+	`device` text DEFAULT '' NOT NULL,
+	`first_source` text NOT NULL,
+	`first_medium` text DEFAULT '' NOT NULL,
+	`first_campaign` text DEFAULT '' NOT NULL,
+	`first_referrer` text DEFAULT '' NOT NULL,
+	`first_landing` text DEFAULT '' NOT NULL,
+	`first_seen_at` integer NOT NULL,
+	`last_source` text NOT NULL,
+	`last_medium` text DEFAULT '' NOT NULL,
+	`last_campaign` text DEFAULT '' NOT NULL,
+	`last_referrer` text DEFAULT '' NOT NULL,
+	`last_landing` text DEFAULT '' NOT NULL,
+	`last_seen_at` integer NOT NULL,
+	FOREIGN KEY (`site_id`) REFERENCES `site`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `visitor_identity_site_user_idx` ON `visitor_identity` (`site_id`,`user_ref`);--> statement-breakpoint
+CREATE INDEX `visitor_identity_site_email_idx` ON `visitor_identity` (`site_id`,`email_hash`);--> statement-breakpoint
+CREATE INDEX `visitor_identity_site_signed_up_idx` ON `visitor_identity` (`site_id`,`signed_up_at`);--> statement-breakpoint
 CREATE TABLE `mrr_snapshot` (
 	`site_id` text NOT NULL,
 	`source_id` text NOT NULL,
@@ -61,29 +90,3 @@ CREATE TABLE `stripe_customer` (
 CREATE UNIQUE INDEX `stripe_customer_site_id_idx` ON `stripe_customer` (`site_id`,`id`);--> statement-breakpoint
 CREATE INDEX `stripe_customer_site_identity_idx` ON `stripe_customer` (`site_id`,`identity_id`);--> statement-breakpoint
 CREATE INDEX `stripe_customer_site_email_idx` ON `stripe_customer` (`site_id`,`email_hash`);--> statement-breakpoint
-CREATE TABLE `visitor_identity` (
-	`id` text PRIMARY KEY NOT NULL,
-	`site_id` text NOT NULL,
-	`user_ref` text NOT NULL,
-	`email_hash` text,
-	`signed_up_at` integer NOT NULL,
-	`country` text DEFAULT '' NOT NULL,
-	`device` text DEFAULT '' NOT NULL,
-	`first_source` text NOT NULL,
-	`first_medium` text DEFAULT '' NOT NULL,
-	`first_campaign` text DEFAULT '' NOT NULL,
-	`first_referrer` text DEFAULT '' NOT NULL,
-	`first_landing` text DEFAULT '' NOT NULL,
-	`first_seen_at` integer NOT NULL,
-	`last_source` text NOT NULL,
-	`last_medium` text DEFAULT '' NOT NULL,
-	`last_campaign` text DEFAULT '' NOT NULL,
-	`last_referrer` text DEFAULT '' NOT NULL,
-	`last_landing` text DEFAULT '' NOT NULL,
-	`last_seen_at` integer NOT NULL,
-	FOREIGN KEY (`site_id`) REFERENCES `site`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE UNIQUE INDEX `visitor_identity_site_user_idx` ON `visitor_identity` (`site_id`,`user_ref`);--> statement-breakpoint
-CREATE INDEX `visitor_identity_site_email_idx` ON `visitor_identity` (`site_id`,`email_hash`);--> statement-breakpoint
-CREATE INDEX `visitor_identity_site_signed_up_idx` ON `visitor_identity` (`site_id`,`signed_up_at`);

@@ -144,6 +144,9 @@ export function DimensionIcon({
         <MonitorIcon aria-hidden className={iconClass} />
       )
     }
+    case "referrer_path":
+    case "prop_key":
+    case "prop_value":
     case "path":
     case "entry":
     case "exit":

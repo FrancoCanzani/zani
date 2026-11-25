@@ -1,7 +1,7 @@
 import type { AnyColumn, SQL } from "drizzle-orm"
 import { and, asc, desc, eq, gte, inArray, lt, ne, or, sql } from "drizzle-orm"
 
-import { event } from "../../../../db/schema"
+import { event, eventProp } from "../../../../db/schema"
 import type { createDb } from "../../../../lib/db"
 import { sourceFor } from "../../../../lib/source"
 
@@ -28,11 +28,13 @@ export type StatsRange = {
 type Database = ReturnType<typeof createDb>
 
 const dimensionColumns: Record<
-  Exclude<Breakdown | FilterKey, "entry" | "exit" | "source">,
+  | Exclude<Breakdown, "entry" | "exit" | "source" | "prop_key" | "prop_value">
+  | Exclude<FilterKey, "source">,
   AnyColumn
 > = {
   path: event.path,
   referrer: event.referrerHost,
+  referrer_path: event.referrerPath,
   country: event.country,
   city: event.city,
   browser: event.browser,
@@ -40,6 +42,8 @@ const dimensionColumns: Record<
   os: event.os,
   screen: event.screen,
   event: event.name,
+  prop: eventProp.key,
+  prop_value: eventProp.value,
   utm_source: event.utmSource,
   utm_medium: event.utmMedium,
   utm_campaign: event.utmCampaign,
@@ -83,11 +87,27 @@ function seriesColumn(breakdown: Breakdown | undefined): AnyColumn | null {
     breakdown === undefined ||
     breakdown === "entry" ||
     breakdown === "exit" ||
-    breakdown === "source"
+    breakdown === "source" ||
+    breakdown === "prop_key" ||
+    breakdown === "prop_value"
   ) {
     return null
   }
   return dimensionColumns[breakdown]
+}
+
+function isPropBreakdown(
+  breakdown: Breakdown | undefined
+): breakdown is "prop_key" | "prop_value" {
+  return breakdown === "prop_key" || breakdown === "prop_value"
+}
+
+function isCustomEventBreakdown(breakdown: Breakdown | undefined) {
+  return (
+    breakdown === "event" ||
+    breakdown === "prop_key" ||
+    breakdown === "prop_value"
+  )
 }
 
 export function filterConditions(
@@ -96,8 +116,22 @@ export function filterConditions(
   const conditions: SQL[] = []
   for (const key of filterKeys) {
     const value = filters[key]
-    if (value === undefined || key === "source") continue
+    if (value === undefined) continue
+    if (key === "source" || key === "prop" || key === "prop_value") continue
     conditions.push(eq(dimensionColumns[key], value))
+  }
+  return conditions
+}
+
+export function propFilterConditions(
+  filters: Partial<Record<FilterKey, string | undefined>>
+): SQL[] {
+  const conditions: SQL[] = []
+  if (filters.prop !== undefined) {
+    conditions.push(eq(eventProp.key, filters.prop))
+  }
+  if (filters.prop_value !== undefined) {
+    conditions.push(eq(eventProp.value, filters.prop_value))
   }
   return conditions
 }
@@ -113,7 +147,7 @@ export function trafficConditions(input: {
   }
   if (input.eventFilter !== undefined) return conditions
   conditions.push(
-    input.breakdown === "event"
+    isCustomEventBreakdown(input.breakdown)
       ? ne(event.name, pageviewName)
       : eq(event.name, pageviewName)
   )
@@ -254,6 +288,17 @@ async function loadSourceBreakdown(
     .slice(0, pointLimit)
 }
 
+function needsPropJoin(
+  breakdown: Breakdown | undefined,
+  filters: Partial<Record<FilterKey, string | undefined>>
+) {
+  return (
+    isPropBreakdown(breakdown) ||
+    filters.prop !== undefined ||
+    filters.prop_value !== undefined
+  )
+}
+
 export async function loadBreakdownRows(
   db: Database,
   input: {
@@ -261,9 +306,10 @@ export async function loadBreakdownRows(
     where: ReturnType<typeof and>
     grain: Grain
     timeZone?: string
+    filters: Partial<Record<FilterKey, string | undefined>>
   }
 ) {
-  const { breakdown, where, grain, timeZone } = input
+  const { breakdown, where, grain, timeZone, filters } = input
   const views = sql<number>`count(*)`
   const visitors = sql<number>`count(distinct ${event.visitorId})`
   const sessions = sql<number>`count(distinct ${event.sessionId})`
@@ -275,26 +321,63 @@ export async function loadBreakdownRows(
     return loadSourceBreakdown(db, where)
   }
 
+  if (isPropBreakdown(breakdown)) {
+    return loadPropBreakdown(db, {
+      breakdown,
+      where,
+      filters,
+    })
+  }
+
   const column = seriesColumn(breakdown)
   const series = column ? sql<string>`${column}` : sql<string>`''`
   const bucket = bucketSql(grain, timeZone)
+  const joinProps = needsPropJoin(breakdown, filters)
 
   if (breakdown) {
-    return db
-      .select({ series, views, visitors, sessions })
-      .from(event)
-      .where(where)
-      .groupBy(series)
-      .orderBy(desc(visitors))
-      .limit(pointLimit)
+    const query = db.select({ series, views, visitors, sessions }).from(event)
+    const scoped = joinProps
+      ? query
+          .innerJoin(eventProp, eq(eventProp.eventId, event.id))
+          .where(and(where, ...propFilterConditions(filters)))
+      : query.where(where)
+    return scoped.groupBy(series).orderBy(desc(visitors)).limit(pointLimit)
   }
 
-  return db
+  const query = db
     .select({ bucket, series, views, visitors, sessions })
     .from(event)
-    .where(where)
-    .groupBy(bucket, series)
-    .orderBy(asc(bucket))
+  const scoped = joinProps
+    ? query
+        .innerJoin(eventProp, eq(eventProp.eventId, event.id))
+        .where(and(where, ...propFilterConditions(filters)))
+    : query.where(where)
+  return scoped.groupBy(bucket, series).orderBy(asc(bucket)).limit(pointLimit)
+}
+
+async function loadPropBreakdown(
+  db: ReturnType<typeof createDb>,
+  input: {
+    breakdown: "prop_key" | "prop_value"
+    where: ReturnType<typeof and>
+    filters: Partial<Record<FilterKey, string | undefined>>
+  }
+) {
+  const series =
+    input.breakdown === "prop_key"
+      ? sql<string>`${eventProp.key}`
+      : sql<string>`${eventProp.value}`
+  const views = sql<number>`count(*)`
+  const visitors = sql<number>`count(distinct ${event.visitorId})`
+  const sessions = sql<number>`count(distinct ${event.sessionId})`
+
+  return db
+    .select({ series, views, visitors, sessions })
+    .from(event)
+    .innerJoin(eventProp, eq(eventProp.eventId, event.id))
+    .where(and(input.where, ...propFilterConditions(input.filters)))
+    .groupBy(series)
+    .orderBy(desc(views))
     .limit(pointLimit)
 }
 

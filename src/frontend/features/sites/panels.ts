@@ -1,9 +1,10 @@
-import type { FilterKey } from "./search"
+import type { FilterKey, SiteSearch } from "./search"
 
 export type Breakdown =
   | "source"
   | "path"
   | "referrer"
+  | "referrer_path"
   | "country"
   | "city"
   | "browser"
@@ -11,6 +12,8 @@ export type Breakdown =
   | "os"
   | "screen"
   | "event"
+  | "prop_key"
+  | "prop_value"
   | "utm_source"
   | "utm_medium"
   | "utm_campaign"
@@ -26,11 +29,13 @@ export type BreakdownTab = {
   view?: "list" | "map"
 }
 
-export const breakdownPanels: Array<{
+export type BreakdownPanelConfig = {
   id: string
   title: string
   tabs: BreakdownTab[]
-}> = [
+}
+
+export const breakdownPanels: BreakdownPanelConfig[] = [
   {
     id: "sources",
     title: "Sources",
@@ -87,6 +92,47 @@ export const breakdownPanels: Array<{
 
 export function breakdownKey(tab: BreakdownTab): Breakdown {
   return tab.key === "map" ? "country" : tab.key
+}
+
+export function panelTabsForSearch(
+  panel: BreakdownPanelConfig,
+  search: SiteSearch
+): BreakdownTab[] {
+  switch (panel.id) {
+    case "sources":
+      if (search.referrer !== undefined) {
+        return [
+          {
+            key: "referrer_path",
+            label: "Path",
+            filterKey: "referrer_path",
+          },
+        ]
+      }
+      return panel.tabs
+    case "events":
+      if (search.event !== undefined && search.prop !== undefined) {
+        return [
+          {
+            key: "prop_value",
+            label: "Value",
+            filterKey: "prop_value",
+          },
+        ]
+      }
+      if (search.event !== undefined) {
+        return [
+          {
+            key: "prop_key",
+            label: "Property",
+            filterKey: "prop",
+          },
+        ]
+      }
+      return panel.tabs
+    default:
+      return panel.tabs
+  }
 }
 
 export const defaultPanelBreakdowns: Breakdown[] = breakdownPanels.map(

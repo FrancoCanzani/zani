@@ -1,5 +1,6 @@
 import type {
   event,
+  eventProp,
   mrrSnapshot,
   stripeCustomer,
   visitorIdentity,
@@ -16,6 +17,22 @@ const trialDays = 14
 export const simVisitorPrefix = "sim_vis_"
 export const simUserPrefix = "sim_user_"
 export const simCustomerPrefix = "cus_sim_"
+
+const referrerPaths: Record<string, string[]> = {
+  "google.com": ["/search", "/url"],
+  "news.ycombinator.com": ["/item", "/news", "/show"],
+  "producthunt.com": ["/posts/zani", "/"],
+  "reddit.com": ["/r/SaaS/comments", "/r/indiehackers/comments"],
+  "t.co": ["/k3x9", "/p2m1"],
+  "github.com": ["/franco/zani", "/trending"],
+}
+
+const signupProps = [
+  { plan: "free", place: "hero" },
+  { plan: "free", place: "pricing" },
+  { plan: "pro", place: "pricing" },
+  { plan: "free", place: "docs" },
+]
 
 type Channel = {
   weight: number
@@ -297,6 +314,7 @@ function visitorsOn(day: number, dayStartMs: number, random: () => number) {
 export function buildSimulation(siteId: string, now = Date.now()) {
   const random = seeded(11)
   const events: Array<typeof event.$inferInsert> = []
+  const props: Array<typeof eventProp.$inferInsert> = []
   const identities: Array<typeof visitorIdentity.$inferInsert> = []
   const customers: Array<typeof stripeCustomer.$inferInsert> = []
   const snapshots: Array<typeof mrrSnapshot.$inferInsert> = []
@@ -334,6 +352,9 @@ export function buildSimulation(siteId: string, now = Date.now()) {
         visitorId,
         sessionId,
         referrerHost: channel.referrer,
+        referrerPath: channel.referrer
+          ? pick(referrerPaths[channel.referrer] ?? ["/"], random())
+          : "",
         country: country.code,
         city: pick(country.cities, random()),
         browser: bot ? "bot" : pick(device.browsers, random()),
@@ -362,13 +383,24 @@ export function buildSimulation(siteId: string, now = Date.now()) {
       if (random() > channel.signupRate * (sawPricing ? 2.4 : 0.8)) continue
 
       const signedUpAt = Math.min(at, now - 60_000)
+      const signupId = newId()
       events.push({
         ...base,
-        id: newId(),
+        id: signupId,
         timestamp: signedUpAt,
         name: "signup",
         path: "/signup",
       })
+      for (const [key, value] of Object.entries(pick(signupProps, random()))) {
+        props.push({
+          id: newId(),
+          eventId: signupId,
+          siteId,
+          timestamp: signedUpAt,
+          key,
+          value,
+        })
+      }
 
       const source = sourceFor(channel.utmSource, channel.referrer)
       const userRef = `${simUserPrefix}${index}`
@@ -451,5 +483,5 @@ export function buildSimulation(siteId: string, now = Date.now()) {
     }
   }
 
-  return { events, identities, customers, snapshots }
+  return { events, props, identities, customers, snapshots }
 }

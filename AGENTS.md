@@ -10,7 +10,9 @@ Do not implement product features unless the current task asks for them.
 
 Do not add URL shortening, link redirects, click maps, session replay, heatmaps, escrow, marketplaces, or dispute resolution unless explicitly requested.
 
-v1 is sites, cookieless pageviews, signups with first/last-touch attribution, and Stripe revenue (read-only, restricted key) stored in D1. Pageviews stay cookieless; only attribution touches use first-party storage. Do not take a cut of payments. Do not build invoicing. Do not write to the connected Stripe account.
+Do not add web vitals / RUM / Speed unless explicitly requested.
+
+v1 is sites, pageviews with a first-party anonymous visitor id, custom event properties, signups with first/last-touch attribution, and Stripe revenue (read-only, restricted key) stored in D1. Do not take a cut of payments. Do not build invoicing. Do not write to the connected Stripe account.
 
 Authentication is Better Auth email OTP on `/api/v1/auth`. Do not add passwords, OAuth, or extra auth providers unless asked.
 

@@ -1,10 +1,10 @@
-# Analytics
+# Zani
 
 Revenue attribution for small SaaS teams, self-hostable on Cloudflare.
 
 Product line: **See which sources bring paying customers.**
 
-A site gets cookieless pageviews from `/script.js`, signups with first- and last-touch attribution through `zani.identify()`, and MRR from a read-only Stripe connection. The Revenue page joins them: MRR, new, expansion, contraction and churn, revenue by source, campaign and landing page, and a customer list.
+A site gets pageviews and custom events (with properties) from `/script.js`, signups with first- and last-touch attribution through `zani.identify()`, and MRR from a read-only Stripe connection. The site dashboard joins them: traffic and revenue KPIs, revenue next to every breakdown, MRR movements, attribution by source, campaign and landing page, and a customer list.
 
 ## Revenue setup
 
@@ -16,9 +16,9 @@ A site gets cookieless pageviews from `/script.js`, signups with first- and last
 
 Stripe keys and webhook secrets are encrypted with a key derived from `BETTER_AUTH_SECRET`. Rotating that secret means re-entering them.
 
-In development, **Simulate data** on a site fills pageviews, 360 signups across sources, about 50 customers, and seven months of MRR history.
+In development, **Simulate data** on a site fills six months of pageviews, about 440 signups across sources, about 80 customers, and their MRR history.
 
-Flow: sign in → `/welcome` (name) → `/businesses` (sites) → add a site. A site page is `/businesses/$slug/sites/$siteId`. Invite links are `/invites/$token`.
+Flow: sign in → `/welcome` (name) → `/businesses` (sites) → add a site → install `/script.js` → call `zani.identify(userId)` after signup → connect Stripe in site settings. A site page is `/businesses/$slug/sites/$siteId`; traffic and revenue share that dashboard. Invite links are `/invites/$token`.
 
 ## Stack
 
@@ -34,12 +34,33 @@ Flow: sign in → `/welcome` (name) → `/businesses` (sites) → add a site. A 
 
 The TanStack Router SPA lives in `src/frontend` and the Hono Worker lives in `src/backend`. The typed API is `src/backend/api.ts`; Better Auth is mounted on the Worker entry beside it. shadcn/ui lives in `src/frontend`. The Drizzle schema and D1 migrations live in `src/backend/db`.
 
+## Tracking
+
+Paste the install snippet before `</body>`. The script:
+
+- Sends pageviews (and SPA navigations) to `/api/v1/collect`
+- Persists an anonymous id + first-touch (landing, referrer, UTMs) in `localStorage`
+- Exposes `zani.track(name, props?)` and `zani.identify(userId, { email }?)`
+
+Identify with the same user id or email you put on the Stripe customer (`metadata.userId` or email) so Revenue can join first-touch → MRR.
+
+## Revenue
+
+On `/businesses/$slug/revenue`:
+
+1. Connect a Stripe **restricted or secret key** plus a webhook signing secret (`whsec_…`). Keys are encrypted at rest.
+2. Point Stripe webhooks at the endpoint shown after connect (`customer.*`, `customer.subscription.*`, `invoice.paid`).
+3. Read MRR, customers, signups, ARPU, churn, and the **Source → Signups → Customers → MRR** table.
+
+In development, **Simulate** seeds identified visitors and attributed subscriptions without a real Stripe account.
+
 ## Local development
 
 ```bash
 bun install
 cp .dev.vars.example .dev.vars
 # Set BETTER_AUTH_SECRET to a long random value, e.g. `openssl rand -base64 32`
+bun run db:migrate:dev
 bun run dev
 ```
 
@@ -55,7 +76,7 @@ Smoke checks:
 - Sites: [http://localhost:5173/businesses](http://localhost:5173/businesses)
 - Health: [http://localhost:5173/api/v1/health](http://localhost:5173/api/v1/health)
 
-D1 (`DB`) and Email (`EMAIL`) are local Wrangler bindings. Generate migrations with `bun run db:generate`; apply locally yourself with `bun run db:migrate:dev` when ready. No remote Cloudflare resources are required.
+D1 (`DB`) and Email (`EMAIL`) are local Wrangler bindings. Generate migrations with `bun run db:generate`; apply locally with `bun run db:migrate:dev` when ready. No remote Cloudflare resources are required for day-to-day work.
 
 ## Checks
 

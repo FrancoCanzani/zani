@@ -98,6 +98,19 @@ function clearFiltersPatch(): Partial<SiteSearch> {
   return patch
 }
 
+function dependentFilters(key: FilterKey): Partial<SiteSearch> {
+  switch (key) {
+    case "referrer":
+      return { referrer_path: undefined }
+    case "event":
+      return { prop: undefined, prop_value: undefined }
+    case "prop":
+      return { prop_value: undefined }
+    default:
+      return {}
+  }
+}
+
 export function SitePage() {
   const { slug, siteId } = routeApi.useParams()
   const search = routeApi.useSearch()
@@ -138,6 +151,7 @@ export function SitePage() {
 
   function toggleFilter(key: FilterKey, value: string) {
     patchSearch({
+      ...dependentFilters(key),
       [key]: search[key] === value ? undefined : value,
     })
   }
@@ -311,7 +325,12 @@ function Toolbar({
           type="button"
           size="xs"
           variant="secondary"
-          onClick={() => patchSearch({ [chip.key]: undefined })}
+          onClick={() =>
+            patchSearch({
+              ...dependentFilters(chip.key),
+              [chip.key]: undefined,
+            })
+          }
         >
           <span className="text-muted-foreground">
             {filterLabels[chip.key]}
@@ -426,8 +445,7 @@ function Dashboard({
         {breakdownPanels.map((panel) => (
           <BreakdownPanel
             key={panel.id}
-            title={panel.title}
-            tabs={panel.tabs}
+            panel={panel}
             slug={slug}
             siteId={siteId}
             range={range}

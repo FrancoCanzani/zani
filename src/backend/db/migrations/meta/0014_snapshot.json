@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "9b266c87-3bd6-4066-b60a-e98b2a07678d",
+  "id": "7585992a-5b0f-41cb-ada7-f616565cc085",
   "prevId": "0653aed1-8737-4e20-b723-0f32f4cd9849",
   "tables": {
     "account": {
@@ -187,6 +187,14 @@
           "autoincrement": false,
           "default": "''"
         },
+        "referrer_path": {
+          "name": "referrer_path",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
         "country": {
           "name": "country",
           "type": "text",
@@ -305,98 +313,8 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "mrr_snapshot": {
-      "name": "mrr_snapshot",
-      "columns": {
-        "site_id": {
-          "name": "site_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "source_id": {
-          "name": "source_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "customer_id": {
-          "name": "customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "subscription_id": {
-          "name": "subscription_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "at": {
-          "name": "at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "mrr": {
-          "name": "mrr",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "mrr_snapshot_site_source_idx": {
-          "name": "mrr_snapshot_site_source_idx",
-          "columns": [
-            "site_id",
-            "source_id"
-          ],
-          "isUnique": true
-        },
-        "mrr_snapshot_site_customer_idx": {
-          "name": "mrr_snapshot_site_customer_idx",
-          "columns": [
-            "site_id",
-            "customer_id"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "mrr_snapshot_site_id_site_id_fk": {
-          "name": "mrr_snapshot_site_id_site_id_fk",
-          "tableFrom": "mrr_snapshot",
-          "tableTo": "site",
-          "columnsFrom": [
-            "site_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "revenue_movement": {
-      "name": "revenue_movement",
+    "event_prop": {
+      "name": "event_prop",
       "columns": {
         "id": {
           "name": "id",
@@ -405,6 +323,13 @@
           "notNull": true,
           "autoincrement": false
         },
+        "event_id": {
+          "name": "event_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "site_id": {
           "name": "site_id",
           "type": "text",
@@ -412,71 +337,70 @@
           "notNull": true,
           "autoincrement": false
         },
-        "customer_id": {
-          "name": "customer_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "kind": {
-          "name": "kind",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "amount": {
-          "name": "amount",
+        "timestamp": {
+          "name": "timestamp",
           "type": "integer",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "mrr_after": {
-          "name": "mrr_after",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "currency": {
-          "name": "currency",
+        "key": {
+          "name": "key",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         },
-        "at": {
-          "name": "at",
-          "type": "integer",
+        "value": {
+          "name": "value",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
         }
       },
       "indexes": {
-        "revenue_movement_site_at_idx": {
-          "name": "revenue_movement_site_at_idx",
+        "event_prop_eventId_idx": {
+          "name": "event_prop_eventId_idx",
           "columns": [
-            "site_id",
-            "at"
+            "event_id"
           ],
           "isUnique": false
         },
-        "revenue_movement_site_customer_idx": {
-          "name": "revenue_movement_site_customer_idx",
+        "event_prop_site_timestamp_idx": {
+          "name": "event_prop_site_timestamp_idx",
           "columns": [
             "site_id",
-            "customer_id"
+            "timestamp"
+          ],
+          "isUnique": false
+        },
+        "event_prop_site_key_idx": {
+          "name": "event_prop_site_key_idx",
+          "columns": [
+            "site_id",
+            "key"
           ],
           "isUnique": false
         }
       },
       "foreignKeys": {
-        "revenue_movement_site_id_site_id_fk": {
-          "name": "revenue_movement_site_id_site_id_fk",
-          "tableFrom": "revenue_movement",
+        "event_prop_event_id_event_id_fk": {
+          "name": "event_prop_event_id_event_id_fk",
+          "tableFrom": "event_prop",
+          "tableTo": "event",
+          "columnsFrom": [
+            "event_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "event_prop_site_id_site_id_fk": {
+          "name": "event_prop_site_id_site_id_fk",
+          "tableFrom": "event_prop",
           "tableTo": "site",
           "columnsFrom": [
             "site_id"
@@ -675,265 +599,6 @@
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
-    "stripe_connection": {
-      "name": "stripe_connection",
-      "columns": {
-        "site_id": {
-          "name": "site_id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "api_key_cipher": {
-          "name": "api_key_cipher",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "api_key_hint": {
-          "name": "api_key_hint",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "webhook_secret_cipher": {
-          "name": "webhook_secret_cipher",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "livemode": {
-          "name": "livemode",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "sync_phase": {
-          "name": "sync_phase",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'customers'"
-        },
-        "sync_cursor": {
-          "name": "sync_cursor",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "synced_at": {
-          "name": "synced_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "sync_error": {
-          "name": "sync_error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "last_webhook_at": {
-          "name": "last_webhook_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "stripe_connection_site_id_site_id_fk": {
-          "name": "stripe_connection_site_id_site_id_fk",
-          "tableFrom": "stripe_connection",
-          "tableTo": "site",
-          "columnsFrom": [
-            "site_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "stripe_customer": {
-      "name": "stripe_customer",
-      "columns": {
-        "site_id": {
-          "name": "site_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "email": {
-          "name": "email",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "email_hash": {
-          "name": "email_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "name": {
-          "name": "name",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "user_ref": {
-          "name": "user_ref",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "identity_id": {
-          "name": "identity_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "currency": {
-          "name": "currency",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "mrr": {
-          "name": "mrr",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": 0
-        },
-        "first_paid_at": {
-          "name": "first_paid_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "churned_at": {
-          "name": "churned_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "stripe_customer_site_id_idx": {
-          "name": "stripe_customer_site_id_idx",
-          "columns": [
-            "site_id",
-            "id"
-          ],
-          "isUnique": true
-        },
-        "stripe_customer_site_identity_idx": {
-          "name": "stripe_customer_site_identity_idx",
-          "columns": [
-            "site_id",
-            "identity_id"
-          ],
-          "isUnique": false
-        },
-        "stripe_customer_site_email_idx": {
-          "name": "stripe_customer_site_email_idx",
-          "columns": [
-            "site_id",
-            "email_hash"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "stripe_customer_site_id_site_id_fk": {
-          "name": "stripe_customer_site_id_site_id_fk",
-          "tableFrom": "stripe_customer",
-          "tableTo": "site",
-          "columnsFrom": [
-            "site_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "stripe_customer_identity_id_visitor_identity_id_fk": {
-          "name": "stripe_customer_identity_id_visitor_identity_id_fk",
-          "tableFrom": "stripe_customer",
-          "tableTo": "visitor_identity",
-          "columnsFrom": [
-            "identity_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
     "user": {
       "name": "user",
       "columns": {
@@ -1058,198 +723,6 @@
         }
       },
       "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "visitor_identity": {
-      "name": "visitor_identity",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "site_id": {
-          "name": "site_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "user_ref": {
-          "name": "user_ref",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "email_hash": {
-          "name": "email_hash",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false,
-          "autoincrement": false
-        },
-        "signed_up_at": {
-          "name": "signed_up_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "country": {
-          "name": "country",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "device": {
-          "name": "device",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "first_source": {
-          "name": "first_source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "first_medium": {
-          "name": "first_medium",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "first_campaign": {
-          "name": "first_campaign",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "first_referrer": {
-          "name": "first_referrer",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "first_landing": {
-          "name": "first_landing",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "first_seen_at": {
-          "name": "first_seen_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "last_source": {
-          "name": "last_source",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "last_medium": {
-          "name": "last_medium",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "last_campaign": {
-          "name": "last_campaign",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "last_referrer": {
-          "name": "last_referrer",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "last_landing": {
-          "name": "last_landing",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "''"
-        },
-        "last_seen_at": {
-          "name": "last_seen_at",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {
-        "visitor_identity_site_user_idx": {
-          "name": "visitor_identity_site_user_idx",
-          "columns": [
-            "site_id",
-            "user_ref"
-          ],
-          "isUnique": true
-        },
-        "visitor_identity_site_email_idx": {
-          "name": "visitor_identity_site_email_idx",
-          "columns": [
-            "site_id",
-            "email_hash"
-          ],
-          "isUnique": false
-        },
-        "visitor_identity_site_signed_up_idx": {
-          "name": "visitor_identity_site_signed_up_idx",
-          "columns": [
-            "site_id",
-            "signed_up_at"
-          ],
-          "isUnique": false
-        }
-      },
-      "foreignKeys": {
-        "visitor_identity_site_id_site_id_fk": {
-          "name": "visitor_identity_site_id_site_id_fk",
-          "tableFrom": "visitor_identity",
-          "tableTo": "site",
-          "columnsFrom": [
-            "site_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        }
-      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

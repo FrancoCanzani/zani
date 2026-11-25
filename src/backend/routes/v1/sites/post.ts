@@ -4,6 +4,7 @@ import { Hono } from "hono"
 
 import {
   event,
+  eventProp,
   mrrSnapshot,
   revenueMovement,
   site,
@@ -211,8 +212,11 @@ export const post = new Hono<AppEnv>()
               like(visitorIdentity.userRef, `${simUserPrefix}%`)
             )
           ),
-        ...chunk(simulation.events, rowsPerInsert(19)).map((part) =>
+        ...chunk(simulation.events, rowsPerInsert(20)).map((part) =>
           db.insert(event).values(part)
+        ),
+        ...chunk(simulation.props, rowsPerInsert(6)).map((part) =>
+          db.insert(eventProp).values(part)
         ),
         ...chunk(simulation.identities, rowsPerInsert(20)).map((part) =>
           db.insert(visitorIdentity).values(part)

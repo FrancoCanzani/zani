@@ -31,7 +31,13 @@ import {
 } from "./api"
 import { CountriesMap } from "./countries-map"
 import { DimensionIcon, dimensionLabel } from "./dimension-icon"
-import { breakdownKey, type Breakdown, type BreakdownTab } from "./panels"
+import {
+  breakdownKey,
+  panelTabsForSearch,
+  type Breakdown,
+  type BreakdownPanelConfig,
+  type BreakdownTab,
+} from "./panels"
 import type { FilterKey, SiteSearch } from "./search"
 
 const revenueBreakdowns = new Set<Breakdown>([
@@ -348,8 +354,7 @@ function BreakdownBody({
 }
 
 export function BreakdownPanel({
-  title,
-  tabs,
+  panel,
   slug,
   siteId,
   range,
@@ -359,8 +364,7 @@ export function BreakdownPanel({
   revenue,
   onSelect,
 }: {
-  title: string
-  tabs: BreakdownTab[]
+  panel: BreakdownPanelConfig
   slug: string
   siteId: string
   range: StatsRange
@@ -371,10 +375,19 @@ export function BreakdownPanel({
   onSelect: (key: FilterKey, value: string) => void
 }) {
   const queryClient = useQueryClient()
+  const tabs = panelTabsForSearch(panel, search)
   const [active, setActive] = useState(tabs[0]!.key)
   const tab = tabs.find((item) => item.key === active) ?? tabs[0]!
   const dataKey = breakdownKey(tab)
   const showTabs = tabs.length > 1
+  const title =
+    panel.id === "sources" && search.referrer !== undefined
+      ? `Sources · ${search.referrer || "(none)"}`
+      : panel.id === "events" && search.event !== undefined
+        ? search.prop !== undefined
+          ? `Events · ${search.event} · ${search.prop}`
+          : `Events · ${search.event}`
+        : panel.title
 
   function prefetch(breakdown: Breakdown) {
     void queryClient.prefetchQuery(
