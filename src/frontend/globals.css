@@ -141,6 +141,13 @@
   * {
     @apply border-border outline-ring/50;
   }
+  /* Radix scroll lock hides the scrollbar and adds a body margin; the stable gutter keeps the width, so the margin would shift the page. */
+  html {
+    scrollbar-gutter: stable;
+  }
+  html body[data-scroll-locked] {
+    margin-right: 0 !important;
+  }
   body {
     @apply bg-background font-sans text-sm text-foreground antialiased;
     font-synthesis: none;
