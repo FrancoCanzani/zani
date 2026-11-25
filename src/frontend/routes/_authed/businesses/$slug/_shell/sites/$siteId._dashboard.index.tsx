@@ -4,6 +4,7 @@ import { revenueOverviewQueryOptions } from "@features/revenue/api"
 import {
   preloadSiteStats,
   previousStatsRange,
+  siteSetupQueryOptions,
   statsQueryFromSearch,
 } from "@features/sites/api"
 import { statsSearch } from "@features/sites/search"
@@ -16,6 +17,9 @@ export const Route = createFileRoute(
   loader: async ({ context, params, deps: { live, ...search } }) => {
     if (live) return
     const { range, filters } = statsQueryFromSearch(search)
+    void context.queryClient.prefetchQuery(
+      siteSetupQueryOptions(params.slug, params.siteId)
+    )
     await Promise.all([
       preloadSiteStats(context.queryClient, params.slug, params.siteId, search),
       context.queryClient.query(

@@ -90,7 +90,7 @@ function RevenueSetup({
         <p className="text-sm leading-relaxed text-muted-foreground">
           {connected
             ? "Stripe is connected. Run a sync from settings to import customers, subscriptions, and paid invoices."
-            : "Call zani.identify() when someone signs up, then connect Stripe with a restricted key. Revenue shows up next to every channel, page, and country."}
+            : "Connect Stripe to see MRR, new customers, and churn. Then call zani.identify() at signup to tie every customer to the channel, page, and country they came from."}
         </p>
       </div>
       <Button asChild variant="outline" className="shrink-0">

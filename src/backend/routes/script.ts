@@ -159,13 +159,25 @@ const source = `(() => {
     }
     return count > 0 ? props : undefined
   }
+  let warnedOrigin = false
   const post = (body) => {
-    void fetch(endpoint, {
+    fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json", "x-write-key": key },
       body: JSON.stringify(body),
       keepalive: true,
     })
+      .then((response) => {
+        if (response.status !== 403 || warnedOrigin) return
+        warnedOrigin = true
+        return response.json().then((result) => {
+          console.warn(
+            "zani: ignored a pageview from " + location.hostname +
+              ". This write key only records " + (result.domain || "its own domain") + "."
+          )
+        })
+      })
+      .catch(() => {})
   }
   const send = (name, referrer, props, identity) => {
     captureUtms()

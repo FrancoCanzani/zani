@@ -7,6 +7,8 @@ export function originHost(origin: string | undefined): string | null {
   }
 }
 
+const bareHost = (host: string) => host.toLowerCase().replace(/^www\./, "")
+
 export function originAllowed(host: string | null, domain: string): boolean {
-  return host !== null && host === domain.toLowerCase()
+  return host !== null && bareHost(host) === bareHost(domain)
 }

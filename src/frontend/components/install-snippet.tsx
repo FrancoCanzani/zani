@@ -2,6 +2,7 @@ import { useEffect, useState } from "react"
 import { CheckIcon, CopyIcon } from "lucide-react"
 import { toast } from "sonner"
 
+import { Segmented } from "@components/segmented"
 import { Button } from "@components/ui/button"
 
 type InstallSnippetProps = {
@@ -28,8 +29,29 @@ function scriptSource(writeKey: string) {
   ].join("\n")
 }
 
+function nextSource(writeKey: string) {
+  const src = `${window.location.origin}/script.js`
+  return [
+    "// app/layout.tsx, inside <body>",
+    'import Script from "next/script"',
+    "",
+    "<Script",
+    `  data-key="${writeKey}"`,
+    `  src="${src}"`,
+    '  strategy="afterInteractive"',
+    "/>",
+  ].join("\n")
+}
+
+const frameworks = ["html", "nextjs"] as const
+type Framework = (typeof frameworks)[number]
+const frameworkLabels: Record<Framework, string> = {
+  html: "HTML",
+  nextjs: "Next.js",
+}
+
 export function InstallSnippet({ label, writeKey, note }: InstallSnippetProps) {
-  const source = scriptSource(writeKey)
+  const [framework, setFramework] = useState<Framework>("html")
 
   return (
     <section className="space-y-3 text-sm">
@@ -37,9 +59,23 @@ export function InstallSnippet({ label, writeKey, note }: InstallSnippetProps) {
         <h2 className="text-muted-foreground">{label}</h2>
         <WriteKeyLine value={writeKey} />
       </div>
-      <ScriptBlock source={source} />
+      <Segmented
+        label="Framework"
+        options={frameworks}
+        value={framework}
+        labels={frameworkLabels}
+        onChange={setFramework}
+      />
+      {framework === "html" ? (
+        <ScriptBlock source={scriptSource(writeKey)} />
+      ) : (
+        <PlainBlock language="tsx" source={nextSource(writeKey)} />
+      )}
       <p className="text-muted-foreground">
-        Paste this on the site, before the closing body tag. After signup, call{" "}
+        {framework === "html"
+          ? "Paste this before the closing body tag. For Vite, Astro, or any static site, it goes in the main HTML file."
+          : "Add this once in the root layout so every page records views."}{" "}
+        After signup, call{" "}
         <code className="font-mono text-xs">zani.identify(userId)</code>.
       </p>
       <p className="text-muted-foreground">{note}</p>
@@ -73,6 +109,26 @@ function ScriptBlock({ source }: { source: string }) {
             </span>
           ))}
         </code>
+      </pre>
+    </div>
+  )
+}
+
+function PlainBlock({
+  language,
+  source,
+}: {
+  language: string
+  source: string
+}) {
+  return (
+    <div className="bg-secondary">
+      <div className="flex items-center gap-3 px-3 py-2">
+        <span className="text-xs text-muted-foreground">{language}</span>
+        <CopyButton value={source} label="Copy snippet" className="ml-auto" />
+      </div>
+      <pre className="no-scrollbar overflow-x-auto px-3 pb-3 font-mono text-xs leading-relaxed">
+        <code>{source}</code>
       </pre>
     </div>
   )

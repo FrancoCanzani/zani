@@ -11,6 +11,7 @@ import { KpiCards } from "./kpi-cards"
 import { LiveDashboard } from "./live-dashboard"
 import { breakdownPanels } from "./panels"
 import { chartSeriesFor, filterLabels } from "./search"
+import { SetupChecklist } from "./setup-checklist"
 import { useSiteSearch } from "./use-site-search"
 
 export function SitePage() {
@@ -63,6 +64,12 @@ function Dashboard() {
 
   return (
     <>
+      <SetupChecklist
+        slug={slug}
+        siteId={siteId}
+        stripeConnected={revenue.connected}
+      />
+
       <KpiCards
         totals={totals}
         previousTotals={previousTotals.data}

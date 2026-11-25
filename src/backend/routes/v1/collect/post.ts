@@ -8,6 +8,7 @@ import { newId, sha256Hex } from "../../../lib/utils"
 import type { AppEnv } from "../../../types"
 
 import { botBrowser, isBot } from "./lib/bot"
+import { notifyFirstPageview } from "./lib/first-pageview"
 import { clientIp, privacyIds } from "./lib/identity"
 import {
   cityFromRequest,
@@ -51,7 +52,8 @@ function firstTouchFromBody(
         firstReferrerHost = host
         let referrerPath = url.pathname || "/"
         if (!referrerPath.startsWith("/")) referrerPath = `/${referrerPath}`
-        if (referrerPath.length > 1024) referrerPath = referrerPath.slice(0, 1024)
+        if (referrerPath.length > 1024)
+          referrerPath = referrerPath.slice(0, 1024)
         firstReferrerPath = referrerPath
       }
     } catch {
@@ -99,7 +101,7 @@ export const post = new Hono<AppEnv>().post(
     }
 
     if (!originAllowed(originHost(c.req.header("origin")), matched.domain)) {
-      return c.json({ error: "origin" as const }, 403)
+      return c.json({ error: "origin" as const, domain: matched.domain }, 403)
     }
 
     const body = c.req.valid("json")
@@ -160,6 +162,18 @@ export const post = new Hono<AppEnv>().post(
           key: prop.key,
           value: prop.value,
         }))
+      )
+    }
+
+    if (dims.name === "pageview" && browser !== botBrowser) {
+      c.executionCtx.waitUntil(
+        notifyFirstPageview(c.env, db, {
+          site: matched,
+          eventId,
+          path: dims.path,
+        }).catch((error: unknown) => {
+          console.error("first pageview email failed", error)
+        })
       )
     }
 

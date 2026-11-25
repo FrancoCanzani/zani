@@ -55,15 +55,6 @@ export function RevenueSettings({
 
       <Step
         index={1}
-        title="Identify signups"
-        state={identifyState}
-        status={identifyLabel}
-      >
-        <IdentifyStep domain={domain} setup={setup ?? null} />
-      </Step>
-
-      <Step
-        index={2}
         title="Connect Stripe"
         state={stripeState}
         status={stripeLabel}
@@ -85,6 +76,15 @@ export function RevenueSettings({
         ) : (
           <EmptyNote>An owner or admin can connect Stripe.</EmptyNote>
         )}
+      </Step>
+
+      <Step
+        index={2}
+        title="Identify signups"
+        state={identifyState}
+        status={identifyLabel}
+      >
+        <IdentifyStep domain={domain} setup={setup ?? null} />
       </Step>
 
       <Step

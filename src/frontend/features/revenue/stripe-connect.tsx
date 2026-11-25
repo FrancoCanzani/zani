@@ -89,6 +89,25 @@ export function StripeConnect({
   )
 }
 
+const restrictedKeyUrl = (() => {
+  const params = new URLSearchParams({
+    name: "Zani",
+    thirdparty_integration_name: "Zani",
+    thirdparty_integration_url: window.location.origin,
+  })
+  // The dashboard's checkout slug differs from the documented one, so ask for both.
+  for (const permission of [
+    "rak_customer_read",
+    "rak_subscription_read",
+    "rak_invoice_read",
+    "rak_checkout_session_read",
+    "rak_bucket_checkout_read",
+  ]) {
+    params.append("permissions[]", permission)
+  }
+  return `https://dashboard.stripe.com/apikeys/create?${params}`
+})()
+
 function StripeKeyForm({ slug, siteId }: { slug: string; siteId: string }) {
   const queryClient = useQueryClient()
   const [apiKey, setApiKey] = useState("")
@@ -133,8 +152,17 @@ function StripeKeyForm({ slug, siteId }: { slug: string; siteId: string }) {
           </Button>
         </div>
         <FieldDescription>
-          Read access to Customers, Checkout Sessions, Subscriptions, and
-          Invoices. Stored encrypted; nothing is written to Stripe.
+          <a
+            href={restrictedKeyUrl}
+            target="_blank"
+            rel="noreferrer"
+            className="text-foreground underline underline-offset-4"
+          >
+            Create the key in Stripe
+          </a>{" "}
+          with read access to Customers, Checkout Sessions, Subscriptions, and
+          Invoices already ticked, then paste it here. Stored encrypted; nothing
+          is written to Stripe.
         </FieldDescription>
       </Field>
     </form>

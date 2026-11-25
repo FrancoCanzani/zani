@@ -216,6 +216,10 @@ function WaitingForViews({
           Install the script
         </h2>
         <InstallStatus slug={slug} siteId={siteId} domain={domain} />
+        <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
+          Only pageviews from {domain} count. Testing on localhost or a preview
+          URL? Those are ignored, and the browser console says so.
+        </p>
         {writeKey ? (
           import.meta.env.DEV ? (
             <p className="text-sm text-muted-foreground">
