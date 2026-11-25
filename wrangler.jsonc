@@ -18,6 +18,7 @@
     "ENVIRONMENT": "development",
     "BETTER_AUTH_URL": "http://localhost:5173",
     "EMAIL_FROM": "noreply@localhost",
+    "STRIPE_CLIENT_ID": "",
   },
   "d1_databases": [
     {
@@ -33,6 +34,6 @@
     },
   ],
   "secrets": {
-    "required": ["BETTER_AUTH_SECRET"],
+    "required": ["BETTER_AUTH_SECRET", "STRIPE_SECRET_KEY"],
   },
 }

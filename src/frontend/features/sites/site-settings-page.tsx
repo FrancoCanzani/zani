@@ -167,9 +167,9 @@ export function SiteSettingsPage() {
   useEffect(() => {
     if (!stripeResult) return
     if (stripeResult === "connected") {
-      toast.success(stripeResultMessages.connected)
+      toast.success(stripeResultMessages.connected, { id: "stripe-oauth" })
     } else {
-      toast.error(stripeResultMessages[stripeResult])
+      toast.error(stripeResultMessages[stripeResult], { id: "stripe-oauth" })
     }
     void navigate({
       to: ".",

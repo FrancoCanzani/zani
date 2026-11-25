@@ -8,13 +8,22 @@ A site gets pageviews and custom events (with properties) from `/script.js`, sig
 
 ## Revenue setup
 
-1. Install the script on your site.
-2. After signup, call `zani.identify(user.id, { email: user.email })`. The script sends the first and last source it kept in local storage on your domain.
+1. Install the script on your site. Site settings and the empty dashboard show when the first real pageview arrives.
+2. After signup, call `zani.identify(user.id, { email: user.email })`. Site settings has snippets for plain JavaScript, React, Next.js, Vue, and TypeScript types, and shows when the first signup arrives.
 3. Pass the same id to Stripe as Checkout `client_reference_id` or customer `metadata.zani_user_id`. Customers with a matching email are linked too.
-4. In site settings, connect Stripe with a restricted key that can read Customers, Checkout Sessions, Subscriptions, and Invoices, then run a sync.
+4. In site settings, press **Connect with Stripe** (OAuth, read-only scope) or paste a restricted key that can read Customers, Checkout Sessions, Subscriptions, and Invoices. Then run a sync.
 5. Optionally add a webhook endpoint at `/api/v1/stripe-webhooks/<siteId>` for `customer.created`, `customer.updated`, `checkout.session.completed`, `customer.subscription.updated`, `customer.subscription.deleted`, and `invoice.paid`, and save its signing secret.
 
-Stripe keys and webhook secrets are encrypted with a key derived from `BETTER_AUTH_SECRET`. Rotating that secret means re-entering them.
+### Stripe OAuth
+
+**Connect with Stripe** appears when both values are set:
+
+- `STRIPE_CLIENT_ID` (`ca_…`, from Stripe Connect settings) in `wrangler.jsonc` vars.
+- `STRIPE_SECRET_KEY`, the platform account's secret key, as a Worker secret (`wrangler secret put STRIPE_SECRET_KEY`) and in `.dev.vars` locally.
+
+Register `https://<your-host>/api/v1/stripe-oauth/callback` as a redirect URI in Stripe. `STRIPE_SECRET_KEY` is listed in `secrets.required`, so deploys fail until it is set; without OAuth, set it to any placeholder and keep `STRIPE_CLIENT_ID` empty. Sites then connect with a restricted key.
+
+Stripe keys, OAuth tokens, and webhook secrets are encrypted with a key derived from `BETTER_AUTH_SECRET`. Rotating that secret means re-entering them.
 
 In development, **Simulate data** on a site fills six months of pageviews, about 440 signups across sources, about 80 customers, and their MRR history.
 

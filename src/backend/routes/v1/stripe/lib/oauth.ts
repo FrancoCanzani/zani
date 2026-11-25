@@ -13,9 +13,10 @@ export type OauthState = {
   exp: number
 }
 
+// OAuth stays off until both are set (local dev may omit the secret entirely); sites then connect with a restricted key.
 export function oauthConfig(env: Bindings) {
-  const clientId = env.STRIPE_CLIENT_ID?.trim()
-  const secretKey = env.STRIPE_SECRET_KEY?.trim()
+  const clientId = (env.STRIPE_CLIENT_ID ?? "").trim()
+  const secretKey = (env.STRIPE_SECRET_KEY ?? "").trim()
   return clientId && secretKey ? { clientId, secretKey } : null
 }
 
