@@ -34,6 +34,7 @@ export function SitesPage() {
   const role = parseWorkspaceRole(workspaceData.workspace.role)
   const canAdd = role ? canManageBusiness(role) : false
   const [created, setCreated] = useState<{
+    id: string
     name: string
     writeKey: string
   } | null>(null)
@@ -47,7 +48,11 @@ export function SitesPage() {
         domain: value.domain.trim(),
       })
       rememberWriteKey(result.site.id, result.writeKey)
-      setCreated({ name: result.site.name, writeKey: result.writeKey })
+      setCreated({
+        id: result.site.id,
+        name: result.site.name,
+        writeKey: result.writeKey,
+      })
       formApi.reset()
       await queryClient.invalidateQueries({ queryKey: ["sites", slug] })
     },
@@ -57,13 +62,13 @@ export function SitesPage() {
     <div className="flex flex-col gap-10">
       <h1 className="text-4xl font-light tracking-tight">Sites</h1>
 
-      <ul className="divide-y border-y">
+      <ul className="divide-y overflow-hidden rounded-xl border border-border/70 bg-card">
         {data.sites.map((site) => (
-          <li key={site.id} className="py-3">
+          <li key={site.id}>
             <Link
               to="/businesses/$slug/sites/$siteId"
               params={{ slug, siteId: site.id }}
-              className="flex min-w-0 items-baseline justify-between gap-4"
+              className="flex min-w-0 items-baseline justify-between gap-4 px-4 py-3 transition-colors hover:bg-muted/40"
             >
               <span className="min-w-0 truncate">{site.name}</span>
               <span className="flex shrink-0 items-baseline gap-3 text-sm text-muted-foreground">
@@ -74,27 +79,47 @@ export function SitesPage() {
           </li>
         ))}
         {data.sites.length === 0 ? (
-          <li className="py-3 text-sm text-muted-foreground">No sites.</li>
+          <li className="px-4 py-3 text-sm text-muted-foreground">
+            No sites yet.
+          </li>
         ) : null}
       </ul>
 
       {created ? (
-        <InstallSnippet
-          label={`${created.name} write key`}
-          writeKey={created.writeKey}
-          note="Shown once."
-        />
+        <section className="space-y-4 rounded-xl border border-border/70 bg-card p-5">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <p className="text-[15px] font-semibold tracking-tight">
+              {created.name} is ready
+            </p>
+            <Button asChild size="sm">
+              <Link
+                to="/businesses/$slug/sites/$siteId"
+                params={{ slug, siteId: created.id }}
+              >
+                Open dashboard
+              </Link>
+            </Button>
+          </div>
+          <InstallSnippet
+            label="Write key"
+            writeKey={created.writeKey}
+            note="Shown once."
+          />
+        </section>
       ) : null}
 
       {canAdd ? (
         <form
-          className="max-w-sm space-y-3"
+          className="max-w-md space-y-4 rounded-xl border border-border/70 bg-card p-5"
           onSubmit={(event) => {
             event.preventDefault()
             event.stopPropagation()
             void form.handleSubmit()
           }}
         >
+          <h2 className="text-[15px] font-semibold tracking-tight">
+            Add a site
+          </h2>
           <FieldGroup>
             <form.Field name="name">
               {(field) => (
@@ -107,6 +132,7 @@ export function SitesPage() {
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(event) => field.handleChange(event.target.value)}
+                    placeholder="My SaaS…"
                   />
                   <FieldError errors={fieldErrors(field.state.meta.errors)} />
                 </Field>

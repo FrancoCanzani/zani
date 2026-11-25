@@ -22,14 +22,16 @@ export function UserMenu({ name, email }: UserMenuProps) {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm text-sidebar-foreground outline-none hover:bg-sidebar-accent hover:text-sidebar-accent-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring">
-        <span className="truncate">{name}</span>
+      <DropdownMenuTrigger className="flex max-w-48 items-center gap-2 rounded-full py-1 pr-3 pl-1 text-sm outline-none hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring">
+        <span
+          aria-hidden
+          className="flex size-7 shrink-0 items-center justify-center rounded-full bg-foreground text-xs font-medium text-background"
+        >
+          {(name || email).slice(0, 1).toUpperCase()}
+        </span>
+        <span className="truncate">{name || email}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent
-        side="top"
-        align="start"
-        className="w-(--radix-dropdown-menu-trigger-width)"
-      >
+      <DropdownMenuContent side="bottom" align="end" className="min-w-56">
         <DropdownMenuLabel className="font-normal">
           <span className="truncate text-xs font-normal text-muted-foreground">
             {email}
