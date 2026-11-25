@@ -1,4 +1,3 @@
-import type { BatchItem } from "drizzle-orm/batch"
 import { and, eq, isNull, or } from "drizzle-orm"
 
 import {
@@ -8,22 +7,17 @@ import {
   visitorIdentity,
 } from "../db/schema"
 
-import type { createDb } from "./db"
+import { chunk, rowsPerInsert, runBatch, type Database } from "./db"
 import { newId, sha256Hex } from "./utils"
 
-type Database = ReturnType<typeof createDb>
+export type MovementKind =
+  | "new"
+  | "expansion"
+  | "contraction"
+  | "churn"
+  | "reactivation"
 
-export const movementKinds = [
-  "new",
-  "expansion",
-  "contraction",
-  "churn",
-  "reactivation",
-] as const
-
-export type MovementKind = (typeof movementKinds)[number]
-
-export type Snapshot = {
+type Snapshot = {
   sourceId: string
   subscriptionId: string
   at: number
@@ -31,7 +25,7 @@ export type Snapshot = {
   currency: string
 }
 
-export type Movement = {
+type Movement = {
   kind: MovementKind
   amount: number
   mrrAfter: number
@@ -80,28 +74,6 @@ export function movementsFromSnapshots(snapshots: Snapshot[]): Movement[] {
   }
 
   return movements
-}
-
-export async function runBatch(
-  db: Database,
-  statements: BatchItem<"sqlite">[]
-) {
-  const [first, ...rest] = statements
-  if (!first) return
-  await db.batch([first, ...rest])
-}
-
-export function chunk<T>(values: T[], size: number): T[][] {
-  const out: T[][] = []
-  for (let offset = 0; offset < values.length; offset += size) {
-    out.push(values.slice(offset, offset + size))
-  }
-  return out
-}
-
-// D1 allows about 100 bound parameters per statement.
-export function rowsPerInsert(columns: number) {
-  return Math.max(1, Math.floor(100 / columns))
 }
 
 export async function recomputeCustomer(

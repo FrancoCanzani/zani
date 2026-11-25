@@ -6,7 +6,7 @@ type Bindings = AppEnv["Bindings"]
 const stateTtlMs = 10 * 60 * 1000
 const oauthHintPrefix = "oauth:"
 
-export type OauthState = {
+type OauthState = {
   slug: string
   siteId: string
   userId: string
@@ -82,20 +82,4 @@ export function oauthAccount(hint: string) {
   return hint.startsWith(oauthHintPrefix)
     ? hint.slice(oauthHintPrefix.length)
     : null
-}
-
-export async function deauthorize(env: Bindings, accountId: string) {
-  const config = oauthConfig(env)
-  if (!config) return
-  await fetch("https://connect.stripe.com/oauth/deauthorize", {
-    method: "POST",
-    headers: {
-      authorization: `Bearer ${config.secretKey}`,
-      "content-type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      client_id: config.clientId,
-      stripe_user_id: accountId,
-    }),
-  }).catch(() => null)
 }

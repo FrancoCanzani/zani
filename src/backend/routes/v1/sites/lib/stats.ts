@@ -1,8 +1,8 @@
 import type { AnyColumn, SQL } from "drizzle-orm"
-import { and, asc, desc, eq, gte, inArray, lt, ne, or, sql } from "drizzle-orm"
+import { and, asc, desc, eq, gte, lt, ne, or, sql } from "drizzle-orm"
 
 import { event, eventProp } from "../../../../db/schema"
-import type { createDb } from "../../../../lib/db"
+import type { Database } from "../../../../lib/db"
 import { sourceFor } from "../../../../lib/source"
 
 import {
@@ -18,14 +18,13 @@ const maxRangeMs = 400 * dayMs
 const botBrowser = "bot"
 const pageviewName = "pageview"
 const pointLimit = 500
+const maxBuckets = 1500
 
 export type StatsRange = {
   start: number
   end: number
   grain: Grain
 }
-
-type Database = ReturnType<typeof createDb>
 
 const dimensionColumns: Record<
   | Exclude<Breakdown, "entry" | "exit" | "source" | "prop_key" | "prop_value">
@@ -64,7 +63,11 @@ export function parseRange(input: {
   if (end - start > maxRangeMs) {
     return { ok: false, message: "The range can be at most 400 days." }
   }
-  return { ok: true, range: { start, end, grain: input.grain ?? "day" } }
+  const grain = input.grain ?? "day"
+  if ((end - start) / bucketSize(grain) > maxBuckets) {
+    return { ok: false, message: "Use a coarser grain for this range." }
+  }
+  return { ok: true, range: { start, end, grain } }
 }
 
 export function bucketSize(grain: Grain): number {
@@ -246,9 +249,11 @@ export async function sourceCondition(
     .filter((host) => sourceFor("", host) === source)
   const byUtm = sql`lower(${event.utmSource}) = ${source}`
   if (matching.length === 0) return byUtm
+  // One JSON parameter instead of one per host keeps this under D1's bound-parameter limit.
+  const hostList = sql`(select value from json_each(${JSON.stringify(matching)}))`
   return or(
     byUtm,
-    and(eq(event.utmSource, ""), inArray(event.referrerHost, matching))
+    and(eq(event.utmSource, ""), sql`${event.referrerHost} in ${hostList}`)
   )!
 }
 
@@ -358,7 +363,7 @@ export async function loadBreakdownRows(
 }
 
 async function loadPropBreakdown(
-  db: ReturnType<typeof createDb>,
+  db: Database,
   input: {
     breakdown: "prop_key" | "prop_value"
     where: ReturnType<typeof and>

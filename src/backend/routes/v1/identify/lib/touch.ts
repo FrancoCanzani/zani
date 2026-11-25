@@ -4,7 +4,7 @@ import { sourceFor } from "../../../../lib/source"
 
 const text = (max: number) => z.string().trim().max(max).optional()
 
-export const touchSchema = z.object({
+const touchSchema = z.object({
   utmSource: text(80),
   utmMedium: text(80),
   utmCampaign: text(80),
@@ -20,7 +20,7 @@ export const identifyBodySchema = z.object({
   lastTouch: touchSchema.optional(),
 })
 
-export type TouchInput = z.infer<typeof touchSchema>
+type TouchInput = z.infer<typeof touchSchema>
 
 export type Touch = {
   source: string

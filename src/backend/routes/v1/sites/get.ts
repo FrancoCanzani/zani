@@ -222,20 +222,18 @@ export const get = new Hono<AppEnv>()
 
       let bounceRate = 0
       if (query.event === undefined && !joinProps && totalSessions > 0) {
-        const sessionRows = await db
-          .select({
-            sessionId: event.sessionId,
-            views: sql<number>`count(*)`.as("views"),
-          })
+        const bounced = db
+          .select({ sessionId: event.sessionId })
           .from(event)
           .where(where)
           .groupBy(event.sessionId)
-
-        const bounceSessions = sessionRows.reduce(
-          (count, row) => count + (asNumber(row.views) === 1 ? 1 : 0),
-          0
-        )
-        bounceRate = Math.round((bounceSessions / totalSessions) * 1000) / 10
+          .having(sql`count(*) = 1`)
+          .as("bounced")
+        const [row] = await db
+          .select({ count: sql<number>`count(*)` })
+          .from(bounced)
+        bounceRate =
+          Math.round((asNumber(row?.count) / totalSessions) * 1000) / 10
       }
 
       const rows = await loadBreakdownRows(db, {

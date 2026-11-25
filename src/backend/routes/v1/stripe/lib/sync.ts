@@ -1,8 +1,8 @@
 import { and, asc, eq, gt } from "drizzle-orm"
 
 import { stripeConnection, stripeCustomer } from "../../../../db/schema"
-import type { createDb } from "../../../../lib/db"
-import { recomputeCustomer, runBatch } from "../../../../lib/revenue"
+import { runBatch, type Database } from "../../../../lib/db"
+import { recomputeCustomer } from "../../../../lib/revenue"
 import {
   checkoutSessionLink,
   customerUpsert,
@@ -18,9 +18,7 @@ import {
   type StripeSubscription,
 } from "../../../../lib/stripe"
 
-type Database = ReturnType<typeof createDb>
-
-export const syncPhases = [
+const syncPhases = [
   "customers",
   "checkout_sessions",
   "subscriptions",

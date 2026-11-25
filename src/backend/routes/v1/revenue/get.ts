@@ -20,7 +20,7 @@ import {
   stripeCustomer,
   visitorIdentity,
 } from "../../../db/schema"
-import { createDb } from "../../../lib/db"
+import { createDb, type Database } from "../../../lib/db"
 import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"
 import type { AppEnv } from "../../../types"
@@ -43,8 +43,6 @@ import {
   type AttributionDimension,
   type Touch,
 } from "./lib/schema"
-
-type Database = ReturnType<typeof createDb>
 
 const unidentified = "(not identified)"
 const customerLimit = 50

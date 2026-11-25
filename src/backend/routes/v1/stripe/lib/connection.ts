@@ -1,14 +1,17 @@
 import { count, eq } from "drizzle-orm"
 
-import { stripeConnection, stripeCustomer } from "../../../../db/schema"
-import type { createDb } from "../../../../lib/db"
+import {
+  mrrSnapshot,
+  revenueMovement,
+  stripeConnection,
+  stripeCustomer,
+} from "../../../../db/schema"
+import type { Database } from "../../../../lib/db"
 import { encryptSecret } from "../../../../lib/secrets"
 import type { AppEnv } from "../../../../types"
 
 import { oauthAccount, oauthConfig } from "./oauth"
 import { parseSyncPhase } from "./sync"
-
-type Database = ReturnType<typeof createDb>
 
 export async function loadConnection(db: Database, siteId: string) {
   const [row] = await db
@@ -48,6 +51,14 @@ export async function serializeConnection(
   }
 }
 
+export function clearRevenueStatements(db: Database, siteId: string) {
+  return [
+    db.delete(revenueMovement).where(eq(revenueMovement.siteId, siteId)),
+    db.delete(mrrSnapshot).where(eq(mrrSnapshot.siteId, siteId)),
+    db.delete(stripeCustomer).where(eq(stripeCustomer.siteId, siteId)),
+  ] as const
+}
+
 export async function saveConnection(
   db: Database,
   secret: string,
@@ -60,13 +71,19 @@ export async function saveConnection(
   }
 ) {
   const now = Date.now()
+  const existing = await loadConnection(db, input.siteId)
+  // Revenue rows come from the previous account; keeping them would mix two accounts' MRR.
+  const replacing =
+    existing !== null && existing.apiKeyHint !== input.apiKeyHint
   const values = {
     siteId: input.siteId,
     apiKeyCipher: await encryptSecret(secret, input.apiKey),
     apiKeyHint: input.apiKeyHint,
     webhookSecretCipher: input.webhookSecret
       ? await encryptSecret(secret, input.webhookSecret)
-      : null,
+      : replacing
+        ? null
+        : (existing?.webhookSecretCipher ?? null),
     livemode: input.livemode,
     syncPhase: "customers",
     syncCursor: null,
@@ -75,11 +92,16 @@ export async function saveConnection(
     createdAt: now,
     updatedAt: now,
   }
-  await db
+  const upsert = db
     .insert(stripeConnection)
     .values(values)
     .onConflictDoUpdate({
       target: stripeConnection.siteId,
       set: { ...values, createdAt: undefined },
     })
+  if (replacing) {
+    await db.batch([...clearRevenueStatements(db, input.siteId), upsert])
+  } else {
+    await upsert
+  }
 }

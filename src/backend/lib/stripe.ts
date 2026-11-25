@@ -2,11 +2,9 @@ import { and, eq, isNull, sql } from "drizzle-orm"
 
 import { mrrSnapshot, stripeCustomer } from "../db/schema"
 
-import type { createDb } from "./db"
+import type { Database } from "./db"
 import { emailHash, findIdentityId } from "./revenue"
 import { hmacSha256Hex, timingSafeEqual } from "./secrets"
-
-type Database = ReturnType<typeof createDb>
 
 // Pinned so invoice and subscription payloads keep one shape regardless of the account's default API version.
 const stripeVersion = "2024-06-20"
@@ -120,7 +118,7 @@ function monthlyAmount(
   }
 }
 
-export function invoiceMrr(invoice: StripeInvoice) {
+function invoiceMrr(invoice: StripeInvoice) {
   if (invoice.status !== "paid" || !invoice.subscription) return null
   let mrr = 0
   let at = Number.POSITIVE_INFINITY
@@ -142,7 +140,7 @@ export function invoiceMrr(invoice: StripeInvoice) {
   }
 }
 
-export type CustomerValues = {
+type CustomerValues = {
   siteId: string
   id: string
   email: string

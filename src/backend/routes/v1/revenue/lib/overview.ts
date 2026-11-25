@@ -2,7 +2,7 @@ import type { MovementKind } from "../../../../lib/revenue"
 import type { Grain } from "../../sites/lib/schema"
 import { bucketSize, timezoneOffsetMs } from "../../sites/lib/stats"
 
-export type MovementRow = {
+type MovementRow = {
   customerId: string
   kind: string
   amount: number

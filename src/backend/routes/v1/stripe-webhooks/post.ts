@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm"
 import { Hono } from "hono"
 
 import { stripeConnection } from "../../../db/schema"
-import { createDb } from "../../../lib/db"
+import { createDb, type Database } from "../../../lib/db"
 import { recomputeCustomer } from "../../../lib/revenue"
 import { decryptSecret } from "../../../lib/secrets"
 import {
@@ -11,6 +11,7 @@ import {
   customerValues,
   invoiceSnapshot,
   linkIdentity,
+  StripeError,
   stripeGet,
   subscriptionEndSnapshot,
   verifyStripeSignature,
@@ -21,8 +22,6 @@ import {
   type StripeSubscription,
 } from "../../../lib/stripe"
 import type { AppEnv } from "../../../types"
-
-type Database = ReturnType<typeof createDb>
 
 async function syncCustomer(
   db: Database,
@@ -37,6 +36,61 @@ async function syncCustomer(
   const values = await customerValues(siteId, customer)
   if (values) await customerUpsert(db, values)
   await linkIdentity(db, siteId, customerId)
+}
+
+async function applyEvent(
+  db: Database,
+  siteId: string,
+  apiKey: string,
+  event: StripeEvent
+) {
+  switch (event.type) {
+    case "customer.created":
+    case "customer.updated":
+      await syncCustomer(db, siteId, apiKey, event.data.object.id)
+      break
+    case "checkout.session.completed": {
+      const session = await stripeGet<StripeCheckoutSession>(
+        apiKey,
+        `checkout/sessions/${event.data.object.id}`
+      )
+      if (session.customer) {
+        await syncCustomer(db, siteId, apiKey, session.customer)
+        const link = checkoutSessionLink(db, siteId, session)
+        if (link) await link
+        await linkIdentity(db, siteId, session.customer)
+      }
+      break
+    }
+    case "customer.subscription.updated":
+    case "customer.subscription.deleted": {
+      const subscription = await stripeGet<StripeSubscription>(
+        apiKey,
+        `subscriptions/${event.data.object.id}`
+      )
+      const snapshot = subscriptionEndSnapshot(db, siteId, subscription)
+      if (snapshot) {
+        await snapshot
+        await recomputeCustomer(db, siteId, subscription.customer)
+      }
+      break
+    }
+    case "invoice.paid": {
+      const invoice = await stripeGet<StripeInvoice>(
+        apiKey,
+        `invoices/${event.data.object.id}`
+      )
+      const snapshot = invoiceSnapshot(db, siteId, invoice)
+      if (snapshot) {
+        await syncCustomer(db, siteId, apiKey, invoice.customer)
+        await snapshot
+        await recomputeCustomer(db, siteId, invoice.customer)
+      }
+      break
+    }
+    default:
+      break
+  }
 }
 
 export const post = new Hono<AppEnv>().post("/:siteId", async (c) => {
@@ -66,58 +120,16 @@ export const post = new Hono<AppEnv>().post("/:siteId", async (c) => {
   }
 
   const event = JSON.parse(payload) as StripeEvent
-  const objectId = event.data.object.id
   const apiKey = await decryptSecret(
     c.env.BETTER_AUTH_SECRET,
     connection.apiKeyCipher
   )
 
-  switch (event.type) {
-    case "customer.created":
-    case "customer.updated":
-      await syncCustomer(db, siteId, apiKey, objectId)
-      break
-    case "checkout.session.completed": {
-      const session = await stripeGet<StripeCheckoutSession>(
-        apiKey,
-        `checkout/sessions/${objectId}`
-      )
-      if (session.customer) {
-        await syncCustomer(db, siteId, apiKey, session.customer)
-        const link = checkoutSessionLink(db, siteId, session)
-        if (link) await link
-        await linkIdentity(db, siteId, session.customer)
-      }
-      break
-    }
-    case "customer.subscription.updated":
-    case "customer.subscription.deleted": {
-      const subscription = await stripeGet<StripeSubscription>(
-        apiKey,
-        `subscriptions/${objectId}`
-      )
-      const snapshot = subscriptionEndSnapshot(db, siteId, subscription)
-      if (snapshot) {
-        await snapshot
-        await recomputeCustomer(db, siteId, subscription.customer)
-      }
-      break
-    }
-    case "invoice.paid": {
-      const invoice = await stripeGet<StripeInvoice>(
-        apiKey,
-        `invoices/${objectId}`
-      )
-      const snapshot = invoiceSnapshot(db, siteId, invoice)
-      if (snapshot) {
-        await syncCustomer(db, siteId, apiKey, invoice.customer)
-        await snapshot
-        await recomputeCustomer(db, siteId, invoice.customer)
-      }
-      break
-    }
-    default:
-      break
+  try {
+    await applyEvent(db, siteId, apiKey, event)
+  } catch (error) {
+    // Stripe retries any non-2xx for days; a 4xx from its API (deleted object, revoked access) never succeeds on retry.
+    if (!(error instanceof StripeError) || error.status >= 500) throw error
   }
 
   await db

@@ -1,9 +1,7 @@
 import { and, eq } from "drizzle-orm"
 
 import { site } from "../../../../db/schema"
-import type { createDb } from "../../../../lib/db"
-
-type Database = ReturnType<typeof createDb>
+import type { Database } from "../../../../lib/db"
 
 export async function loadSite(
   db: Database,

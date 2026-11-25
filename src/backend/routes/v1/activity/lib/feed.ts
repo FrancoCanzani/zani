@@ -7,7 +7,7 @@ import {
   stripeCustomer,
   visitorIdentity,
 } from "../../../../db/schema"
-import type { createDb } from "../../../../lib/db"
+import type { Database } from "../../../../lib/db"
 import type { MovementKind } from "../../../../lib/revenue"
 import { sourceFor } from "../../../../lib/source"
 import { identityFilters } from "../../revenue/lib/filters"
@@ -20,9 +20,7 @@ import {
 
 import type { ActivityQuery } from "./schema"
 
-type Database = ReturnType<typeof createDb>
-
-export const activityLimit = 50
+const activityLimit = 50
 
 export type ActivityItem =
   | {

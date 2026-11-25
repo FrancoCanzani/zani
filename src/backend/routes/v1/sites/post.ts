@@ -11,13 +11,8 @@ import {
   stripeCustomer,
   visitorIdentity,
 } from "../../../db/schema"
-import { createDb } from "../../../lib/db"
-import {
-  chunk,
-  recomputeCustomer,
-  rowsPerInsert,
-  runBatch,
-} from "../../../lib/revenue"
+import { chunk, createDb, rowsPerInsert, runBatch } from "../../../lib/db"
+import { recomputeCustomer } from "../../../lib/revenue"
 import { newId, nowMs, randomToken, sha256Hex } from "../../../lib/utils"
 import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"

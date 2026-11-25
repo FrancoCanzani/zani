@@ -213,7 +213,7 @@ export function cityFromRequest(request: Request): string {
   return normalizeCity(city)
 }
 
-function classifyAgent(userAgent: string): {
+export function classifyAgent(userAgent: string): {
   browser: string
   device: string
   os: string

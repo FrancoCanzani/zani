@@ -7,19 +7,12 @@ import { createDb } from "../../../lib/db"
 import { emailHash, linkCustomersToIdentity } from "../../../lib/revenue"
 import { newId, sha256Hex } from "../../../lib/utils"
 import type { AppEnv } from "../../../types"
-import { countryFromRequest } from "../collect/lib/normalize"
+import { classifyAgent, countryFromRequest } from "../collect/lib/normalize"
 import { originAllowed, originHost } from "../collect/lib/origin"
 
 import { identifyBodySchema, normalizeTouch } from "./lib/touch"
 
 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
-function deviceFor(userAgent: string) {
-  const value = userAgent.toLowerCase()
-  if (/ipad|tablet/.test(value)) return "tablet"
-  if (/mobi|iphone|android/.test(value)) return "mobile"
-  return "desktop"
-}
 
 export const post = new Hono<AppEnv>().post(
   "/",
@@ -58,7 +51,7 @@ export const post = new Hono<AppEnv>().post(
       emailHash: hashed,
       signedUpAt: now,
       country: countryFromRequest(c.req.raw),
-      device: deviceFor(c.req.header("user-agent") ?? ""),
+      device: classifyAgent(c.req.header("user-agent") ?? "").device,
       firstSource: first.source,
       firstMedium: first.medium,
       firstCampaign: first.campaign,

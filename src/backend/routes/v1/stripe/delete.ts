@@ -1,12 +1,7 @@
 import { eq } from "drizzle-orm"
 import { Hono } from "hono"
 
-import {
-  mrrSnapshot,
-  revenueMovement,
-  stripeConnection,
-  stripeCustomer,
-} from "../../../db/schema"
+import { stripeConnection } from "../../../db/schema"
 import { createDb } from "../../../lib/db"
 import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"
@@ -15,8 +10,8 @@ import { loadSite } from "../sites/lib/load"
 import { workspaceFromContext } from "../workspaces/lib/context"
 import { canManageBusiness, parseWorkspaceRole } from "../workspaces/lib/schema"
 
-import { loadConnection } from "./lib/connection"
-import { deauthorize, oauthAccount, oauthConfig } from "./lib/oauth"
+import { clearRevenueStatements, loadConnection } from "./lib/connection"
+import { oauthAccount, oauthConfig } from "./lib/oauth"
 
 export const remove = new Hono<AppEnv>().delete(
   "/",
@@ -40,27 +35,31 @@ export const remove = new Hono<AppEnv>().delete(
 
     const existing = await loadConnection(db, matched.id)
     const account = existing ? oauthAccount(existing.apiKeyHint) : null
-    if (account) {
-      await deauthorize(c.env, account)
+    const oauth = oauthConfig(c.env)
+    if (account && oauth) {
+      // Best effort: the local disconnect must succeed even if Stripe is unreachable.
+      await fetch("https://connect.stripe.com/oauth/deauthorize", {
+        method: "POST",
+        headers: {
+          authorization: `Bearer ${oauth.secretKey}`,
+          "content-type": "application/x-www-form-urlencoded",
+        },
+        body: new URLSearchParams({
+          client_id: oauth.clientId,
+          stripe_user_id: account,
+        }),
+      }).catch(() => null)
     }
 
-    // Revenue data is derived from the connected account; keeping it would mix accounts on reconnect.
     await db.batch([
       db
         .delete(stripeConnection)
         .where(eq(stripeConnection.siteId, matched.id)),
-      db.delete(revenueMovement).where(eq(revenueMovement.siteId, matched.id)),
-      db.delete(mrrSnapshot).where(eq(mrrSnapshot.siteId, matched.id)),
-      db.delete(stripeCustomer).where(eq(stripeCustomer.siteId, matched.id)),
+      ...clearRevenueStatements(db, matched.id),
     ])
 
     return c.json(
-      {
-        stripe: {
-          connected: false as const,
-          oauthAvailable: oauthConfig(c.env) !== null,
-        },
-      },
+      { stripe: { connected: false as const, oauthAvailable: oauth !== null } },
       200
     )
   }
