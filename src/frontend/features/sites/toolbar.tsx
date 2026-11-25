@@ -24,6 +24,17 @@ function dateInputValue(iso: string, timeZone: string) {
   return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 }
 
+const customDay = new Intl.DateTimeFormat(undefined, {
+  month: "short",
+  day: "numeric",
+})
+
+function customRangeLabel(from: string, to: string) {
+  const day = (value: string) =>
+    customDay.format(new Date(`${value.slice(0, 10)}T12:00`))
+  return `${day(from)} – ${day(to)}`
+}
+
 function clearFiltersPatch(): Partial<SiteSearch> {
   const patch: Partial<SiteSearch> = {}
   for (const key of filterKeys) {
@@ -88,12 +99,30 @@ export function Toolbar({
             active={search.range === "custom"}
             label={
               search.range === "custom" && search.from && search.to
-                ? `${search.from} → ${search.to}`
+                ? customRangeLabel(search.from, search.to)
                 : "Custom"
             }
             onCustom={(from, to) => patchSearch({ range: "custom", from, to })}
             onTimeZone={(tz) => patchSearch({ tz })}
           />
+          {search.range === "custom" ? (
+            <Button
+              type="button"
+              size="icon-xs"
+              variant="ghost"
+              aria-label="Clear custom range"
+              className="-ml-1.5"
+              onClick={() =>
+                patchSearch({
+                  range: undefined,
+                  from: undefined,
+                  to: undefined,
+                })
+              }
+            >
+              <XIcon />
+            </Button>
+          ) : null}
           {showCompare ? (
             <Button
               type="button"

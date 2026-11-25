@@ -267,7 +267,7 @@ export function DashboardChart({
             tickLine={false}
             axisLine={false}
             tickMargin={6}
-            width={40}
+            width="auto"
             allowDecimals={false}
             tickFormatter={(value) => formatCount(Number(value))}
           />
@@ -278,7 +278,7 @@ export function DashboardChart({
               tickLine={false}
               axisLine={false}
               tickMargin={6}
-              width={money ? 56 : 32}
+              width="auto"
               allowDecimals={false}
               tickFormatter={(value) =>
                 money

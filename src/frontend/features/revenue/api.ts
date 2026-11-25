@@ -305,15 +305,18 @@ export async function syncStripeStep(
 
 export function formatCompactMoney(minor: number, currency: string) {
   const code = (currency || "usd").toUpperCase()
+  const major = minor / 100
   try {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency: code,
-      notation: Math.abs(minor) >= 1_000_000 ? "compact" : "standard",
-      maximumFractionDigits: Math.abs(minor) >= 10_000 ? 0 : 2,
-    }).format(minor / 100)
+      currencyDisplay: "narrowSymbol",
+      notation: Math.abs(major) >= 10_000 ? "compact" : "standard",
+      maximumFractionDigits:
+        Number.isInteger(major) || Math.abs(major) >= 100 ? 0 : 2,
+    }).format(major)
   } catch {
-    return `${Math.round(minor / 100)} ${code}`
+    return `${Math.round(major)} ${code}`
   }
 }
 
@@ -324,6 +327,7 @@ export function formatMoney(minor: number, currency: string) {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency: code,
+      currencyDisplay: "narrowSymbol",
       minimumFractionDigits: fractionDigits,
       maximumFractionDigits: fractionDigits,
     }).format(minor / 100)

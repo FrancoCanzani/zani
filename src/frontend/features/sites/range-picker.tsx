@@ -104,15 +104,16 @@ export function RangePicker({
           {label}
         </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-auto p-3">
+      <PopoverContent align="start" className="w-auto p-2">
         <Calendar
           mode="range"
+          className="p-0 [--cell-radius:var(--radius-sm)] [--cell-size:--spacing(6.5)]"
           numberOfMonths={1}
           selected={draft}
           onSelect={setDraft}
           defaultMonth={draft?.from ?? draft?.to}
         />
-        <div className="mt-3 grid grid-cols-2 gap-2 border-t pt-3">
+        <div className="mt-2 grid grid-cols-2 gap-2 border-t pt-2">
           <label className="space-y-1">
             <span className="text-[11px] text-muted-foreground">From</span>
             <Input
@@ -132,7 +133,7 @@ export function RangePicker({
             />
           </label>
         </div>
-        <div className="mt-3 flex flex-wrap items-center gap-2 border-t pt-3">
+        <div className="mt-2 flex flex-wrap items-center gap-1.5 border-t pt-2">
           <Button
             type="button"
             size="xs"
