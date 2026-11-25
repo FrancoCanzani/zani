@@ -1,271 +1,44 @@
-import {
-  useMutation,
-  useQueryClient,
-  useSuspenseQuery,
-} from "@tanstack/react-query"
-import { Link, getRouteApi } from "@tanstack/react-router"
-import { SettingsIcon, SparklesIcon } from "lucide-react"
-import { Suspense, startTransition, useState } from "react"
-import { toast } from "sonner"
+import { useSuspenseQuery } from "@tanstack/react-query"
+import { Suspense } from "react"
 
-import { InstallSnippet } from "@components/install-snippet"
-import { Button } from "@components/ui/button"
 import { Skeleton } from "@components/ui/skeleton"
 import { revenueOverviewQueryOptions } from "@features/revenue/api"
-import {
-  AttributionPanel,
-  MovementsPanel,
-  TopCustomersPanel,
-} from "@features/revenue/revenue-panels"
-import { workspaceQueryOptions } from "@features/workspaces/api"
-import {
-  canManageBusiness,
-  parseWorkspaceRole,
-} from "@features/workspaces/role"
 
-import {
-  previousStatsRange,
-  simulateSiteViews,
-  siteStatsQueryOptions,
-  statsQueryFromSearch,
-  type SiteStats,
-  type StatsFilters,
-  type StatsRange,
-} from "./api"
-import { ActivityFeed } from "./activity-feed"
+import { previousStatsRange, siteStatsQueryOptions } from "./api"
 import { BreakdownPanel } from "./breakdown-panel"
 import { DashboardChart } from "./dashboard-chart"
-import { InstallStatus } from "./install-status"
 import { KpiCards } from "./kpi-cards"
-import { LiveDashboard, LivePill } from "./live-dashboard"
+import { LiveDashboard } from "./live-dashboard"
 import { breakdownPanels } from "./panels"
-import {
-  chartSeriesFor,
-  dependentFilters,
-  filterLabels,
-  type FilterKey,
-  type SiteSearch,
-} from "./search"
-import { Toolbar } from "./toolbar"
-import { useRememberedWriteKey } from "./write-key"
-
-const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId/")
-
-function formatStatsRange(start: string, end: string, timeZone: string) {
-  const startDate = new Date(start)
-  const endDate = new Date(Date.parse(end) - 1)
-  const monthDay = new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    timeZone,
-  })
-  const monthDayYear = new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-    timeZone,
-  })
-  if (startDate.getFullYear() === endDate.getFullYear()) {
-    return `${monthDay.format(startDate)} – ${monthDayYear.format(endDate)}`
-  }
-  return `${monthDayYear.format(startDate)} – ${monthDayYear.format(endDate)}`
-}
+import { chartSeriesFor, filterLabels } from "./search"
+import { useSiteSearch } from "./use-site-search"
 
 export function SitePage() {
-  const { slug, siteId } = routeApi.useParams()
-  const search = routeApi.useSearch()
-  const navigate = routeApi.useNavigate()
-  const queryClient = useQueryClient()
-  const { range, filters, includeBots } = statsQueryFromSearch(search)
-  const timeZone = search.tz || "UTC"
-  const previousRange = previousStatsRange(range)
-
-  const totals = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, undefined, range, filters, includeBots)
-  )
-
-  const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
-  const role = parseWorkspaceRole(workspaceData.workspace.role)
-  const canManage = role !== null && canManageBusiness(role)
-  const site = totals.data.site
-  const revoked = site.revokedAt !== null
-  const { writeKey } = useRememberedWriteKey(siteId)
-
-  function patchSearch(patch: Partial<SiteSearch>) {
-    startTransition(() => {
-      void navigate({
-        search: (prev) => {
-          const next = { ...prev, ...patch }
-          for (const key of Object.keys(patch) as Array<keyof SiteSearch>) {
-            if (patch[key] === undefined) delete next[key]
-          }
-          return next
-        },
-        resetScroll: false,
-      })
-    })
-  }
-
-  function toggleFilter(key: FilterKey, value: string) {
-    patchSearch({
-      ...dependentFilters(key),
-      [key]: search[key] === value ? undefined : value,
-    })
-  }
-
-  const simulate = useMutation({
-    mutationFn: () => simulateSiteViews(slug, siteId),
-    onSuccess: async (result) => {
-      toast.success(
-        `Simulated ${result.inserted.toLocaleString()} pageviews, ${result.signups} signups, and ${result.customers} customers`
-      )
-      await Promise.all([
-        queryClient.invalidateQueries({
-          queryKey: ["site-stats", slug, siteId],
-        }),
-        queryClient.invalidateQueries({ queryKey: ["revenue", slug, siteId] }),
-      ])
-    },
-    onError: (error) => {
-      toast.error(error.message)
-    },
-  })
-
+  const { search } = useSiteSearch()
+  if (!search.live) return <Dashboard />
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <h1 className="truncate text-3xl font-light tracking-tight sm:text-4xl">
-            {site.name}
-          </h1>
-          <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
-            <a
-              href={`https://${site.domain}`}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:text-foreground hover:underline"
-            >
-              {site.domain}
-            </a>
-            <span aria-hidden>·</span>
-            <span className="font-mono">
-              {search.live
-                ? "Last 30 minutes"
-                : formatStatsRange(range.start, range.end, timeZone)}
-            </span>
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {totals.data.hasEvents && !revoked ? (
-            <LivePill
-              slug={slug}
-              siteId={siteId}
-              active={search.live}
-              onToggle={() =>
-                patchSearch({ live: search.live ? undefined : true })
-              }
-            />
-          ) : null}
-          {import.meta.env.DEV ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              disabled={simulate.isPending || revoked}
-              onClick={() => simulate.mutate()}
-            >
-              <SparklesIcon data-icon="inline-start" />
-              {simulate.isPending ? "Simulating…" : "Simulate data"}
-            </Button>
-          ) : null}
-          <Button asChild variant="outline" size="xs">
-            <Link
-              to="/businesses/$slug/sites/$siteId/settings"
-              params={{ slug, siteId }}
-            >
-              <SettingsIcon data-icon="inline-start" />
-              Settings
-            </Link>
-          </Button>
-        </div>
-      </div>
-
-      {revoked ? (
-        <p className="text-sm text-muted-foreground">
-          Collection is stopped. New pageviews are not recorded.
-        </p>
-      ) : null}
-
-      {totals.data.hasEvents && search.live ? (
-        <Suspense fallback={<PanelSkeleton />}>
-          <LiveDashboard
-            slug={slug}
-            siteId={siteId}
-            search={search}
-            filters={filters}
-            includeBots={includeBots}
-            timeZone={timeZone}
-            patchSearch={patchSearch}
-            toggleFilter={toggleFilter}
-          />
-        </Suspense>
-      ) : totals.data.hasEvents ? (
-        <Dashboard
-          slug={slug}
-          siteId={siteId}
-          search={search}
-          range={range}
-          previousRange={previousRange}
-          filters={filters}
-          includeBots={includeBots}
-          timeZone={timeZone}
-          totals={totals.data}
-          patchSearch={patchSearch}
-          toggleFilter={toggleFilter}
-        />
-      ) : revoked ? (
-        <p className="text-sm text-muted-foreground">
-          No pageviews were recorded.
-        </p>
-      ) : (
-        <WaitingForViews
-          domain={site.domain}
-          writeKey={writeKey}
-          canManage={canManage}
-          slug={slug}
-          siteId={siteId}
-        />
-      )}
-    </div>
+    <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
+      <LiveDashboard />
+    </Suspense>
   )
 }
 
-function Dashboard({
-  slug,
-  siteId,
-  search,
-  range,
-  previousRange,
-  filters,
-  includeBots,
-  timeZone,
-  totals,
-  patchSearch,
-  toggleFilter,
-}: {
-  slug: string
-  siteId: string
-  search: SiteSearch
-  range: StatsRange
-  previousRange: StatsRange
-  filters: StatsFilters
-  includeBots: boolean
-  timeZone: string
-  totals: SiteStats
-  patchSearch: (patch: Partial<SiteSearch>) => void
-  toggleFilter: (key: FilterKey, value: string) => void
-}) {
-  const [now] = useState(() => Date.now())
+function Dashboard() {
+  const {
+    slug,
+    siteId,
+    search,
+    range,
+    filters,
+    includeBots,
+    timeZone,
+    patchSearch,
+    toggleFilter,
+  } = useSiteSearch()
+  const previousRange = previousStatsRange(range)
+  const { data: totals } = useSuspenseQuery(
+    siteStatsQueryOptions(slug, siteId, undefined, range, filters, includeBots)
+  )
   const { data: revenue } = useSuspenseQuery(
     revenueOverviewQueryOptions(slug, siteId, range, filters)
   )
@@ -290,13 +63,6 @@ function Dashboard({
 
   return (
     <>
-      <Toolbar
-        search={search}
-        range={range}
-        timeZone={timeZone}
-        patchSearch={patchSearch}
-      />
-
       <KpiCards
         totals={totals}
         previousTotals={previousTotals.data}
@@ -346,157 +112,6 @@ function Dashboard({
           />
         ))}
       </div>
-
-      <ActivityFeed
-        slug={slug}
-        siteId={siteId}
-        range={range}
-        filters={filters}
-        includeBots={includeBots}
-        live={false}
-        now={now}
-        onSelect={toggleFilter}
-      />
-
-      <section className="flex flex-col gap-3 pt-4">
-        <div className="flex items-baseline justify-between gap-3">
-          <h2 className="text-xl font-light tracking-tight">Revenue</h2>
-          {revenue.otherCurrencies > 0 ? (
-            <p className="text-xs text-muted-foreground">
-              {revenue.currency.toUpperCase()} only · {revenue.otherCurrencies}{" "}
-              other {revenue.otherCurrencies === 1 ? "currency" : "currencies"}{" "}
-              hidden
-            </p>
-          ) : null}
-        </div>
-        {revenue.hasData ? (
-          <>
-            <Suspense fallback={<PanelSkeleton />}>
-              <AttributionPanel
-                slug={slug}
-                siteId={siteId}
-                range={range}
-                filters={filters}
-                includeBots={includeBots}
-                by={search.by}
-                touch={search.touch}
-                overview={revenue}
-                onChange={patchSearch}
-              />
-            </Suspense>
-            <div className="grid gap-3 md:grid-cols-2">
-              <MovementsPanel overview={revenue} />
-              <Suspense fallback={<PanelSkeleton />}>
-                <TopCustomersPanel slug={slug} siteId={siteId} />
-              </Suspense>
-            </div>
-          </>
-        ) : (
-          <RevenueSetup
-            slug={slug}
-            siteId={siteId}
-            connected={revenue.connected}
-          />
-        )}
-      </section>
     </>
-  )
-}
-
-function PanelSkeleton() {
-  return <Skeleton className="h-64 rounded-xl" />
-}
-
-function RevenueSetup({
-  slug,
-  siteId,
-  connected,
-}: {
-  slug: string
-  siteId: string
-  connected: boolean
-}) {
-  return (
-    <section className="flex flex-col gap-4 rounded-xl border border-dashed border-border p-6 sm:flex-row sm:items-center sm:justify-between">
-      <div className="max-w-lg space-y-1">
-        <h3 className="text-[15px] font-medium tracking-tight">
-          {connected
-            ? "Waiting for revenue"
-            : "See which channels bring paying customers"}
-        </h3>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {connected
-            ? "Stripe is connected. Run a sync from settings to import customers, subscriptions, and paid invoices."
-            : "Call zani.identify() when someone signs up, then connect Stripe with a restricted key. Revenue shows up next to every channel, page, and country."}
-        </p>
-      </div>
-      <Button asChild variant="outline" className="shrink-0">
-        <Link
-          to="/businesses/$slug/sites/$siteId/settings"
-          params={{ slug, siteId }}
-          hash="revenue"
-        >
-          {connected ? "Open settings" : "Set up revenue"}
-        </Link>
-      </Button>
-    </section>
-  )
-}
-
-function WaitingForViews({
-  domain,
-  writeKey,
-  canManage,
-  slug,
-  siteId,
-}: {
-  domain: string
-  writeKey: string | null
-  canManage: boolean
-  slug: string
-  siteId: string
-}) {
-  return (
-    <section className="space-y-4 rounded-xl border border-border/70 bg-card p-6">
-      <div className="space-y-2">
-        <h2 className="text-[15px] font-medium tracking-tight">
-          Install the script
-        </h2>
-        <InstallStatus slug={slug} siteId={siteId} domain={domain} />
-        {writeKey ? (
-          import.meta.env.DEV ? (
-            <p className="text-sm text-muted-foreground">
-              Or press Simulate data to fill the dashboard with fake traffic and
-              revenue.
-            </p>
-          ) : null
-        ) : canManage ? (
-          <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-            The write key was shown once. Rotate it to copy a new script.
-          </p>
-        ) : (
-          <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-            An owner or admin installs the script.
-          </p>
-        )}
-      </div>
-      {writeKey ? (
-        <InstallSnippet
-          label="Write key"
-          writeKey={writeKey}
-          note="Shown once."
-        />
-      ) : canManage ? (
-        <Button asChild variant="outline">
-          <Link
-            to="/businesses/$slug/sites/$siteId/settings"
-            params={{ slug, siteId }}
-            hash="install"
-          >
-            Get a new write key
-          </Link>
-        </Button>
-      ) : null}
-    </section>
   )
 }

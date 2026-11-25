@@ -1,8 +1,4 @@
-import {
-  keepPreviousData,
-  queryOptions,
-  type QueryClient,
-} from "@tanstack/react-query"
+import { keepPreviousData, queryOptions } from "@tanstack/react-query"
 
 import {
   rangeQuery,
@@ -222,33 +218,6 @@ export function stripeStatusQueryOptions(slug: string, siteId: string) {
         "stripe"
       ),
   })
-}
-
-export async function preloadRevenue(
-  queryClient: QueryClient,
-  slug: string,
-  siteId: string,
-  input: {
-    range: StatsRange
-    previous: StatsRange
-    filters: StatsFilters
-    by: AttributionDimension
-    touch: Touch
-  }
-) {
-  const { range, previous, filters, by, touch } = input
-  void queryClient.prefetchQuery(
-    attributionQueryOptions(slug, siteId, range, filters, by, touch)
-  )
-  void queryClient.prefetchQuery(revenueCustomersQueryOptions(slug, siteId))
-  await Promise.all([
-    queryClient.query(
-      revenueOverviewQueryOptions(slug, siteId, range, filters)
-    ),
-    queryClient.query(
-      revenueOverviewQueryOptions(slug, siteId, previous, filters)
-    ),
-  ])
 }
 
 async function errorMessage(

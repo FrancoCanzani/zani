@@ -86,6 +86,27 @@ export const siteSearchSchema = z.object({
 
 export type SiteSearch = z.infer<typeof siteSearchSchema>
 
+export const siteSearchDefaults = {
+  range: "30d",
+  metric: "visitors",
+  by: "source",
+  touch: "first",
+  tz: "UTC",
+  compare: false,
+  bots: false,
+  live: false,
+} satisfies Partial<SiteSearch>
+
+export type StatsSearch = Pick<
+  SiteSearch,
+  "range" | "from" | "to" | "tz" | "bots" | FilterKey
+>
+
+export function statsSearch(search: SiteSearch): StatsSearch {
+  const { range, from, to, tz, bots } = search
+  return { range, from, to, tz, bots, ...filtersFromSearch(search) }
+}
+
 export const hourMs = 60 * 60 * 1000
 export const dayMs = 24 * hourMs
 
@@ -155,7 +176,7 @@ const presetDays: Record<Exclude<RangePreset, "custom">, number> = {
   "12m": 365,
 }
 
-export function rangeFromSearch(search: SiteSearch): {
+export function rangeFromSearch(search: StatsSearch): {
   start: string
   end: string
   grain: Grain
@@ -252,7 +273,7 @@ export function liveRange(now: number) {
 }
 
 export function filtersFromSearch(
-  search: SiteSearch
+  search: StatsSearch
 ): Partial<Record<FilterKey, string>> {
   const filters: Partial<Record<FilterKey, string>> = {}
   for (const key of filterKeys) {

@@ -2,21 +2,12 @@ import { useQuery, useSuspenseQuery } from "@tanstack/react-query"
 import { startTransition, useEffect, useState } from "react"
 
 import { ActivityFeed } from "./activity-feed"
-import {
-  siteOnlineQueryOptions,
-  siteStatsQueryOptions,
-  type StatsFilters,
-} from "./api"
+import { siteOnlineQueryOptions, siteStatsQueryOptions } from "./api"
 import { BreakdownPanel } from "./breakdown-panel"
 import { DashboardChart } from "./dashboard-chart"
 import { breakdownPanels } from "./panels"
-import {
-  liveRange,
-  liveTickMs,
-  type FilterKey,
-  type SiteSearch,
-} from "./search"
-import { Toolbar } from "./toolbar"
+import { liveRange, liveTickMs } from "./search"
+import { useSiteSearch } from "./use-site-search"
 
 const livePanelIds = new Set(["pages", "sources", "countries"])
 const livePanels = breakdownPanels.filter((panel) => livePanelIds.has(panel.id))
@@ -80,25 +71,9 @@ function Stat({ label, value }: { label: string; value: number }) {
   )
 }
 
-export function LiveDashboard({
-  slug,
-  siteId,
-  search,
-  filters,
-  includeBots,
-  timeZone,
-  patchSearch,
-  toggleFilter,
-}: {
-  slug: string
-  siteId: string
-  search: SiteSearch
-  filters: StatsFilters
-  includeBots: boolean
-  timeZone: string
-  patchSearch: (patch: Partial<SiteSearch>) => void
-  toggleFilter: (key: FilterKey, value: string) => void
-}) {
+export function LiveDashboard() {
+  const { slug, siteId, search, filters, includeBots, timeZone, toggleFilter } =
+    useSiteSearch()
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const handle = window.setInterval(() => {
@@ -115,13 +90,6 @@ export function LiveDashboard({
 
   return (
     <>
-      <Toolbar
-        search={search}
-        range={range}
-        timeZone={timeZone}
-        patchSearch={patchSearch}
-      />
-
       <div className="grid grid-cols-3 gap-2">
         <Stat label="Online now" value={online.data?.online ?? 0} />
         <Stat label="Visitors · 30 min" value={totals.data.visitors} />

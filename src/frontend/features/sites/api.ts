@@ -14,7 +14,7 @@ import {
   rangeFromSearch,
   type FilterKey,
   type Grain,
-  type SiteSearch,
+  type StatsSearch,
 } from "./search"
 
 export type Site = {
@@ -258,7 +258,7 @@ export async function simulateSiteViews(slug: string, siteId: string) {
   )
 }
 
-export function statsQueryFromSearch(search: SiteSearch): StatsQuery {
+export function statsQueryFromSearch(search: StatsSearch): StatsQuery {
   const range = rangeFromSearch(search)
   return {
     range: { ...range, tz: search.tz },
@@ -291,7 +291,7 @@ export async function preloadSiteStats(
   queryClient: QueryClient,
   slug: string,
   siteId: string,
-  search: SiteSearch
+  search: StatsSearch
 ) {
   const { range, filters, includeBots } = statsQueryFromSearch(search)
   const previous = previousStatsRange(range)
