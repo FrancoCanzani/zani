@@ -3,9 +3,10 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { useState } from "react"
+import { useState, type ReactNode } from "react"
 import { toast } from "sonner"
 
+import { CopyButton } from "@components/install-snippet"
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -17,12 +18,7 @@ import {
 } from "@components/ui/alert-dialog"
 import { Badge } from "@components/ui/badge"
 import { Button } from "@components/ui/button"
-import {
-  Field,
-  FieldDescription,
-  FieldGroup,
-  FieldLabel,
-} from "@components/ui/field"
+import { Field, FieldDescription, FieldLabel } from "@components/ui/field"
 import { Input } from "@components/ui/input"
 
 import {
@@ -61,12 +57,57 @@ client_reference_id: user.id
 // or on the customer
 metadata: { zani_user_id: user.id }`
 
+type ConnectedStatus = Extract<StripeStatus, { connected: true }>
+
 function formatWhen(ms: number | null) {
-  if (ms === null) return "never"
+  if (ms === null) return "Never"
   return new Intl.DateTimeFormat(undefined, {
     dateStyle: "medium",
     timeStyle: "short",
   }).format(ms)
+}
+
+function Step({
+  index,
+  title,
+  done,
+  children,
+}: {
+  index: number
+  title: string
+  done?: boolean
+  children: ReactNode
+}) {
+  return (
+    <div className="space-y-3 rounded-lg border border-border/70 p-4">
+      <div className="flex items-center gap-2">
+        <span className="flex size-5 items-center justify-center rounded-full bg-muted font-mono text-[11px] text-muted-foreground">
+          {index}
+        </span>
+        <h3 className="text-[15px] font-semibold tracking-tight">{title}</h3>
+        {done ? (
+          <Badge variant="secondary" className="ml-auto">
+            Connected
+          </Badge>
+        ) : null}
+      </div>
+      {children}
+    </div>
+  )
+}
+
+function CodeBlock({ code, label }: { code: string; label: string }) {
+  return (
+    <div className="bg-secondary">
+      <div className="flex items-center gap-3 px-3 py-2">
+        <span className="text-xs text-muted-foreground">js</span>
+        <CopyButton value={code} label={label} className="ml-auto" />
+      </div>
+      <pre className="no-scrollbar overflow-x-auto px-3 pb-3 font-mono text-xs leading-relaxed">
+        <code>{code}</code>
+      </pre>
+    </div>
+  )
 }
 
 export function RevenueSettings({
@@ -80,83 +121,64 @@ export function RevenueSettings({
 }) {
   const { data } = useSuspenseQuery(stripeStatusQueryOptions(slug, siteId))
   const webhookUrl = `${window.location.origin}/api/v1/stripe-webhooks/${siteId}`
+  const stripe = data.stripe
 
   return (
-    <section id="revenue" className="scroll-mt-24 space-y-6">
-      <div className="space-y-3">
-        <h2 className="text-sm text-muted-foreground">Revenue attribution</h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          The script keeps the visitor’s first and last source in local storage
-          on your domain. Call identify when someone signs up, and pass the same
-          id to Stripe. Customers with a matching email are linked too.
-        </p>
-        <pre className="no-scrollbar overflow-x-auto bg-secondary px-3 py-3 font-mono text-xs leading-relaxed">
-          <code>{identifySnippet}</code>
-        </pre>
-      </div>
+    <section id="revenue" className="scroll-mt-24 space-y-3">
+      <h2 className="text-sm text-muted-foreground">Revenue</h2>
 
-      {data.stripe.connected ? (
-        <StripeConnected
+      <Step index={1} title="Identify signups">
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          The script keeps each visitor’s first and last source on your domain.
+          Call identify after signup and pass the same id to Stripe. Customers
+          with a matching email are linked too.
+        </p>
+        <CodeBlock code={identifySnippet} label="Copy snippet" />
+      </Step>
+
+      <Step index={2} title="Connect Stripe" done={stripe.connected}>
+        {stripe.connected ? (
+          <StripeConnected
+            slug={slug}
+            siteId={siteId}
+            status={stripe}
+            canManage={canManage}
+          />
+        ) : canManage ? (
+          <StripeConnectForm slug={slug} siteId={siteId} />
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            An owner or admin can connect Stripe.
+          </p>
+        )}
+      </Step>
+
+      <Step index={3} title="Live updates">
+        <WebhookStep
           slug={slug}
           siteId={siteId}
-          status={data.stripe}
+          status={stripe.connected ? stripe : null}
           canManage={canManage}
           webhookUrl={webhookUrl}
         />
-      ) : canManage ? (
-        <StripeConnectForm
-          slug={slug}
-          siteId={siteId}
-          webhookUrl={webhookUrl}
-        />
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          Stripe is not connected. An owner or admin can connect it.
-        </p>
-      )}
+      </Step>
     </section>
   )
 }
 
-function WebhookInstructions({ webhookUrl }: { webhookUrl: string }) {
-  return (
-    <div className="space-y-2 text-sm text-muted-foreground">
-      <p>For live updates, add a webhook endpoint in Stripe pointing to:</p>
-      <p className="font-mono text-xs break-all text-foreground">
-        {webhookUrl}
-      </p>
-      <p>Events: {webhookEvents.join(", ")}.</p>
-    </div>
-  )
-}
-
-function StripeConnectForm({
-  slug,
-  siteId,
-  webhookUrl,
-}: {
-  slug: string
-  siteId: string
-  webhookUrl: string
-}) {
+function StripeConnectForm({ slug, siteId }: { slug: string; siteId: string }) {
   const queryClient = useQueryClient()
   const [apiKey, setApiKey] = useState("")
-  const [webhookSecret, setWebhookSecret] = useState("")
 
   const connect = useMutation({
-    mutationFn: () =>
-      connectStripe(slug, siteId, {
-        apiKey: apiKey.trim(),
-        webhookSecret: webhookSecret.trim() || undefined,
-      }),
+    mutationFn: () => connectStripe(slug, siteId, { apiKey: apiKey.trim() }),
     onSuccess: (result) => {
       queryClient.setQueryData(
         stripeStatusQueryOptions(slug, siteId).queryKey,
         result
       )
       setApiKey("")
-      setWebhookSecret("")
-      toast.success("Stripe connected. Run a sync to import history.")
+      toast.success("Stripe connected. Run the first sync to import history.")
     },
     onError: (error) => {
       toast.error(error.message)
@@ -165,15 +187,15 @@ function StripeConnectForm({
 
   return (
     <form
-      className="space-y-4"
+      className="space-y-3"
       onSubmit={(event) => {
         event.preventDefault()
         connect.mutate()
       }}
     >
-      <FieldGroup>
-        <Field>
-          <FieldLabel htmlFor="stripe-key">Restricted key</FieldLabel>
+      <Field>
+        <FieldLabel htmlFor="stripe-key">Restricted key</FieldLabel>
+        <div className="flex gap-2">
           <Input
             id="stripe-key"
             type="password"
@@ -183,30 +205,15 @@ function StripeConnectForm({
             value={apiKey}
             onChange={(event) => setApiKey(event.target.value)}
           />
-          <FieldDescription>
-            Create a restricted key with read access to Customers, Checkout
-            Sessions, Subscriptions, and Invoices. It is stored encrypted.
-          </FieldDescription>
-        </Field>
-        <Field>
-          <FieldLabel htmlFor="stripe-webhook">
-            Webhook signing secret (optional)
-          </FieldLabel>
-          <Input
-            id="stripe-webhook"
-            type="password"
-            autoComplete="off"
-            spellCheck={false}
-            placeholder="whsec_…"
-            value={webhookSecret}
-            onChange={(event) => setWebhookSecret(event.target.value)}
-          />
-        </Field>
-      </FieldGroup>
-      <WebhookInstructions webhookUrl={webhookUrl} />
-      <Button type="submit" disabled={connect.isPending || !apiKey.trim()}>
-        {connect.isPending ? "Connecting…" : "Connect Stripe"}
-      </Button>
+          <Button type="submit" disabled={connect.isPending || !apiKey.trim()}>
+            {connect.isPending ? "Connecting…" : "Connect"}
+          </Button>
+        </div>
+        <FieldDescription>
+          Read access to Customers, Checkout Sessions, Subscriptions, and
+          Invoices. Stored encrypted; nothing is written to Stripe.
+        </FieldDescription>
+      </Field>
     </form>
   )
 }
@@ -216,23 +223,21 @@ function StripeConnected({
   siteId,
   status,
   canManage,
-  webhookUrl,
 }: {
   slug: string
   siteId: string
-  status: Extract<StripeStatus, { connected: true }>
+  status: ConnectedStatus
   canManage: boolean
-  webhookUrl: string
 }) {
   const queryClient = useQueryClient()
   const [phase, setPhase] = useState<SyncPhase | null>(null)
-  const [webhookSecret, setWebhookSecret] = useState("")
   const [disconnectOpen, setDisconnectOpen] = useState(false)
-  const statusKey = stripeStatusQueryOptions(slug, siteId).queryKey
 
   async function refresh() {
     await Promise.all([
-      queryClient.invalidateQueries({ queryKey: statusKey }),
+      queryClient.invalidateQueries({
+        queryKey: stripeStatusQueryOptions(slug, siteId).queryKey,
+      }),
       queryClient.invalidateQueries({ queryKey: ["revenue", slug, siteId] }),
     ])
   }
@@ -258,19 +263,6 @@ function StripeConnected({
     onSettled: () => setPhase(null),
   })
 
-  const saveSecret = useMutation({
-    mutationFn: () =>
-      updateStripeWebhookSecret(slug, siteId, webhookSecret.trim() || null),
-    onSuccess: (result) => {
-      queryClient.setQueryData(statusKey, result)
-      setWebhookSecret("")
-      toast.success("Webhook secret saved.")
-    },
-    onError: (error) => {
-      toast.error(error.message)
-    },
-  })
-
   const disconnect = useMutation({
     mutationFn: () => disconnectStripe(slug, siteId),
     onSuccess: async () => {
@@ -283,99 +275,57 @@ function StripeConnected({
     },
   })
 
+  const syncLabel = sync.isPending
+    ? `${phaseLabels[phase ?? status.syncPhase]}…`
+    : status.syncPhase === "done"
+      ? "Sync again"
+      : status.syncedAt === null && status.syncPhase === "customers"
+        ? "Run first sync"
+        : "Resume sync"
+
   return (
-    <div className="space-y-5">
-      <dl className="grid grid-cols-2 gap-3 text-sm">
+    <div className="space-y-4">
+      <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-3">
         <div className="space-y-1">
-          <dt className="text-muted-foreground">Key</dt>
+          <dt className="text-xs text-muted-foreground">Key</dt>
           <dd className="flex items-center gap-2 font-mono">
             ••••{status.apiKeyHint}
             <Badge variant="outline">{status.livemode ? "live" : "test"}</Badge>
           </dd>
         </div>
         <div className="space-y-1">
-          <dt className="text-muted-foreground">Customers</dt>
+          <dt className="text-xs text-muted-foreground">Customers</dt>
           <dd className="font-mono tabular-nums">{status.customers}</dd>
         </div>
         <div className="space-y-1">
-          <dt className="text-muted-foreground">Last full sync</dt>
+          <dt className="text-xs text-muted-foreground">Last full sync</dt>
           <dd>{formatWhen(status.syncedAt)}</dd>
-        </div>
-        <div className="space-y-1">
-          <dt className="text-muted-foreground">Webhook</dt>
-          <dd>
-            {status.webhookConfigured
-              ? `last event ${formatWhen(status.lastWebhookAt)}`
-              : "not configured"}
-          </dd>
         </div>
       </dl>
       {status.syncError ? (
         <p className="text-sm text-destructive">{status.syncError}</p>
       ) : null}
-
       {canManage ? (
-        <>
-          <div className="flex items-center gap-3">
-            <Button
-              type="button"
-              variant="outline"
-              disabled={sync.isPending}
-              onClick={() => sync.mutate()}
-            >
-              {sync.isPending
-                ? `${phaseLabels[phase ?? status.syncPhase]}…`
-                : status.syncPhase === "done"
-                  ? "Sync again"
-                  : status.syncedAt === null && status.syncPhase === "customers"
-                    ? "Run first sync"
-                    : "Resume sync"}
-            </Button>
-          </div>
-
-          <form
-            className="space-y-3"
-            onSubmit={(event) => {
-              event.preventDefault()
-              saveSecret.mutate()
-            }}
-          >
-            <WebhookInstructions webhookUrl={webhookUrl} />
-            <Field>
-              <FieldLabel htmlFor="stripe-webhook-update">
-                Webhook signing secret
-              </FieldLabel>
-              <Input
-                id="stripe-webhook-update"
-                type="password"
-                autoComplete="off"
-                spellCheck={false}
-                placeholder={
-                  status.webhookConfigured
-                    ? "Saved. Paste to replace."
-                    : "whsec_…"
-                }
-                value={webhookSecret}
-                onChange={(event) => setWebhookSecret(event.target.value)}
-              />
-            </Field>
-            <Button
-              type="submit"
-              variant="outline"
-              disabled={saveSecret.isPending || !webhookSecret.trim()}
-            >
-              Save secret
-            </Button>
-          </form>
-
+        <div className="flex flex-wrap items-center gap-2">
           <Button
             type="button"
-            variant="destructive"
+            variant="outline"
+            size="sm"
+            disabled={sync.isPending}
+            onClick={() => sync.mutate()}
+          >
+            {syncLabel}
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-destructive hover:text-destructive"
             onClick={() => setDisconnectOpen(true)}
           >
-            Disconnect Stripe
+            Disconnect
           </Button>
-        </>
+        </div>
       ) : null}
 
       <AlertDialog open={disconnectOpen} onOpenChange={setDisconnectOpen}>
@@ -402,6 +352,108 @@ function StripeConnected({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+    </div>
+  )
+}
+
+function WebhookStep({
+  slug,
+  siteId,
+  status,
+  canManage,
+  webhookUrl,
+}: {
+  slug: string
+  siteId: string
+  status: ConnectedStatus | null
+  canManage: boolean
+  webhookUrl: string
+}) {
+  const queryClient = useQueryClient()
+  const [webhookSecret, setWebhookSecret] = useState("")
+
+  const saveSecret = useMutation({
+    mutationFn: () =>
+      updateStripeWebhookSecret(slug, siteId, webhookSecret.trim() || null),
+    onSuccess: (result) => {
+      queryClient.setQueryData(
+        stripeStatusQueryOptions(slug, siteId).queryKey,
+        result
+      )
+      setWebhookSecret("")
+      toast.success("Webhook secret saved.")
+    },
+    onError: (error) => {
+      toast.error(error.message)
+    },
+  })
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm leading-relaxed text-muted-foreground">
+        Optional. Without a webhook, revenue updates when you sync. Add an
+        endpoint in Stripe with this URL and these events.
+      </p>
+      <div className="flex items-center gap-1 bg-secondary px-3 py-2">
+        <span className="no-scrollbar min-w-0 flex-1 overflow-x-auto font-mono text-xs whitespace-nowrap">
+          {webhookUrl}
+        </span>
+        <CopyButton value={webhookUrl} label="Copy webhook URL" />
+      </div>
+      <div className="flex flex-wrap gap-1">
+        {webhookEvents.map((name) => (
+          <Badge key={name} variant="outline" className="font-mono">
+            {name}
+          </Badge>
+        ))}
+      </div>
+      {status ? (
+        <>
+          <p className="text-sm text-muted-foreground">
+            {status.webhookConfigured
+              ? `Last event: ${formatWhen(status.lastWebhookAt).toLowerCase()}.`
+              : "No signing secret saved yet."}
+          </p>
+          {canManage ? (
+            <form
+              onSubmit={(event) => {
+                event.preventDefault()
+                saveSecret.mutate()
+              }}
+            >
+              <Field>
+                <FieldLabel htmlFor="stripe-webhook">Signing secret</FieldLabel>
+                <div className="flex gap-2">
+                  <Input
+                    id="stripe-webhook"
+                    type="password"
+                    autoComplete="off"
+                    spellCheck={false}
+                    placeholder={
+                      status.webhookConfigured
+                        ? "Saved. Paste to replace."
+                        : "whsec_…"
+                    }
+                    value={webhookSecret}
+                    onChange={(event) => setWebhookSecret(event.target.value)}
+                  />
+                  <Button
+                    type="submit"
+                    variant="outline"
+                    disabled={saveSecret.isPending || !webhookSecret.trim()}
+                  >
+                    Save
+                  </Button>
+                </div>
+              </Field>
+            </form>
+          ) : null}
+        </>
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          Connect Stripe first, then save the endpoint’s signing secret here.
+        </p>
+      )}
     </div>
   )
 }

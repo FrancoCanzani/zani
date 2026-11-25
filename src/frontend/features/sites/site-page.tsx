@@ -207,9 +207,9 @@ export function SitePage() {
 
   return (
     <div className="flex flex-col gap-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-4xl font-light tracking-tight">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 space-y-1">
+          <h1 className="truncate text-4xl font-light tracking-tight">
             {totals.data.site.name}
           </h1>
           <p className="text-sm text-muted-foreground">
@@ -219,11 +219,12 @@ export function SitePage() {
             {formatStatsRange(range.start, range.end, timeZone)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex shrink-0 items-center gap-2">
           {import.meta.env.DEV ? (
             <Button
               type="button"
               variant="outline"
+              size="sm"
               disabled={simulate.isPending || revoked}
               onClick={() => simulate.mutate()}
             >

@@ -19,12 +19,17 @@ function formatDay(ms: number) {
   }).format(ms)
 }
 
-function formatAxis(minor: number) {
-  const major = minor / 100
-  if (major >= 1_000_000) return `${(major / 1_000_000).toFixed(1)}M`
-  if (major >= 1000)
-    return `${(major / 1000).toFixed(major >= 10_000 ? 0 : 1)}k`
-  return String(Math.round(major))
+function formatAxis(minor: number, currency: string) {
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: (currency || "usd").toUpperCase(),
+      notation: "compact",
+      maximumFractionDigits: 1,
+    }).format(minor / 100)
+  } catch {
+    return String(Math.round(minor / 100))
+  }
 }
 
 export function MrrChart({
@@ -67,8 +72,8 @@ export function MrrChart({
           tickLine={false}
           axisLine={false}
           tickMargin={8}
-          width={44}
-          tickFormatter={(value) => formatAxis(Number(value))}
+          width={52}
+          tickFormatter={(value) => formatAxis(Number(value), currency)}
         />
         <ChartTooltip
           cursor={{ stroke: "var(--border)", strokeWidth: 1 }}

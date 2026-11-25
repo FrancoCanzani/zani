@@ -77,7 +77,7 @@ function ScriptBlock({ source }: { source: string }) {
   )
 }
 
-function CopyButton({
+export function CopyButton({
   value,
   label,
   className,
