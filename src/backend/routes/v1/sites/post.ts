@@ -2,7 +2,7 @@ import { zValidator } from "@hono/zod-validator"
 import { eq } from "drizzle-orm"
 import { Hono } from "hono"
 
-import { event, eventProp, site, vital } from "../../../db/schema"
+import { event, eventProp, site } from "../../../db/schema"
 import { createDb } from "../../../lib/db"
 import {
   newId,
@@ -155,7 +155,7 @@ export const post = new Hono<AppEnv>()
         return c.json({ error: "revoked" as const }, 409)
       }
 
-      const { events, props, vitals } = buildSimulateRows(matched.id)
+      const { events, props } = buildSimulateRows(matched.id)
       for (let offset = 0; offset < events.length; offset += batchSize) {
         await db
           .insert(event)
@@ -165,11 +165,6 @@ export const post = new Hono<AppEnv>()
         await db
           .insert(eventProp)
           .values(props.slice(offset, offset + batchSize))
-      }
-      for (let offset = 0; offset < vitals.length; offset += batchSize) {
-        await db
-          .insert(vital)
-          .values(vitals.slice(offset, offset + batchSize))
       }
 
       return c.json({ inserted: events.length }, 200)

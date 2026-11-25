@@ -113,6 +113,13 @@
       "when": 1795598456663,
       "tag": "0015_broad_paladin",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "6",
+      "when": 1795600000000,
+      "tag": "0016_visitor_profile",
+      "breakpoints": true
     }
   ]
 }

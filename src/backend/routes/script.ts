@@ -6,8 +6,12 @@ const source = `(() => {
   const endpoint = new URL("/api/v1/collect", el.src)
   const namePattern = /^[a-z0-9_-]{1,32}$/
   const propKeyPattern = /^[a-z0-9_]{1,64}$/
+  const uuidPattern =
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   const maxPropKeys = 8
   const maxPropValueLength = 255
+  const aidKey = "zani_aid"
+  const ftKey = "zani_ft"
   let path = ""
   let utms = {
     utmSource: "",
@@ -47,6 +51,72 @@ const source = `(() => {
     if (!width || !height) return
     return Math.round(width) + "x" + Math.round(height)
   }
+  const newId = () => {
+    try {
+      if (crypto.randomUUID) return crypto.randomUUID()
+    } catch (_) {}
+    const bytes = new Uint8Array(16)
+    try {
+      crypto.getRandomValues(bytes)
+    } catch (_) {
+      for (let i = 0; i < bytes.length; i += 1) bytes[i] = (Math.random() * 256) | 0
+    }
+    bytes[6] = (bytes[6] & 0x0f) | 0x40
+    bytes[8] = (bytes[8] & 0x3f) | 0x80
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("")
+    return (
+      hex.slice(0, 8) +
+      "-" +
+      hex.slice(8, 12) +
+      "-" +
+      hex.slice(12, 16) +
+      "-" +
+      hex.slice(16, 20) +
+      "-" +
+      hex.slice(20)
+    )
+  }
+  const anonymousId = (() => {
+    try {
+      const existing = localStorage.getItem(aidKey)
+      if (existing && uuidPattern.test(existing)) return existing
+      const id = newId()
+      localStorage.setItem(aidKey, id)
+      return id
+    } catch (_) {
+      return undefined
+    }
+  })()
+  const readFirstTouch = () => {
+    try {
+      const raw = localStorage.getItem(ftKey)
+      if (!raw) return
+      const parsed = JSON.parse(raw)
+      if (!parsed || typeof parsed !== "object") return
+      return parsed
+    } catch (_) {}
+  }
+  const writeFirstTouch = (value) => {
+    try {
+      localStorage.setItem(ftKey, JSON.stringify(value))
+    } catch (_) {}
+  }
+  const firstTouch = (() => {
+    const existing = readFirstTouch()
+    if (existing && typeof existing.path === "string") return existing
+    captureUtms()
+    const value = {
+      path: pagePath(),
+      referrer: document.referrer || "",
+      utmSource: utms.utmSource,
+      utmMedium: utms.utmMedium,
+      utmCampaign: utms.utmCampaign,
+      utmContent: utms.utmContent,
+      utmTerm: utms.utmTerm,
+    }
+    writeFirstTouch(value)
+    return value
+  })()
   const normalizeProps = (input) => {
     if (!input || typeof input !== "object" || Array.isArray(input)) return
     const props = {}
@@ -95,7 +165,7 @@ const source = `(() => {
       keepalive: true,
     })
   }
-  const send = (name, referrer, props) => {
+  const send = (name, referrer, props, identity) => {
     captureUtms()
     const body = {
       name,
@@ -107,7 +177,17 @@ const source = `(() => {
       utmCampaign: utms.utmCampaign || undefined,
       utmContent: utms.utmContent || undefined,
       utmTerm: utms.utmTerm || undefined,
+      firstPath: firstTouch.path || undefined,
+      firstReferrer: firstTouch.referrer || undefined,
+      firstUtmSource: firstTouch.utmSource || undefined,
+      firstUtmMedium: firstTouch.utmMedium || undefined,
+      firstUtmCampaign: firstTouch.utmCampaign || undefined,
+      firstUtmContent: firstTouch.utmContent || undefined,
+      firstUtmTerm: firstTouch.utmTerm || undefined,
     }
+    if (anonymousId) body.anonymousId = anonymousId
+    if (identity?.userId) body.userId = identity.userId
+    if (identity?.email) body.email = identity.email
     if (props) body.props = props
     post(body)
   }
@@ -121,9 +201,37 @@ const source = `(() => {
   const track = (name, props) => {
     if (typeof name !== "string") return
     const trimmed = name.trim().toLowerCase()
-    if (!namePattern.test(trimmed) || trimmed === "pageview") return
+    if (!namePattern.test(trimmed) || trimmed === "pageview" || trimmed === "identify")
+      return
     if (!path) path = pagePath()
     send(trimmed, document.referrer, normalizeProps(props))
+  }
+  const identify = (userId, traits) => {
+    let id = ""
+    let email = ""
+    let props
+    if (typeof userId === "string") {
+      id = userId.trim().slice(0, 128)
+      if (traits && typeof traits === "object" && !Array.isArray(traits)) {
+        if (typeof traits.email === "string") {
+          email = traits.email.trim().slice(0, 254)
+        }
+        const { email: _email, ...rest } = traits
+        props = normalizeProps(rest)
+      }
+    } else if (userId && typeof userId === "object" && !Array.isArray(userId)) {
+      if (typeof userId.userId === "string") id = userId.userId.trim().slice(0, 128)
+      if (typeof userId.id === "string" && !id) id = userId.id.trim().slice(0, 128)
+      if (typeof userId.email === "string") email = userId.email.trim().slice(0, 254)
+      const { userId: _userId, id: _id, email: _email, ...rest } = userId
+      props = normalizeProps(rest)
+    }
+    if (!id && !email) return
+    if (!path) path = pagePath()
+    send("identify", document.referrer, props, {
+      userId: id || undefined,
+      email: email || undefined,
+    })
   }
   const push = history.pushState
   const replace = history.replaceState
@@ -140,129 +248,7 @@ const source = `(() => {
   addEventListener("popstate", trackPage)
   addEventListener("hashchange", trackPage)
   trackPage()
-  window.zani = { track }
-
-  const cssPath = (node) => {
-    if (!node || !node.tagName) return ""
-    let value = String(node.tagName).toLowerCase()
-    if (node.id) return (value + "#" + node.id).slice(0, 200)
-    if (node.classList && node.classList.length) {
-      value +=
-        "." +
-        Array.from(node.classList)
-          .slice(0, 2)
-          .join(".")
-    }
-    return value.slice(0, 200)
-  }
-  const navType = () => {
-    try {
-      const entry = performance.getEntriesByType("navigation")[0]
-      if (!entry || !entry.type) return
-      if (
-        entry.type === "navigate" ||
-        entry.type === "reload" ||
-        entry.type === "back_forward" ||
-        entry.type === "prerender"
-      ) {
-        return entry.type
-      }
-    } catch (_) {}
-  }
-  const pageLoadMs = () => {
-    try {
-      const entry = performance.getEntriesByType("navigation")[0]
-      if (!entry) return
-      const value =
-        entry.loadEventEnd > 0
-          ? entry.loadEventEnd
-          : entry.duration > 0
-            ? entry.duration
-            : 0
-      if (!value || value < 0) return
-      return Math.round(value)
-    } catch (_) {}
-  }
-
-  let lcpValue = null
-  let lcpElement = ""
-  let clsValue = 0
-  let inpValue = null
-  let flushed = false
-  const navigation = navType()
-
-  try {
-    const lcpObserver = new PerformanceObserver((list) => {
-      const entries = list.getEntries()
-      const last = entries[entries.length - 1]
-      if (!last) return
-      lcpValue = last.startTime
-      lcpElement = cssPath(last.element)
-    })
-    lcpObserver.observe({ type: "largest-contentful-paint", buffered: true })
-  } catch (_) {}
-
-  try {
-    const clsObserver = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        if (entry.hadRecentInput) continue
-        clsValue += entry.value
-      }
-    })
-    clsObserver.observe({ type: "layout-shift", buffered: true })
-  } catch (_) {}
-
-  try {
-    const eventObserver = new PerformanceObserver((list) => {
-      for (const entry of list.getEntries()) {
-        if (entry.interactionId === 0) continue
-        const duration = entry.duration
-        if (!Number.isFinite(duration)) continue
-        if (inpValue === null || duration > inpValue) inpValue = duration
-      }
-    })
-    eventObserver.observe({ type: "event", buffered: true, durationThreshold: 16 })
-  } catch (_) {}
-
-  const flushVitals = () => {
-    if (flushed) return
-    const samples = []
-    const load = pageLoadMs()
-    if (load !== undefined) samples.push({ metric: "load", value: load, navType: navigation })
-    if (lcpValue !== null) {
-      samples.push({
-        metric: "lcp",
-        value: Math.round(lcpValue),
-        element: lcpElement || undefined,
-        navType: navigation,
-      })
-    }
-    if (inpValue !== null) {
-      samples.push({
-        metric: "inp",
-        value: Math.round(inpValue),
-        navType: navigation,
-      })
-    }
-    if (clsValue > 0) {
-      samples.push({
-        metric: "cls",
-        value: Math.round(clsValue * 10000) / 10000,
-        navType: navigation,
-      })
-    }
-    if (!samples.length) return
-    flushed = true
-    post({
-      path: path || pagePath(),
-      vitals: samples,
-    })
-  }
-
-  addEventListener("visibilitychange", () => {
-    if (document.visibilityState === "hidden") flushVitals()
-  })
-  addEventListener("pagehide", flushVitals)
+  window.zani = { track, identify }
 })()
 `
 

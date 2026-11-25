@@ -98,18 +98,3 @@ export const statsQuerySchema = z.object({
   utm_content: filterValue.optional(),
   utm_term: filterValue.optional(),
 })
-
-export const vitalsQuerySchema = z.object({
-  start: z.string().trim().min(1),
-  end: z.string().trim().min(1),
-  grain: z.enum(grains).optional(),
-  tz: z.string().trim().min(1).max(64).optional(),
-  bots: z.enum(["0", "1"]).optional(),
-  metric: z.enum(["load", "lcp", "inp", "cls"]).optional(),
-  path: filterValue.optional(),
-  country: filterValue.optional(),
-  city: filterValue.optional(),
-  browser: filterValue.optional(),
-  device: filterValue.optional(),
-  os: filterValue.optional(),
-})

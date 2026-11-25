@@ -39,7 +39,8 @@ export function InstallSnippet({ label, writeKey, note }: InstallSnippetProps) {
       </div>
       <ScriptBlock source={source} />
       <p className="text-muted-foreground">
-        Paste this on the site, before the closing body tag.
+        Paste this on the site, before the closing body tag. After signup, call{" "}
+        <code className="font-mono text-xs">zani.identify(userId)</code>.
       </p>
       <p className="text-muted-foreground">{note}</p>
     </section>

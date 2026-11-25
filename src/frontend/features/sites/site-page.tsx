@@ -5,7 +5,7 @@ import {
 } from "@tanstack/react-query"
 import { Link, getRouteApi } from "@tanstack/react-router"
 import { XIcon } from "lucide-react"
-import { Suspense, startTransition } from "react"
+import { startTransition } from "react"
 import { toast } from "sonner"
 
 import { InstallSnippet } from "@components/install-snippet"
@@ -36,23 +36,17 @@ import {
   isChartMetric,
   metricLabels,
   rangeLabels,
-  siteViewLabels,
-  speedFilterKeys,
   type ChartMetric,
   type FilterKey,
   type Metric,
   type SiteSearch,
-  type SiteView,
-  type VitalMetric,
 } from "./search"
 import { ViewsChart } from "./views-chart"
-import { VitalsPanel } from "./vitals-panel"
 import { useRememberedWriteKey } from "./write-key"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId/")
 
 const quickRanges = ["1d", "7d", "30d"] as const
-const siteViewOrder = ["analytics", "speed"] as const satisfies readonly SiteView[]
 
 const kpiMetrics = [
   "views",
@@ -149,7 +143,6 @@ export function SitePage() {
   const chips = activeFilterChips(search)
   const timeZone = search.tz || "UTC"
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-  const view = search.view
 
   const totals = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, undefined, range, filters, includeBots)
@@ -210,9 +203,6 @@ export function SitePage() {
       await queryClient.invalidateQueries({
         queryKey: ["site-stats", slug, siteId],
       })
-      await queryClient.invalidateQueries({
-        queryKey: ["site-vitals", slug, siteId],
-      })
     },
     onError: (error) => {
       toast.error(error.message)
@@ -236,33 +226,6 @@ export function SitePage() {
           </p>
         </div>
         <div className="flex items-center gap-1.5">
-          {totals.data.hasEvents ? (
-            <div
-              role="tablist"
-              aria-label="Site view"
-              className="flex h-6 items-center gap-0.5 rounded-[min(var(--radius-md),10px)] bg-muted p-0.5"
-            >
-              {siteViewOrder.map((item) => {
-                const selected = view === item
-                return (
-                  <button
-                    key={item}
-                    type="button"
-                    role="tab"
-                    aria-selected={selected}
-                    onClick={() => patchSearch({ view: item })}
-                    className={`h-5 min-w-[4.75rem] rounded-[min(var(--radius-md),8px)] px-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-                      selected
-                        ? "bg-background text-foreground shadow-sm"
-                        : "text-muted-foreground hover:text-foreground"
-                    }`}
-                  >
-                    {siteViewLabels[item]}
-                  </button>
-                )
-              })}
-            </div>
-          ) : null}
           {import.meta.env.DEV ? (
             <Button
               type="button"
@@ -294,7 +257,6 @@ export function SitePage() {
       {totals.data.hasEvents ? (
         <SiteDashboard
           search={search}
-          view={view}
           timeZone={timeZone}
           localTz={localTz}
           range={range}
@@ -382,7 +344,6 @@ function WaitingForViews({
 
 function SiteToolbar({
   search,
-  view,
   timeZone,
   localTz,
   range,
@@ -390,20 +351,12 @@ function SiteToolbar({
   patchSearch,
 }: {
   search: SiteSearch
-  view: SiteView
   timeZone: string
   localTz: string
   range: StatsRange
   chips: ReturnType<typeof activeFilterChips>
   patchSearch: (patch: Partial<SiteSearch>) => void
 }) {
-  const visibleChips =
-    view === "speed"
-      ? chips.filter((chip) =>
-          (speedFilterKeys as readonly FilterKey[]).includes(chip.key)
-        )
-      : chips
-
   return (
     <div className="flex flex-wrap items-center gap-1.5">
       {quickRanges.map((preset) => (
@@ -443,18 +396,16 @@ function SiteToolbar({
         }
         onTimeZone={(tz) => patchSearch({ tz })}
       />
-      {view === "analytics" ? (
-        <Button
-          type="button"
-          size="xs"
-          variant={search.compare ? "default" : "outline"}
-          onClick={() =>
-            patchSearch({ compare: search.compare ? undefined : true })
-          }
-        >
-          Compare
-        </Button>
-      ) : null}
+      <Button
+        type="button"
+        size="xs"
+        variant={search.compare ? "default" : "outline"}
+        onClick={() =>
+          patchSearch({ compare: search.compare ? undefined : true })
+        }
+      >
+        Compare
+      </Button>
       <Button
         type="button"
         size="xs"
@@ -463,7 +414,7 @@ function SiteToolbar({
       >
         Bots
       </Button>
-      {visibleChips.map((chip) => (
+      {chips.map((chip) => (
         <Button
           key={`${chip.key}:${chip.value}`}
           type="button"
@@ -486,7 +437,7 @@ function SiteToolbar({
           <XIcon data-icon="inline-end" />
         </Button>
       ))}
-      {visibleChips.length > 0 ? (
+      {chips.length > 0 ? (
         <Button
           type="button"
           size="xs"
@@ -502,7 +453,6 @@ function SiteToolbar({
 
 function SiteDashboard({
   search,
-  view,
   timeZone,
   localTz,
   range,
@@ -518,7 +468,6 @@ function SiteDashboard({
   toggleFilter,
 }: {
   search: SiteSearch
-  view: SiteView
   timeZone: string
   localTz: string
   range: StatsRange
@@ -537,48 +486,26 @@ function SiteDashboard({
     <>
       <SiteToolbar
         search={search}
-        view={view}
         timeZone={timeZone}
         localTz={localTz}
         range={range}
         chips={chips}
         patchSearch={patchSearch}
       />
-
-      {view === "speed" ? (
-        <Suspense
-          fallback={
-            <p className="text-sm text-muted-foreground">Loading speed…</p>
-          }
-        >
-          <VitalsPanel
-            slug={slug}
-            siteId={siteId}
-            range={range}
-            filters={filters}
-            includeBots={includeBots}
-            metric={search.vital}
-            activePath={search.path}
-            onSelectMetric={(vital: VitalMetric) => patchSearch({ vital })}
-            onSelectPath={(path) => toggleFilter("path", path)}
-          />
-        </Suspense>
-      ) : (
-        <AnalyticsView
-          search={search}
-          range={range}
-          chartMetric={chartMetric}
-          totals={totals}
-          previousTotals={previousTotals}
-          slug={slug}
-          siteId={siteId}
-          filters={filters}
-          includeBots={includeBots}
-          timeZone={timeZone}
-          patchSearch={patchSearch}
-          toggleFilter={toggleFilter}
-        />
-      )}
+      <AnalyticsView
+        search={search}
+        range={range}
+        chartMetric={chartMetric}
+        totals={totals}
+        previousTotals={previousTotals}
+        slug={slug}
+        siteId={siteId}
+        filters={filters}
+        includeBots={includeBots}
+        timeZone={timeZone}
+        patchSearch={patchSearch}
+        toggleFilter={toggleFilter}
+      />
     </>
   )
 }

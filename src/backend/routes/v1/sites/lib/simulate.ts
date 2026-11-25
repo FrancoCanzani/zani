@@ -1,4 +1,3 @@
-import { rateVital, type VitalMetric } from "../../collect/lib/vitals"
 import { newId } from "../../../../lib/utils"
 
 const dayMs = 24 * 60 * 60 * 1000
@@ -137,35 +136,7 @@ export function buildSimulateRows(siteId: string, end = Date.now()) {
     }))
   })
 
-  const vitals = events.flatMap((row, index) => {
-    if (row.name !== "pageview" || row.browser === "bot") return []
-    const samples: Array<{ metric: VitalMetric; value: number }> = [
-      { metric: "load", value: 800 + (index % 40) * 90 },
-      { metric: "lcp", value: 900 + (index % 35) * 110 },
-      { metric: "inp", value: 40 + (index % 25) * 18 },
-      { metric: "cls", value: Math.round(((index % 20) * 0.02) * 10000) / 10000 },
-    ]
-    return samples.map((sample) => ({
-      id: newId(),
-      siteId,
-      timestamp: row.timestamp,
-      metric: sample.metric,
-      value: sample.value,
-      rating: rateVital(sample.metric, sample.value),
-      path: row.path,
-      element: sample.metric === "lcp" ? "img.hero" : "",
-      navType: index % 9 === 0 ? "reload" : "navigate",
-      visitorId: row.visitorId,
-      sessionId: row.sessionId,
-      country: row.country,
-      city: row.city,
-      browser: row.browser,
-      device: row.device,
-      os: row.os,
-    }))
-  })
-
-  return { events, props, vitals }
+  return { events, props }
 }
 
 export { batchSize }

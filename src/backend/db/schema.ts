@@ -1,7 +1,6 @@
 import {
   index,
   integer,
-  real,
   sqliteTable,
   text,
   uniqueIndex,
@@ -200,34 +199,33 @@ export const eventProp = sqliteTable(
   ]
 )
 
-export const vital = sqliteTable(
-  "vital",
+export const visitor = sqliteTable(
+  "visitor",
   {
     id: text("id").primaryKey(),
     siteId: text("site_id")
       .notNull()
       .references(() => site.id, { onDelete: "cascade" }),
-    timestamp: integer("timestamp").notNull(),
-    metric: text("metric").notNull(),
-    value: real("value").notNull(),
-    rating: text("rating").notNull(),
-    path: text("path").notNull(),
-    element: text("element").notNull().default(""),
-    navType: text("nav_type").notNull().default(""),
-    visitorId: text("visitor_id").notNull(),
-    sessionId: text("session_id").notNull(),
-    country: text("country").notNull().default(""),
-    city: text("city").notNull().default(""),
-    browser: text("browser").notNull().default(""),
-    device: text("device").notNull().default(""),
-    os: text("os").notNull().default(""),
+    anonymousId: text("anonymous_id").notNull(),
+    userId: text("user_id").notNull().default(""),
+    email: text("email").notNull().default(""),
+    firstPath: text("first_path").notNull().default(""),
+    firstReferrerHost: text("first_referrer_host").notNull().default(""),
+    firstReferrerPath: text("first_referrer_path").notNull().default(""),
+    firstUtmSource: text("first_utm_source").notNull().default(""),
+    firstUtmMedium: text("first_utm_medium").notNull().default(""),
+    firstUtmCampaign: text("first_utm_campaign").notNull().default(""),
+    firstUtmContent: text("first_utm_content").notNull().default(""),
+    firstUtmTerm: text("first_utm_term").notNull().default(""),
+    firstSeenAt: integer("first_seen_at").notNull(),
+    lastSeenAt: integer("last_seen_at").notNull(),
+    identifiedAt: integer("identified_at"),
   },
   (table) => [
-    index("vital_site_timestamp_idx").on(table.siteId, table.timestamp),
-    index("vital_site_metric_timestamp_idx").on(
+    uniqueIndex("visitor_site_anonymous_idx").on(
       table.siteId,
-      table.metric,
-      table.timestamp
+      table.anonymousId
     ),
+    index("visitor_site_userId_idx").on(table.siteId, table.userId),
   ]
 )
