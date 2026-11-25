@@ -90,6 +90,29 @@ export function accountSitesQueryOptions() {
   })
 }
 
+export type SiteSummary = {
+  siteId: string
+  visitors: number
+  previousVisitors: number
+  mrr: { currency: string; value: number; previous: number } | null
+}
+
+export function sitesSummaryQueryOptions(slug: string) {
+  return queryOptions({
+    queryKey: ["sites-summary", slug] as const,
+    queryFn: async () =>
+      (
+        await requireJson<{ sites: SiteSummary[] }>(
+          await api.workspaces[":slug"].sites.summary.$get({
+            param: { slug },
+          }),
+          "sites"
+        )
+      ).sites,
+    staleTime: statsStaleMs,
+  })
+}
+
 export function sitesQueryOptions(slug: string) {
   return queryOptions({
     queryKey: ["sites", slug] as const,

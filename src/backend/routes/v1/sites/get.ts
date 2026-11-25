@@ -23,6 +23,7 @@ import {
 } from "./lib/simulate"
 import { statsQuerySchema } from "./lib/schema"
 import { serializeSite } from "./lib/serialize"
+import { loadSiteSummaries } from "./lib/summary"
 import {
   asNumber,
   loadBreakdownRows,
@@ -52,6 +53,15 @@ export const get = new Hono<AppEnv>()
       .orderBy(asc(site.name))
 
     return c.json({ sites: rows.map(serializeSite) }, 200)
+  })
+  .get("/summary", requireSession, requireWorkspaceMember, async (c) => {
+    const current = workspaceFromContext(c.var)
+    const summaries = await loadSiteSummaries(
+      createDb(c.env),
+      current.workspace.id,
+      Date.now()
+    )
+    return c.json({ sites: summaries }, 200)
   })
   .get("/:siteId/setup", requireSession, requireWorkspaceMember, async (c) => {
     const current = workspaceFromContext(c.var)
