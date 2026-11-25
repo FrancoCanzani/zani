@@ -1,80 +1,201 @@
-import { useQueryClient, useSuspenseQuery } from "@tanstack/react-query"
-import { Suspense, useEffect, useState } from "react"
+import {
+  useQuery,
+  useQueryClient,
+  useSuspenseQuery,
+} from "@tanstack/react-query"
+import { Suspense, useEffect, useMemo, useState } from "react"
+
+import { Button } from "@components/ui/button"
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@components/ui/sheet"
+import { Skeleton } from "@components/ui/skeleton"
+
+import {
+  formatCompactMoney,
+  formatMoney,
+  revenueBreakdownQueryOptions,
+} from "@features/revenue/api"
 
 import {
   siteStatsQueryOptions,
   statsQueryFromSearch,
-  type SiteStats,
   type StatsFilters,
   type StatsRange,
 } from "./api"
 import { CountriesMap } from "./countries-map"
+import { DimensionIcon, dimensionLabel } from "./dimension-icon"
 import { breakdownKey, type Breakdown, type BreakdownTab } from "./panels"
 import type { FilterKey, SiteSearch } from "./search"
 
-function BreakdownTable({
+const revenueBreakdowns = new Set<Breakdown>([
+  "source",
+  "referrer",
+  "path",
+  "entry",
+  "country",
+  "device",
+  "utm_medium",
+  "utm_campaign",
+])
+
+const visibleRows = 8
+
+type SortKey = "visitors" | "revenue"
+
+type Row = {
+  value: string
+  visitors: number
+  customers: number
+  newMrr: number
+}
+
+type RevenueContext = {
+  enabled: boolean
+  currency: string
+}
+
+function ColumnHeader({
+  label,
+  active,
+  onClick,
+  className,
+}: {
+  label: string
+  active: boolean
+  onClick?: () => void
+  className: string
+}) {
+  if (!onClick) {
+    return <span className={className}>{label}</span>
+  }
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      aria-pressed={active}
+      className={`${className} rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${active ? "text-foreground" : ""}`}
+    >
+      {label}
+      {active ? " ↓" : ""}
+    </button>
+  )
+}
+
+function RowList({
+  dimension,
   filterKey,
-  data,
+  rows,
   activeValue,
+  showRevenue,
+  sort,
+  currency,
+  onSort,
   onSelect,
 }: {
+  dimension: Breakdown
   filterKey: FilterKey
-  data: SiteStats
+  rows: Row[]
   activeValue: string | undefined
+  showRevenue: boolean
+  sort: SortKey
+  currency: string
+  onSort?: (sort: SortKey) => void
   onSelect: (key: FilterKey, value: string) => void
 }) {
-  const maxViews = Math.max(1, ...data.points.map((point) => point.views))
-  const totalViews = data.points.reduce((sum, point) => sum + point.views, 0)
+  const metricOf = (row: Row) =>
+    sort === "revenue" ? row.newMrr : row.visitors
+  const max = Math.max(1, ...rows.map(metricOf))
 
   return (
-    <div className="space-y-1.5">
-      <ul className="space-y-1.5">
-        {data.points.length === 0 ? (
-          <li className="py-2 text-xs text-muted-foreground">No data</li>
-        ) : (
-          data.points.map((point) => {
-            const value = point.series
-            const selected = activeValue === value
-            const share = totalViews === 0 ? 0 : point.views / totalViews
-            return (
-              <li key={value || "(none)"}>
-                <button
-                  type="button"
-                  onClick={() => onSelect(filterKey, value)}
-                  className={`relative flex h-[30px] w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-[13px] transition-colors hover:bg-muted/60 ${selected ? "bg-muted/60" : ""}`}
-                >
+    <div>
+      <div className="flex h-6 items-center gap-2 px-2 text-[11px] text-muted-foreground uppercase">
+        <span className="flex-1" />
+        <ColumnHeader
+          label="Visitors"
+          active={showRevenue && sort === "visitors"}
+          onClick={showRevenue && onSort ? () => onSort("visitors") : undefined}
+          className="w-16 text-right"
+        />
+        {showRevenue ? (
+          <ColumnHeader
+            label="Revenue"
+            active={sort === "revenue"}
+            onClick={onSort ? () => onSort("revenue") : undefined}
+            className="w-20 text-right"
+          />
+        ) : null}
+      </div>
+      <ul className="space-y-0.5">
+        {rows.map((row) => {
+          const selected = activeValue === row.value
+          const perVisitor =
+            row.visitors > 0 && row.newMrr > 0
+              ? `${formatMoney(Math.round(row.newMrr / row.visitors), currency)} per visitor · ${row.customers} ${row.customers === 1 ? "customer" : "customers"}`
+              : undefined
+          return (
+            <li key={row.value || "(none)"}>
+              <button
+                type="button"
+                title={perVisitor}
+                onClick={() => onSelect(filterKey, row.value)}
+                className={`group relative flex h-[30px] w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-[13px] transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${selected ? "bg-muted/70" : ""}`}
+              >
+                <span
+                  aria-hidden
+                  className={`absolute inset-y-0 left-0 rounded-md transition-[width] ${sort === "revenue" ? "bg-emerald-500/10" : "bg-foreground/[0.06]"}`}
+                  style={{ width: `${(metricOf(row) / max) * 100}%` }}
+                />
+                <span className="relative flex min-w-0 flex-1 items-center gap-2">
+                  <DimensionIcon dimension={dimension} value={row.value} />
                   <span
-                    aria-hidden
-                    className="absolute inset-y-0 left-0 bg-foreground/[0.06]"
-                    style={{ width: `${(point.views / maxViews) * 100}%` }}
-                  />
-                  <span className="relative min-w-0 flex-1 truncate font-mono">
-                    {value || "(none)"}
+                    className={`truncate ${row.value ? "" : "text-muted-foreground"} ${dimension === "country" || dimension === "source" || dimension === "device" ? "" : "font-mono"}`}
+                  >
+                    {dimensionLabel(dimension, row.value)}
                   </span>
-                  <span className="relative font-mono text-[13px] text-muted-foreground tabular-nums">
-                    {point.views}
+                </span>
+                <span className="relative w-16 text-right font-mono text-muted-foreground tabular-nums">
+                  {row.visitors.toLocaleString()}
+                </span>
+                {showRevenue ? (
+                  <span
+                    className={`relative w-20 text-right font-mono tabular-nums ${row.newMrr > 0 ? "text-foreground" : "text-muted-foreground/60"}`}
+                  >
+                    {row.newMrr > 0
+                      ? formatCompactMoney(row.newMrr, currency)
+                      : "—"}
                   </span>
-                  <span className="relative w-8 text-right font-mono text-[13px] text-muted-foreground tabular-nums">
-                    {Math.round(share * 100)}%
-                  </span>
-                </button>
-              </li>
-            )
-          })
-        )}
+                ) : null}
+              </button>
+            </li>
+          )
+        })}
       </ul>
-      {data.truncated ? (
-        <p className="text-xs text-muted-foreground">Truncated.</p>
-      ) : null}
     </div>
   )
 }
 
 function BreakdownBodyFallback() {
-  return <p className="py-2 text-xs text-muted-foreground">Loading…</p>
+  return (
+    <div className="space-y-1.5 pt-6">
+      {Array.from({ length: 6 }, (_, index) => (
+        <Skeleton
+          key={index}
+          className="h-[26px] rounded-md"
+          style={{ width: `${92 - index * 12}%` }}
+        />
+      ))}
+    </div>
+  )
 }
 
 function BreakdownBody({
+  title,
   tab,
   slug,
   siteId,
@@ -82,8 +203,10 @@ function BreakdownBody({
   filters,
   includeBots,
   search,
+  revenue,
   onSelect,
 }: {
+  title: string
   tab: BreakdownTab
   slug: string
   siteId: string
@@ -91,30 +214,131 @@ function BreakdownBody({
   filters: StatsFilters
   includeBots: boolean
   search: SiteSearch
+  revenue: RevenueContext
   onSelect: (key: FilterKey, value: string) => void
 }) {
   const dataKey = breakdownKey(tab)
+  const [sort, setSort] = useState<SortKey>("visitors")
   const { data } = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, dataKey, range, filters, includeBots)
   )
+  const revenueSupported = revenue.enabled && revenueBreakdowns.has(dataKey)
+  const revenueData = useQuery({
+    ...revenueBreakdownQueryOptions(slug, siteId, dataKey, range, filters),
+    enabled: revenueSupported,
+  })
+
+  const rows = useMemo(() => {
+    const merged = new Map<string, Row>()
+    for (const point of data.points) {
+      merged.set(point.series, {
+        value: point.series,
+        visitors: point.visitors,
+        customers: 0,
+        newMrr: 0,
+      })
+    }
+    if (revenueSupported) {
+      for (const row of revenueData.data?.rows ?? []) {
+        if (row.newMrr === 0 && !merged.has(row.key)) continue
+        const target = merged.get(row.key) ?? {
+          value: row.key,
+          visitors: 0,
+          customers: 0,
+          newMrr: 0,
+        }
+        target.customers += row.customers
+        target.newMrr += row.newMrr
+        merged.set(row.key, target)
+      }
+    }
+    const list = [...merged.values()]
+    return sort === "revenue"
+      ? list.sort((a, b) => b.newMrr - a.newMrr || b.visitors - a.visitors)
+      : list.sort((a, b) => b.visitors - a.visitors || b.newMrr - a.newMrr)
+  }, [data.points, revenueData.data, revenueSupported, sort])
+
+  const showRevenue = revenueSupported && rows.some((row) => row.newMrr > 0)
+  const currency = revenueData.data?.currency ?? revenue.currency
 
   if (tab.view === "map") {
     return (
       <CountriesMap
-        points={data.points}
+        points={rows.map((row) => ({
+          series: row.value,
+          value: row.visitors,
+          detail:
+            row.newMrr > 0
+              ? `${formatMoney(row.newMrr, currency)} new MRR · ${row.customers} ${row.customers === 1 ? "customer" : "customers"}`
+              : undefined,
+        }))}
+        valueLabel="visitors"
         activeValue={search.country}
         onSelect={(country) => onSelect("country", country)}
       />
     )
   }
 
+  if (rows.length === 0) {
+    return (
+      <p className="py-8 text-center text-xs text-muted-foreground">
+        No data in this range
+      </p>
+    )
+  }
+
+  const listProps = {
+    dimension: dataKey,
+    filterKey: tab.filterKey,
+    activeValue: search[tab.filterKey],
+    showRevenue,
+    sort: showRevenue ? sort : ("visitors" as const),
+    currency,
+    onSort: setSort,
+  }
+
   return (
-    <BreakdownTable
-      filterKey={tab.filterKey}
-      data={data}
-      activeValue={search[tab.filterKey]}
-      onSelect={onSelect}
-    />
+    <div className="space-y-1">
+      <RowList
+        {...listProps}
+        rows={rows.slice(0, visibleRows)}
+        onSelect={onSelect}
+      />
+      {rows.length > visibleRows ? (
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button
+              type="button"
+              size="xs"
+              variant="ghost"
+              className="w-full text-muted-foreground"
+            >
+              View all {rows.length.toLocaleString()}
+            </Button>
+          </SheetTrigger>
+          <SheetContent className="w-full overflow-y-auto data-[side=right]:sm:max-w-lg">
+            <SheetHeader>
+              <SheetTitle>
+                {title} · {tab.label}
+              </SheetTitle>
+              <SheetDescription>
+                {showRevenue
+                  ? "Visitors and new MRR from customers whose first visit matched."
+                  : "Visitors in the selected range."}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="px-4 pb-6">
+              <RowList {...listProps} rows={rows} onSelect={onSelect} />
+            </div>
+          </SheetContent>
+        </Sheet>
+      ) : null}
+      {data.truncated ? (
+        <p className="px-2 text-xs text-muted-foreground">
+          Showing the top {data.points.length}.
+        </p>
+      ) : null}
+    </div>
   )
 }
 
@@ -127,6 +351,7 @@ export function BreakdownPanel({
   filters,
   includeBots,
   search,
+  revenue,
   onSelect,
 }: {
   title: string
@@ -137,6 +362,7 @@ export function BreakdownPanel({
   filters: StatsFilters
   includeBots: boolean
   search: SiteSearch
+  revenue: RevenueContext
   onSelect: (key: FilterKey, value: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -184,14 +410,14 @@ export function BreakdownPanel({
   }, [slug, siteId, search, dataKey, queryClient, tabs])
 
   return (
-    <section className="rounded-lg border border-border/70 p-4">
-      <div className="mb-3 flex items-center justify-between gap-3">
+    <section className="flex min-w-0 flex-col rounded-xl border border-border/70 bg-card p-4">
+      <div className="flex items-center justify-between gap-3">
         <h2 className="text-[15px] font-semibold tracking-tight">{title}</h2>
         {showTabs ? (
           <div
             role="radiogroup"
             aria-label={`${title} breakdown`}
-            className="flex h-[26px] items-center gap-0.5 rounded-[7px] bg-muted p-0.5"
+            className="flex h-[26px] items-center gap-0.5 overflow-x-auto rounded-[7px] bg-muted p-0.5"
           >
             {tabs.map((item) => {
               const selected = item.key === active
@@ -219,6 +445,8 @@ export function BreakdownPanel({
       </div>
       <Suspense fallback={<BreakdownBodyFallback />}>
         <BreakdownBody
+          key={dataKey}
+          title={title}
           tab={tab}
           slug={slug}
           siteId={siteId}
@@ -226,6 +454,7 @@ export function BreakdownPanel({
           filters={filters}
           includeBots={includeBots}
           search={search}
+          revenue={revenue}
           onSelect={onSelect}
         />
       </Suspense>

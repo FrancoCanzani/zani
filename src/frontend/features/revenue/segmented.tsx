@@ -7,7 +7,7 @@ export function Segmented<T extends string>({
 }: {
   label: string
   options: readonly T[]
-  value: T
+  value: T | null
   labels: Record<T, string>
   onChange: (value: T) => void
 }) {

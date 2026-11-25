@@ -1,6 +1,7 @@
 import type { FilterKey } from "./search"
 
 export type Breakdown =
+  | "source"
   | "path"
   | "referrer"
   | "country"
@@ -31,33 +32,20 @@ export const breakdownPanels: Array<{
   tabs: BreakdownTab[]
 }> = [
   {
-    id: "pages",
-    title: "Pages",
+    id: "sources",
+    title: "Sources",
     tabs: [
-      { key: "path", label: "Path", filterKey: "path" },
-      { key: "entry", label: "Entry", filterKey: "path" },
-      { key: "exit", label: "Exit", filterKey: "path" },
+      { key: "source", label: "Channel", filterKey: "source" },
+      { key: "referrer", label: "Referrer", filterKey: "referrer" },
     ],
   },
   {
-    id: "referrers",
-    title: "Referrers",
-    tabs: [{ key: "referrer", label: "Referrer", filterKey: "referrer" }],
-  },
-  {
-    id: "events",
-    title: "Events",
-    tabs: [{ key: "event", label: "Name", filterKey: "event" }],
-  },
-  {
-    id: "utm",
-    title: "UTM",
+    id: "pages",
+    title: "Pages",
     tabs: [
-      { key: "utm_source", label: "Source", filterKey: "utm_source" },
-      { key: "utm_medium", label: "Medium", filterKey: "utm_medium" },
-      { key: "utm_campaign", label: "Campaign", filterKey: "utm_campaign" },
-      { key: "utm_content", label: "Content", filterKey: "utm_content" },
-      { key: "utm_term", label: "Term", filterKey: "utm_term" },
+      { key: "entry", label: "Entry", filterKey: "path" },
+      { key: "path", label: "All", filterKey: "path" },
+      { key: "exit", label: "Exit", filterKey: "path" },
     ],
   },
   {
@@ -73,11 +61,27 @@ export const breakdownPanels: Array<{
     id: "devices",
     title: "Devices",
     tabs: [
+      { key: "device", label: "Device", filterKey: "device" },
       { key: "browser", label: "Browser", filterKey: "browser" },
       { key: "os", label: "OS", filterKey: "os" },
-      { key: "device", label: "Device", filterKey: "device" },
       { key: "screen", label: "Screen", filterKey: "screen" },
     ],
+  },
+  {
+    id: "utm",
+    title: "UTM",
+    tabs: [
+      { key: "utm_source", label: "Source", filterKey: "utm_source" },
+      { key: "utm_medium", label: "Medium", filterKey: "utm_medium" },
+      { key: "utm_campaign", label: "Campaign", filterKey: "utm_campaign" },
+      { key: "utm_content", label: "Content", filterKey: "utm_content" },
+      { key: "utm_term", label: "Term", filterKey: "utm_term" },
+    ],
+  },
+  {
+    id: "events",
+    title: "Events",
+    tabs: [{ key: "event", label: "Name", filterKey: "event" }],
   },
 ]
 

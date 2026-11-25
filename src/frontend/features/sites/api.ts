@@ -11,6 +11,7 @@ import {
   filtersFromSearch,
   rangeFromSearch,
   type FilterKey,
+  type Grain,
   type SiteSearch,
 } from "./search"
 
@@ -52,7 +53,7 @@ export type SiteStats = {
 export type StatsRange = {
   start: string
   end: string
-  grain: "hour" | "day"
+  grain: Grain
   tz?: string
 }
 

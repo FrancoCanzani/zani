@@ -1,14 +1,23 @@
 import { z } from "zod"
 
-export const rangePresets = ["1d", "7d", "30d", "custom"] as const
+export const rangePresets = ["1d", "7d", "30d", "90d", "12m", "custom"] as const
 export const metrics = [
-  "views",
   "visitors",
-  "sessions",
+  "views",
   "bounce",
-  "views_per_visit",
+  "signups",
+  "new_mrr",
+  "mrr",
 ] as const
+export const attributionDimensions = [
+  "source",
+  "medium",
+  "campaign",
+  "landing",
+] as const
+export const touches = ["first", "last"] as const
 export const filterKeys = [
+  "source",
   "path",
   "referrer",
   "country",
@@ -28,10 +37,15 @@ export const filterKeys = [
 export type RangePreset = (typeof rangePresets)[number]
 export type Metric = (typeof metrics)[number]
 export type FilterKey = (typeof filterKeys)[number]
+export type AttributionDimension = (typeof attributionDimensions)[number]
+export type Touch = (typeof touches)[number]
+export type Grain = "hour" | "day" | "week"
 
 export const siteSearchSchema = z.object({
-  range: z.enum(rangePresets).default("7d"),
-  metric: z.enum(metrics).default("views"),
+  range: z.enum(rangePresets).default("30d"),
+  metric: z.enum(metrics).default("visitors"),
+  by: z.enum(attributionDimensions).default("source"),
+  touch: z.enum(touches).default("first"),
   from: z.string().optional(),
   to: z.string().optional(),
   tz: z.string().default("UTC"),
@@ -43,6 +57,7 @@ export const siteSearchSchema = z.object({
     .union([z.literal("true"), z.literal("false"), z.boolean()])
     .optional()
     .transform((value) => value === true || value === "true"),
+  source: z.string().optional(),
   path: z.string().optional(),
   referrer: z.string().optional(),
   country: z.string().optional(),
@@ -87,7 +102,7 @@ function zonedParts(ms: number, timeZone: string) {
   }
 }
 
-function zonedOffsetMs(ms: number, timeZone: string) {
+export function zonedOffsetMs(ms: number, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     timeZoneName: "shortOffset",
@@ -116,10 +131,24 @@ function zonedDateUtcMs(
   return utcGuess - zonedOffsetMs(utcGuess, timeZone)
 }
 
+function grainFor(durationMs: number): Grain {
+  if (durationMs <= dayMs) return "hour"
+  if (durationMs <= 92 * dayMs) return "day"
+  return "week"
+}
+
+const presetDays: Record<Exclude<RangePreset, "custom">, number> = {
+  "1d": 1,
+  "7d": 7,
+  "30d": 30,
+  "90d": 90,
+  "12m": 365,
+}
+
 export function rangeFromSearch(search: SiteSearch): {
   start: string
   end: string
-  grain: "hour" | "day"
+  grain: Grain
 } {
   const timeZone = search.tz || "UTC"
   if (search.range === "custom" && search.from && search.to) {
@@ -146,11 +175,10 @@ export function rangeFromSearch(search: SiteSearch): {
             0
           ) + 60_000
         : zonedDateUtcMs(timeZone, to.year, to.month, to.day, 0, 0, 0) + dayMs
-      const duration = endMs - startMs
       return {
         start: new Date(startMs).toISOString(),
         end: new Date(endMs).toISOString(),
-        grain: duration <= dayMs ? "hour" : "day",
+        grain: grainFor(endMs - startMs),
       }
     }
   }
@@ -168,18 +196,27 @@ export function rangeFromSearch(search: SiteSearch): {
           0,
           0
         )
-      : zonedDateUtcMs(timeZone, parts.year, parts.month, parts.day + 1, 0, 0, 0)
-  const days = search.range === "1d" ? 1 : search.range === "30d" ? 30 : 7
+      : zonedDateUtcMs(
+          timeZone,
+          parts.year,
+          parts.month,
+          parts.day + 1,
+          0,
+          0,
+          0
+        )
+  const days = presetDays[search.range === "custom" ? "30d" : search.range]
   return {
     start: new Date(endMs - days * dayMs).toISOString(),
     end: new Date(endMs).toISOString(),
-    grain: days <= 1 ? "hour" : "day",
+    grain: grainFor(days * dayMs),
   }
 }
 
 function parseDateInput(value: string) {
-  const match =
-    /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?$/.exec(value.trim())
+  const match = /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2}))?$/.exec(
+    value.trim()
+  )
   if (!match) return null
   const hasTime = match[4] !== undefined && match[5] !== undefined
   return {
@@ -210,6 +247,7 @@ export function activeFilterChips(search: SiteSearch) {
 }
 
 export const filterLabels: Record<FilterKey, string> = {
+  source: "Channel",
   path: "Page",
   referrer: "Referrer",
   country: "Country",
@@ -227,23 +265,43 @@ export const filterLabels: Record<FilterKey, string> = {
 }
 
 export const metricLabels: Record<Metric, string> = {
-  views: "Views",
   visitors: "Visitors",
-  sessions: "Sessions",
+  views: "Pageviews",
   bounce: "Bounce rate",
-  views_per_visit: "Views / visit",
+  signups: "Signups",
+  new_mrr: "New MRR",
+  mrr: "MRR",
 }
 
 export const rangeLabels: Record<RangePreset, string> = {
   "1d": "Today",
-  "7d": "Week",
-  "30d": "Month",
+  "7d": "7 days",
+  "30d": "30 days",
+  "90d": "90 days",
+  "12m": "12 months",
   custom: "Custom",
 }
 
-export const chartMetrics = ["views", "visitors", "sessions"] as const
-export type ChartMetric = (typeof chartMetrics)[number]
+export type TrafficMetric = "visitors" | "views"
+export type RevenueMetric = "signups" | "new_mrr" | "mrr"
 
-export function isChartMetric(metric: Metric): metric is ChartMetric {
-  return metric === "views" || metric === "visitors" || metric === "sessions"
+export function chartSeriesFor(metric: Metric): {
+  bars: TrafficMetric
+  line: RevenueMetric
+} {
+  switch (metric) {
+    case "visitors":
+    case "views":
+      return { bars: metric, line: "new_mrr" }
+    case "signups":
+    case "new_mrr":
+    case "mrr":
+      return { bars: "visitors", line: metric }
+    case "bounce":
+      return { bars: "visitors", line: "new_mrr" }
+    default: {
+      const exhaustive: never = metric
+      return exhaustive
+    }
+  }
 }

@@ -9,18 +9,16 @@ import {
 import enLocale from "i18n-iso-countries/langs/en.json"
 import { ComposableMap, Geographies, Geography } from "react-simple-maps"
 import { feature } from "topojson-client"
-import type {
-  FeatureCollection,
-  Geometry,
-  GeoJsonProperties,
-} from "geojson"
+import type { FeatureCollection, Geometry, GeoJsonProperties } from "geojson"
 import type { Topology, GeometryCollection } from "topojson-specification"
 import countries110m from "world-atlas/countries-110m.json"
 
 registerLocale(enLocale)
 
 type CountriesMapProps = {
-  points: Array<{ series: string; views: number }>
+  points: Array<{ series: string; value: number; detail?: string }>
+  valueLabel: string
+  formatValue?: (value: number) => string
   activeValue: string | undefined
   onSelect: (country: string) => void
 }
@@ -30,6 +28,7 @@ type HoverState = {
   name: string
   views: number
   share: number
+  detail?: string
   x: number
   y: number
 }
@@ -59,12 +58,14 @@ function hoverFromEvent(
   code: string,
   name: string,
   views: number,
-  totalViews: number
+  totalViews: number,
+  detail?: string
 ): HoverState {
   return {
     code,
     name,
     views,
+    detail,
     share: totalViews === 0 ? 0 : views / totalViews,
     x: event.clientX,
     y: event.clientY,
@@ -73,13 +74,16 @@ function hoverFromEvent(
 
 export function CountriesMap({
   points,
+  valueLabel,
+  formatValue = formatCompact,
   activeValue,
   onSelect,
 }: CountriesMapProps) {
   const [hover, setHover] = useState<HoverState | null>(null)
 
-  const { byNumeric, totalViews, maxViews } = useMemo(() => {
+  const { byNumeric, details, totalViews, maxViews } = useMemo(() => {
     const map = new Map<string, number>()
+    const detailMap = new Map<string, string>()
     let total = 0
     for (const point of points) {
       const code = point.series.trim().toUpperCase()
@@ -87,11 +91,13 @@ export function CountriesMap({
       const numeric = alpha2ToNumeric(code)
       if (numeric == null) continue
       const id = String(numeric).padStart(3, "0")
-      map.set(id, (map.get(id) ?? 0) + point.views)
-      total += point.views
+      map.set(id, (map.get(id) ?? 0) + point.value)
+      if (point.detail) detailMap.set(id, point.detail)
+      total += point.value
     }
     return {
       byNumeric: map,
+      details: detailMap,
       totalViews: total,
       maxViews: Math.max(1, ...map.values()),
     }
@@ -109,9 +115,14 @@ export function CountriesMap({
               <span>{hover.name}</span>
             </div>
             <div className="mt-0.5 text-[12px] text-muted-foreground">
-              {formatCompact(hover.views)} views ·{" "}
+              {formatValue(hover.views)} {valueLabel} ·{" "}
               {(hover.share * 100).toFixed(1)}%
             </div>
+            {hover.detail ? (
+              <div className="text-[12px] text-muted-foreground">
+                {hover.detail}
+              </div>
+            ) : null}
           </div>,
           document.body
         )
@@ -167,7 +178,8 @@ export function CountriesMap({
                         alpha2,
                         name || alpha2,
                         views,
-                        totalViews
+                        totalViews,
+                        details.get(numeric)
                       )
                     )
                   }}
@@ -179,7 +191,8 @@ export function CountriesMap({
                         alpha2,
                         name || alpha2,
                         views,
-                        totalViews
+                        totalViews,
+                        details.get(numeric)
                       )
                     )
                   }}

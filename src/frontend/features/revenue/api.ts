@@ -4,15 +4,21 @@ import {
   type QueryClient,
 } from "@tanstack/react-query"
 
+import type { StatsFilters, StatsRange } from "@features/sites/api"
+import type { Breakdown } from "@features/sites/panels"
+import type {
+  AttributionDimension,
+  FilterKey,
+  Touch,
+} from "@features/sites/search"
 import { api, requireJson } from "@lib/api"
 
-import type { RevenueSearch } from "./search"
-
 export type RevenuePoint = {
-  at: number
+  bucket: number
+  signups: number
+  newMrr: number
+  newCustomers: number
   mrr: number
-  gained: number
-  lost: number
 }
 
 export type RevenueOverview = {
@@ -20,10 +26,9 @@ export type RevenueOverview = {
   hasData: boolean
   currency: string
   otherCurrencies: number
-  start: number
-  end: number
-  payingCustomers: number
   identifiedCustomers: number
+  ignoredFilters: FilterKey[]
+  payingCustomers: number
   arpa: number
   mrr: number
   mrrStart: number
@@ -35,7 +40,15 @@ export type RevenueOverview = {
   newCustomers: number
   churnedCustomers: number
   revenueChurnRate: number
+  signups: number
   points: RevenuePoint[]
+}
+
+export type RevenueBreakdownRow = {
+  key: string
+  signups: number
+  customers: number
+  newMrr: number
 }
 
 export type AttributionRow = {
@@ -86,20 +99,65 @@ export type StripeStatus =
 
 const revenueStaleMs = 30_000
 
+function rangeQuery(range: StatsRange, filters: StatsFilters) {
+  return {
+    start: range.start,
+    end: range.end,
+    grain: range.grain,
+    ...(range.tz ? { tz: range.tz } : {}),
+    ...filters,
+  }
+}
+
 export function revenueOverviewQueryOptions(
   slug: string,
   siteId: string,
-  range: RevenueSearch["range"]
+  range: StatsRange,
+  filters: StatsFilters
 ) {
   return queryOptions({
-    queryKey: ["revenue", slug, siteId, "overview", range] as const,
+    queryKey: ["revenue", slug, siteId, "overview", range, filters] as const,
     queryFn: async () =>
       requireJson<RevenueOverview>(
         await api.workspaces[":slug"].sites[":siteId"].revenue.$get({
           param: { slug, siteId },
-          query: { range },
+          query: rangeQuery(range, filters),
         }),
         "mrr"
+      ),
+    staleTime: revenueStaleMs,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function revenueBreakdownQueryOptions(
+  slug: string,
+  siteId: string,
+  by: Breakdown,
+  range: StatsRange,
+  filters: StatsFilters
+) {
+  return queryOptions({
+    queryKey: [
+      "revenue",
+      slug,
+      siteId,
+      "breakdown",
+      by,
+      range,
+      filters,
+    ] as const,
+    queryFn: async () =>
+      requireJson<{
+        currency: string
+        supported: boolean
+        rows: RevenueBreakdownRow[]
+      }>(
+        await api.workspaces[":slug"].sites[":siteId"].revenue.breakdown.$get({
+          param: { slug, siteId },
+          query: { ...rangeQuery(range, filters), by },
+        }),
+        "rows"
       ),
     staleTime: revenueStaleMs,
     placeholderData: keepPreviousData,
@@ -109,9 +167,11 @@ export function revenueOverviewQueryOptions(
 export function attributionQueryOptions(
   slug: string,
   siteId: string,
-  search: RevenueSearch
+  range: StatsRange,
+  filters: StatsFilters,
+  by: AttributionDimension,
+  touch: Touch
 ) {
-  const { range, by, touch } = search
   return queryOptions({
     queryKey: [
       "revenue",
@@ -119,6 +179,7 @@ export function attributionQueryOptions(
       siteId,
       "attribution",
       range,
+      filters,
       by,
       touch,
     ] as const,
@@ -127,7 +188,7 @@ export function attributionQueryOptions(
         await api.workspaces[":slug"].sites[":siteId"].revenue.attribution.$get(
           {
             param: { slug, siteId },
-            query: { range, by, touch },
+            query: { ...rangeQuery(range, filters), by, touch },
           }
         ),
         "rows"
@@ -168,15 +229,26 @@ export async function preloadRevenue(
   queryClient: QueryClient,
   slug: string,
   siteId: string,
-  search: RevenueSearch
+  input: {
+    range: StatsRange
+    previous: StatsRange
+    filters: StatsFilters
+    by: AttributionDimension
+    touch: Touch
+  }
 ) {
+  const { range, previous, filters, by, touch } = input
   await Promise.all([
     queryClient.query({
-      ...revenueOverviewQueryOptions(slug, siteId, search.range),
+      ...revenueOverviewQueryOptions(slug, siteId, range, filters),
       staleTime: revenueStaleMs,
     }),
     queryClient.query({
-      ...attributionQueryOptions(slug, siteId, search),
+      ...revenueOverviewQueryOptions(slug, siteId, previous, filters),
+      staleTime: revenueStaleMs,
+    }),
+    queryClient.query({
+      ...attributionQueryOptions(slug, siteId, range, filters, by, touch),
       staleTime: revenueStaleMs,
     }),
     queryClient.query({
@@ -256,6 +328,20 @@ export async function syncStripeStep(
   return requireJson<{
     sync: { phase: SyncPhase; processed: number; done: boolean }
   }>(response, "sync")
+}
+
+export function formatCompactMoney(minor: number, currency: string) {
+  const code = (currency || "usd").toUpperCase()
+  try {
+    return new Intl.NumberFormat(undefined, {
+      style: "currency",
+      currency: code,
+      notation: Math.abs(minor) >= 1_000_000 ? "compact" : "standard",
+      maximumFractionDigits: Math.abs(minor) >= 10_000 ? 0 : 2,
+    }).format(minor / 100)
+  } catch {
+    return `${Math.round(minor / 100)} ${code}`
+  }
 }
 
 export function formatMoney(minor: number, currency: string) {

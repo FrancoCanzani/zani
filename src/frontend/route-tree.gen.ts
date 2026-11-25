@@ -24,7 +24,6 @@ import { Route as AuthedBusinessesSlugShellManageRouteImport } from './routes/_a
 import { Route as AuthedBusinessesSlugShellSettingsRouteImport } from './routes/_authed/businesses/$slug/_shell/settings'
 import { Route as AuthedBusinessesSlugShellSitesSiteIdRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId'
 import { Route as AuthedBusinessesSlugShellSitesSiteIdIndexRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId.index'
-import { Route as AuthedBusinessesSlugShellSitesSiteIdRevenueRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId.revenue'
 import { Route as AuthedBusinessesSlugShellSitesSiteIdSettingsRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId.settings'
 
 const IndexRoute = IndexRouteImport.update({
@@ -107,12 +106,6 @@ const AuthedBusinessesSlugShellSitesSiteIdIndexRoute =
     path: '/',
     getParentRoute: () => AuthedBusinessesSlugShellSitesSiteIdRoute,
   } as any)
-const AuthedBusinessesSlugShellSitesSiteIdRevenueRoute =
-  AuthedBusinessesSlugShellSitesSiteIdRevenueRouteImport.update({
-    id: '/revenue',
-    path: '/revenue',
-    getParentRoute: () => AuthedBusinessesSlugShellSitesSiteIdRoute,
-  } as any)
 const AuthedBusinessesSlugShellSitesSiteIdSettingsRoute =
   AuthedBusinessesSlugShellSitesSiteIdSettingsRouteImport.update({
     id: '/settings',
@@ -133,7 +126,6 @@ export interface FileRoutesByFullPath {
   '/businesses/$slug/settings': typeof AuthedBusinessesSlugShellSettingsRoute
   '/businesses/$slug/': typeof AuthedBusinessesSlugShellIndexRoute
   '/businesses/$slug/sites/$siteId': typeof AuthedBusinessesSlugShellSitesSiteIdRouteWithChildren
-  '/businesses/$slug/sites/$siteId/revenue': typeof AuthedBusinessesSlugShellSitesSiteIdRevenueRoute
   '/businesses/$slug/sites/$siteId/settings': typeof AuthedBusinessesSlugShellSitesSiteIdSettingsRoute
   '/businesses/$slug/sites/$siteId/': typeof AuthedBusinessesSlugShellSitesSiteIdIndexRoute
 }
@@ -148,7 +140,6 @@ export interface FileRoutesByTo {
   '/businesses': typeof AuthedBusinessesIndexRoute
   '/businesses/$slug/manage': typeof AuthedBusinessesSlugShellManageRoute
   '/businesses/$slug/settings': typeof AuthedBusinessesSlugShellSettingsRoute
-  '/businesses/$slug/sites/$siteId/revenue': typeof AuthedBusinessesSlugShellSitesSiteIdRevenueRoute
   '/businesses/$slug/sites/$siteId/settings': typeof AuthedBusinessesSlugShellSitesSiteIdSettingsRoute
   '/businesses/$slug/sites/$siteId': typeof AuthedBusinessesSlugShellSitesSiteIdIndexRoute
 }
@@ -168,7 +159,6 @@ export interface FileRoutesById {
   '/_authed/businesses/$slug/_shell/settings': typeof AuthedBusinessesSlugShellSettingsRoute
   '/_authed/businesses/$slug/_shell/': typeof AuthedBusinessesSlugShellIndexRoute
   '/_authed/businesses/$slug/_shell/sites/$siteId': typeof AuthedBusinessesSlugShellSitesSiteIdRouteWithChildren
-  '/_authed/businesses/$slug/_shell/sites/$siteId/revenue': typeof AuthedBusinessesSlugShellSitesSiteIdRevenueRoute
   '/_authed/businesses/$slug/_shell/sites/$siteId/settings': typeof AuthedBusinessesSlugShellSitesSiteIdSettingsRoute
   '/_authed/businesses/$slug/_shell/sites/$siteId/': typeof AuthedBusinessesSlugShellSitesSiteIdIndexRoute
 }
@@ -187,7 +177,6 @@ export interface FileRouteTypes {
     | '/businesses/$slug/settings'
     | '/businesses/$slug/'
     | '/businesses/$slug/sites/$siteId'
-    | '/businesses/$slug/sites/$siteId/revenue'
     | '/businesses/$slug/sites/$siteId/settings'
     | '/businesses/$slug/sites/$siteId/'
   fileRoutesByTo: FileRoutesByTo
@@ -202,7 +191,6 @@ export interface FileRouteTypes {
     | '/businesses'
     | '/businesses/$slug/manage'
     | '/businesses/$slug/settings'
-    | '/businesses/$slug/sites/$siteId/revenue'
     | '/businesses/$slug/sites/$siteId/settings'
     | '/businesses/$slug/sites/$siteId'
   id:
@@ -221,7 +209,6 @@ export interface FileRouteTypes {
     | '/_authed/businesses/$slug/_shell/settings'
     | '/_authed/businesses/$slug/_shell/'
     | '/_authed/businesses/$slug/_shell/sites/$siteId'
-    | '/_authed/businesses/$slug/_shell/sites/$siteId/revenue'
     | '/_authed/businesses/$slug/_shell/sites/$siteId/settings'
     | '/_authed/businesses/$slug/_shell/sites/$siteId/'
   fileRoutesById: FileRoutesById
@@ -339,13 +326,6 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedBusinessesSlugShellSitesSiteIdIndexRouteImport
       parentRoute: typeof AuthedBusinessesSlugShellSitesSiteIdRoute
     }
-    '/_authed/businesses/$slug/_shell/sites/$siteId/revenue': {
-      id: '/_authed/businesses/$slug/_shell/sites/$siteId/revenue'
-      path: '/revenue'
-      fullPath: '/businesses/$slug/sites/$siteId/revenue'
-      preLoaderRoute: typeof AuthedBusinessesSlugShellSitesSiteIdRevenueRouteImport
-      parentRoute: typeof AuthedBusinessesSlugShellSitesSiteIdRoute
-    }
     '/_authed/businesses/$slug/_shell/sites/$siteId/settings': {
       id: '/_authed/businesses/$slug/_shell/sites/$siteId/settings'
       path: '/settings'
@@ -357,15 +337,12 @@ declare module '@tanstack/react-router' {
 }
 
 interface AuthedBusinessesSlugShellSitesSiteIdRouteChildren {
-  AuthedBusinessesSlugShellSitesSiteIdRevenueRoute: typeof AuthedBusinessesSlugShellSitesSiteIdRevenueRoute
   AuthedBusinessesSlugShellSitesSiteIdSettingsRoute: typeof AuthedBusinessesSlugShellSitesSiteIdSettingsRoute
   AuthedBusinessesSlugShellSitesSiteIdIndexRoute: typeof AuthedBusinessesSlugShellSitesSiteIdIndexRoute
 }
 
 const AuthedBusinessesSlugShellSitesSiteIdRouteChildren: AuthedBusinessesSlugShellSitesSiteIdRouteChildren =
   {
-    AuthedBusinessesSlugShellSitesSiteIdRevenueRoute:
-      AuthedBusinessesSlugShellSitesSiteIdRevenueRoute,
     AuthedBusinessesSlugShellSitesSiteIdSettingsRoute:
       AuthedBusinessesSlugShellSitesSiteIdSettingsRoute,
     AuthedBusinessesSlugShellSitesSiteIdIndexRoute:
