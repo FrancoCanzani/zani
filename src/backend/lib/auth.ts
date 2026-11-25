@@ -33,6 +33,7 @@ export function createAuth(env: Env, ctx?: WaitUntilCtx) {
             env.BETTER_AUTH_URL,
             "http://localhost:5173",
             "http://127.0.0.1:5173",
+            "https://*.trycloudflare.com",
           ]
         : [env.BETTER_AUTH_URL],
     database: drizzleAdapter(db, {
