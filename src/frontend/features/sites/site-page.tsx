@@ -235,12 +235,12 @@ export function SitePage() {
             {formatStatsRange(range.start, range.end, timeZone)}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5">
           {totals.data.hasEvents ? (
             <div
               role="tablist"
               aria-label="Site view"
-              className="flex h-8 items-center gap-0.5 rounded-lg bg-muted p-0.5"
+              className="flex h-6 items-center gap-0.5 rounded-[min(var(--radius-md),10px)] bg-muted p-0.5"
             >
               {siteViewOrder.map((item) => {
                 const selected = view === item
@@ -251,7 +251,7 @@ export function SitePage() {
                     role="tab"
                     aria-selected={selected}
                     onClick={() => patchSearch({ view: item })}
-                    className={`h-7 min-w-[5.75rem] rounded-md px-2.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+                    className={`h-5 min-w-[4.75rem] rounded-[min(var(--radius-md),8px)] px-2 text-xs font-medium transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
                       selected
                         ? "bg-background text-foreground shadow-sm"
                         : "text-muted-foreground hover:text-foreground"
@@ -266,6 +266,7 @@ export function SitePage() {
           {import.meta.env.DEV ? (
             <Button
               type="button"
+              size="xs"
               variant="outline"
               disabled={simulate.isPending || revoked}
               onClick={() => simulate.mutate()}
@@ -273,7 +274,7 @@ export function SitePage() {
               {simulate.isPending ? "Simulating…" : "Simulate views"}
             </Button>
           ) : null}
-          <Button asChild variant="outline" size="sm">
+          <Button asChild variant="outline" size="xs">
             <Link
               to="/businesses/$slug/sites/$siteId/settings"
               params={{ slug, siteId }}
