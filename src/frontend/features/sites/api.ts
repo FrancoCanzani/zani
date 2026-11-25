@@ -17,8 +17,6 @@ import {
   type SiteSearch,
 } from "./search"
 
-export type { Breakdown }
-
 export type Site = {
   id: string
   name: string
@@ -61,7 +59,7 @@ export type StatsRange = {
 
 export type StatsFilters = Partial<Record<FilterKey, string>>
 
-export type StatsQuery = {
+type StatsQuery = {
   range: StatsRange
   filters: StatsFilters
   includeBots: boolean
@@ -105,6 +103,15 @@ export function sitesQueryOptions(slug: string) {
   })
 }
 
+export function rangeQuery(range: StatsRange, filters: StatsFilters) {
+  return {
+    start: range.start,
+    end: range.end,
+    ...(range.tz ? { tz: range.tz } : {}),
+    ...filters,
+  }
+}
+
 export function siteStatsQueryOptions(
   slug: string,
   siteId: string,
@@ -128,13 +135,10 @@ export function siteStatsQueryOptions(
         await api.workspaces[":slug"].sites[":siteId"].stats.$get({
           param: { slug, siteId },
           query: {
-            start: range.start,
-            end: range.end,
+            ...rangeQuery(range, filters),
             grain: range.grain,
-            ...(range.tz ? { tz: range.tz } : {}),
             ...(breakdown ? { breakdown } : {}),
             ...(includeBots ? { bots: "1" as const } : {}),
-            ...filters,
           },
         }),
         "views"
@@ -292,40 +296,37 @@ export async function preloadSiteStats(
   const { range, filters, includeBots } = statsQueryFromSearch(search)
   const previous = previousStatsRange(range)
   await Promise.all([
-    queryClient.query({
-      ...siteStatsQueryOptions(
+    queryClient.query(
+      siteStatsQueryOptions(
         slug,
         siteId,
         undefined,
         range,
         filters,
         includeBots
-      ),
-      staleTime: statsStaleMs,
-    }),
-    queryClient.query({
-      ...siteStatsQueryOptions(
+      )
+    ),
+    queryClient.query(
+      siteStatsQueryOptions(
         slug,
         siteId,
         undefined,
         previous,
         filters,
         includeBots
-      ),
-      staleTime: statsStaleMs,
-    }),
+      )
+    ),
     ...defaultPanelBreakdowns.map((breakdown) =>
-      queryClient.query({
-        ...siteStatsQueryOptions(
+      queryClient.query(
+        siteStatsQueryOptions(
           slug,
           siteId,
           breakdown,
           range,
           filters,
           includeBots
-        ),
-        staleTime: statsStaleMs,
-      })
+        )
+      )
     ),
   ])
 }
@@ -412,13 +413,10 @@ export function activityQueryOptions(
           await api.workspaces[":slug"].sites[":siteId"].activity.$get({
             param: { slug, siteId },
             query: {
-              start: range.start,
-              end: range.end,
+              ...rangeQuery(range, filters),
               type,
-              ...(range.tz ? { tz: range.tz } : {}),
               ...(includeBots ? { bots: "1" as const } : {}),
               ...(pageParam === null ? {} : { before: String(pageParam) }),
-              ...filters,
             },
           }),
           "activity"

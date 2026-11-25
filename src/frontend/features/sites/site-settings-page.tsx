@@ -5,12 +5,7 @@ import {
   useSuspenseQuery,
   type QueryClient,
 } from "@tanstack/react-query"
-import {
-  Link,
-  getRouteApi,
-  notFound,
-  useNavigate,
-} from "@tanstack/react-router"
+import { Link, getRouteApi, notFound } from "@tanstack/react-router"
 import { useEffect, useState } from "react"
 import { toast } from "sonner"
 import { z } from "zod"
@@ -92,7 +87,7 @@ async function refreshSite(
 export function SiteSettingsPage() {
   const { slug, siteId } = routeApi.useParams()
   const { stripe: stripeResult } = routeApi.useSearch()
-  const navigate = useNavigate()
+  const navigate = routeApi.useNavigate()
   const { session } = sessionApi.useRouteContext()
   const queryClient = useQueryClient()
   const { data } = useSuspenseQuery(sitesQueryOptions(slug))
@@ -172,7 +167,6 @@ export function SiteSettingsPage() {
       toast.error(stripeResultMessages[stripeResult], { id: "stripe-oauth" })
     }
     void navigate({
-      to: ".",
       search: {},
       hash: "revenue",
       replace: true,

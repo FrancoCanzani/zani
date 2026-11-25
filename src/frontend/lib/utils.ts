@@ -36,3 +36,18 @@ export function formatRelative(ms: number, now = Date.now()) {
   }
   return "just now"
 }
+
+export function formatDateTime(ms: number | null) {
+  if (ms === null) return "Never"
+  return new Intl.DateTimeFormat(undefined, {
+    dateStyle: "medium",
+    timeStyle: "short",
+  }).format(ms)
+}
+
+export function formatCount(value: number) {
+  return new Intl.NumberFormat(undefined, {
+    notation: value >= 10_000 ? "compact" : "standard",
+    maximumFractionDigits: 1,
+  }).format(value)
+}

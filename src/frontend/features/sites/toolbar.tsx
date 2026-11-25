@@ -2,7 +2,7 @@ import { XIcon } from "lucide-react"
 
 import { Button } from "@components/ui/button"
 
-import { Segmented } from "@features/revenue/segmented"
+import { Segmented } from "@components/segmented"
 
 import type { StatsRange } from "./api"
 import { RangePicker } from "./range-picker"
@@ -12,23 +12,16 @@ import {
   filterKeys,
   filterLabels,
   rangeLabels,
+  zonedParts,
   type SiteSearch,
 } from "./search"
 
 const quickRanges = ["1d", "7d", "30d", "90d", "12m"] as const
 
 function dateInputValue(iso: string, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(iso))
-  const year = parts.find((part) => part.type === "year")?.value
-  const month = parts.find((part) => part.type === "month")?.value
-  const day = parts.find((part) => part.type === "day")?.value
-  if (!year || !month || !day) return ""
-  return `${year}-${month}-${day}`
+  const { year, month, day } = zonedParts(Date.parse(iso), timeZone)
+  if ([year, month, day].some(Number.isNaN)) return ""
+  return `${year}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`
 }
 
 function clearFiltersPatch(): Partial<SiteSearch> {

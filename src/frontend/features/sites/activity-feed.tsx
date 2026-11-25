@@ -11,7 +11,7 @@ import { Button } from "@components/ui/button"
 import { Skeleton } from "@components/ui/skeleton"
 
 import { formatMoney } from "@features/revenue/api"
-import { Segmented } from "@features/revenue/segmented"
+import { Segmented } from "@components/segmented"
 import { formatRelative } from "@lib/utils"
 
 import {
@@ -34,21 +34,8 @@ const typeLabels: Record<ActivityType, string> = {
 
 type RevenueItem = Extract<ActivityItem, { kind: "revenue" }>
 
-function formatAmount(minor: number, currency: string) {
-  if (minor % 100 !== 0) return formatMoney(minor, currency)
-  try {
-    return new Intl.NumberFormat(undefined, {
-      style: "currency",
-      currency: (currency || "usd").toUpperCase(),
-      maximumFractionDigits: 0,
-    }).format(minor / 100)
-  } catch {
-    return formatMoney(minor, currency)
-  }
-}
-
 function revenueHeadline(item: RevenueItem) {
-  const amount = formatAmount(Math.abs(item.amount), item.currency)
+  const amount = formatMoney(Math.abs(item.amount), item.currency)
   switch (item.movement) {
     case "new":
       return `Paid ${amount}/mo`

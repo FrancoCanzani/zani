@@ -41,7 +41,7 @@ import {
   type RevenueCustomer,
   type RevenueOverview,
 } from "./api"
-import { Segmented } from "./segmented"
+import { Segmented } from "@components/segmented"
 
 const topCustomerCount = 8
 const unidentifiedKey = "(not identified)"
@@ -92,7 +92,7 @@ function rate(part: number, whole: number) {
   return `${value < 10 ? value.toFixed(1) : Math.round(value)}%`
 }
 
-export function Panel({
+function Panel({
   title,
   description,
   action,

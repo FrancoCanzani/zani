@@ -13,17 +13,18 @@ import {
   type RevenuePoint,
 } from "@features/revenue/api"
 
+import { formatCount } from "@lib/utils"
+
 import type { StatsPoint, StatsRange } from "./api"
 import {
+  dayMs,
+  hourMs,
   metricLabels,
   zonedOffsetMs,
   type Grain,
   type RevenueMetric,
   type TrafficMetric,
 } from "./search"
-
-const hourMs = 60 * 60 * 1000
-const dayMs = 24 * hourMs
 
 function bucketSize(grain: Grain) {
   switch (grain) {
@@ -75,13 +76,6 @@ function formatBucket(ms: number, grain: Grain, timeZone: string) {
       return exhaustive
     }
   }
-}
-
-function formatCount(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    notation: value >= 10_000 ? "compact" : "standard",
-    maximumFractionDigits: 1,
-  }).format(value)
 }
 
 function revenueValue(point: RevenuePoint | undefined, metric: RevenueMetric) {

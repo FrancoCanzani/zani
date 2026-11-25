@@ -13,6 +13,8 @@ import type { FeatureCollection, Geometry, GeoJsonProperties } from "geojson"
 import type { Topology, GeometryCollection } from "topojson-specification"
 import countries110m from "world-atlas/countries-110m.json"
 
+import { formatCount } from "@lib/utils"
+
 registerLocale(enLocale)
 
 type CountriesMapProps = {
@@ -23,7 +25,6 @@ type CountriesMapProps = {
     detail?: string
   }>
   valueLabel: string
-  formatValue?: (value: number) => string
   activeValue: string | undefined
   onSelect: (country: string) => void
 }
@@ -51,13 +52,6 @@ const emptyFill = "#E8EAED"
 const dataGreen = "#10B981"
 const selectedGreen = "#047857"
 
-function formatCompact(value: number) {
-  return new Intl.NumberFormat(undefined, {
-    notation: "compact",
-    maximumFractionDigits: 1,
-  }).format(value)
-}
-
 function hoverFromEvent(
   event: MouseEvent,
   code: string,
@@ -80,7 +74,6 @@ function hoverFromEvent(
 export function CountriesMap({
   points,
   valueLabel,
-  formatValue = formatCompact,
   activeValue,
   onSelect,
 }: CountriesMapProps) {
@@ -126,7 +119,7 @@ export function CountriesMap({
               <span>{hover.name}</span>
             </div>
             <div className="mt-0.5 text-[12px] text-muted-foreground">
-              {formatValue(hover.views)} {valueLabel} ·{" "}
+              {formatCount(hover.views)} {valueLabel} ·{" "}
               {(hover.share * 100).toFixed(1)}%
             </div>
             {hover.detail ? (

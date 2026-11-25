@@ -4,7 +4,11 @@ import {
   type QueryClient,
 } from "@tanstack/react-query"
 
-import type { StatsFilters, StatsRange } from "@features/sites/api"
+import {
+  rangeQuery,
+  type StatsFilters,
+  type StatsRange,
+} from "@features/sites/api"
 import type { Breakdown } from "@features/sites/panels"
 import type {
   AttributionDimension,
@@ -100,17 +104,9 @@ export type StripeStatus =
       customers: number
     }
 
-const revenueStaleMs = 30_000
+export type ConnectedStripeStatus = Extract<StripeStatus, { connected: true }>
 
-function rangeQuery(range: StatsRange, filters: StatsFilters) {
-  return {
-    start: range.start,
-    end: range.end,
-    grain: range.grain,
-    ...(range.tz ? { tz: range.tz } : {}),
-    ...filters,
-  }
-}
+const revenueStaleMs = 30_000
 
 export function revenueOverviewQueryOptions(
   slug: string,
@@ -124,7 +120,7 @@ export function revenueOverviewQueryOptions(
       requireJson<RevenueOverview>(
         await api.workspaces[":slug"].sites[":siteId"].revenue.$get({
           param: { slug, siteId },
-          query: rangeQuery(range, filters),
+          query: { ...rangeQuery(range, filters), grain: range.grain },
         }),
         "mrr"
       ),
@@ -241,23 +237,17 @@ export async function preloadRevenue(
   }
 ) {
   const { range, previous, filters, by, touch } = input
+  void queryClient.prefetchQuery(
+    attributionQueryOptions(slug, siteId, range, filters, by, touch)
+  )
+  void queryClient.prefetchQuery(revenueCustomersQueryOptions(slug, siteId))
   await Promise.all([
-    queryClient.query({
-      ...revenueOverviewQueryOptions(slug, siteId, range, filters),
-      staleTime: revenueStaleMs,
-    }),
-    queryClient.query({
-      ...revenueOverviewQueryOptions(slug, siteId, previous, filters),
-      staleTime: revenueStaleMs,
-    }),
-    queryClient.query({
-      ...attributionQueryOptions(slug, siteId, range, filters, by, touch),
-      staleTime: revenueStaleMs,
-    }),
-    queryClient.query({
-      ...revenueCustomersQueryOptions(slug, siteId),
-      staleTime: revenueStaleMs,
-    }),
+    queryClient.query(
+      revenueOverviewQueryOptions(slug, siteId, range, filters)
+    ),
+    queryClient.query(
+      revenueOverviewQueryOptions(slug, siteId, previous, filters)
+    ),
   ])
 }
 
@@ -360,11 +350,13 @@ export function formatCompactMoney(minor: number, currency: string) {
 
 export function formatMoney(minor: number, currency: string) {
   const code = (currency || "usd").toUpperCase()
+  const fractionDigits = minor % 100 === 0 || Math.abs(minor) >= 100_000 ? 0 : 2
   try {
     return new Intl.NumberFormat(undefined, {
       style: "currency",
       currency: code,
-      maximumFractionDigits: Math.abs(minor) >= 100_000 ? 0 : 2,
+      minimumFractionDigits: fractionDigits,
+      maximumFractionDigits: fractionDigits,
     }).format(minor / 100)
   } catch {
     return `${(minor / 100).toFixed(2)} ${code}`

@@ -4,8 +4,9 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { ArrowDownIcon } from "lucide-react"
-import { Suspense, useEffect, useMemo, useState } from "react"
+import { Suspense, useMemo, useState } from "react"
 
+import { Segmented } from "@components/segmented"
 import { Button } from "@components/ui/button"
 import {
   Sheet,
@@ -25,7 +26,6 @@ import {
 
 import {
   siteStatsQueryOptions,
-  statsQueryFromSearch,
   type StatsFilters,
   type StatsRange,
 } from "./api"
@@ -380,6 +380,9 @@ export function BreakdownPanel({
   const tab = tabs.find((item) => item.key === active) ?? tabs[0]!
   const dataKey = breakdownKey(tab)
   const showTabs = tabs.length > 1
+  const tabLabels = Object.fromEntries(
+    tabs.map((item) => [item.key, item.label])
+  ) as Record<BreakdownTab["key"], string>
   const title =
     panel.id === "sources" && search.referrer !== undefined
       ? `Sources · ${search.referrer || "(none)"}`
@@ -402,63 +405,22 @@ export function BreakdownPanel({
     )
   }
 
-  useEffect(() => {
-    const {
-      range: idleRange,
-      filters: idleFilters,
-      includeBots: idleBots,
-    } = statsQueryFromSearch(search)
-    const handle = window.setTimeout(() => {
-      for (const item of tabs) {
-        const key = breakdownKey(item)
-        if (key === dataKey) continue
-        void queryClient.prefetchQuery(
-          siteStatsQueryOptions(
-            slug,
-            siteId,
-            key,
-            idleRange,
-            idleFilters,
-            idleBots
-          )
-        )
-      }
-    }, 150)
-    return () => window.clearTimeout(handle)
-  }, [slug, siteId, search, dataKey, queryClient, tabs])
-
   return (
     <section className="flex min-w-0 flex-col rounded-xl border border-border/70 bg-card p-4">
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-[15px] font-medium tracking-tight">{title}</h2>
         {showTabs ? (
-          <div
-            role="radiogroup"
-            aria-label={`${title} breakdown`}
-            className="flex h-[26px] items-center gap-0.5 overflow-x-auto rounded-[7px] bg-muted p-0.5"
-          >
-            {tabs.map((item) => {
-              const selected = item.key === active
-              return (
-                <button
-                  key={item.key}
-                  type="button"
-                  role="radio"
-                  aria-checked={selected}
-                  onMouseEnter={() => prefetch(breakdownKey(item))}
-                  onFocus={() => prefetch(breakdownKey(item))}
-                  onClick={() => setActive(item.key)}
-                  className={`h-[22px] shrink-0 rounded-[5px] px-2 text-[12px] leading-4 transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-                    selected
-                      ? "bg-background text-foreground shadow-sm"
-                      : "text-muted-foreground hover:text-foreground"
-                  }`}
-                >
-                  {item.label}
-                </button>
-              )
-            })}
-          </div>
+          <Segmented
+            label={`${title} breakdown`}
+            options={tabs.map((item) => item.key)}
+            value={tab.key}
+            labels={tabLabels}
+            onChange={setActive}
+            onHover={(key) => {
+              const item = tabs.find((candidate) => candidate.key === key)
+              if (item) prefetch(breakdownKey(item))
+            }}
+          />
         ) : null}
       </div>
       <Suspense fallback={<BreakdownBodyFallback />}>

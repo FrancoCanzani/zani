@@ -1,7 +1,7 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect } from "react"
 
-import { StepStatus } from "@features/revenue/revenue-settings"
+import { StepStatus } from "@components/setup-step"
 import { formatRelative } from "@lib/utils"
 
 import { siteSetupQueryOptions } from "./api"

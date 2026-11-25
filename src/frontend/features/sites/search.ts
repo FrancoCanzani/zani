@@ -86,10 +86,10 @@ export const siteSearchSchema = z.object({
 
 export type SiteSearch = z.infer<typeof siteSearchSchema>
 
-const hourMs = 60 * 60 * 1000
-const dayMs = 24 * hourMs
+export const hourMs = 60 * 60 * 1000
+export const dayMs = 24 * hourMs
 
-function zonedParts(ms: number, timeZone: string) {
+export function zonedParts(ms: number, timeZone: string) {
   const parts = new Intl.DateTimeFormat("en-US", {
     timeZone,
     year: "numeric",
@@ -239,7 +239,7 @@ function parseDateInput(value: string) {
   }
 }
 
-export const liveWindowMs = 30 * 60_000
+const liveWindowMs = 30 * 60_000
 export const liveTickMs = 10_000
 
 export function liveRange(now: number) {
@@ -269,8 +269,26 @@ export function dependentFilters(key: FilterKey): Partial<SiteSearch> {
       return { prop: undefined, prop_value: undefined }
     case "prop":
       return { prop_value: undefined }
-    default:
+    case "source":
+    case "path":
+    case "referrer_path":
+    case "country":
+    case "city":
+    case "browser":
+    case "device":
+    case "os":
+    case "screen":
+    case "prop_value":
+    case "utm_source":
+    case "utm_medium":
+    case "utm_campaign":
+    case "utm_content":
+    case "utm_term":
       return {}
+    default: {
+      const exhaustive: never = key
+      return exhaustive
+    }
   }
 }
 
