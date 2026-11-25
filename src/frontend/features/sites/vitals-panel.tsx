@@ -1,29 +1,17 @@
 import { useSuspenseQuery } from "@tanstack/react-query"
-import { useState } from "react"
 
 import {
   siteVitalsQueryOptions,
   type StatsFilters,
   type StatsRange,
-  type VitalMetric,
   type VitalSummary,
 } from "./api"
-
-const metricOrder = ["lcp", "inp", "cls", "load"] as const satisfies readonly VitalMetric[]
-
-const metricLabels: Record<VitalMetric, string> = {
-  lcp: "LCP",
-  inp: "INP",
-  cls: "CLS",
-  load: "Load",
-}
-
-const metricHints: Record<VitalMetric, string> = {
-  lcp: "Largest contentful paint",
-  inp: "Interaction to next paint",
-  cls: "Cumulative layout shift",
-  load: "Page load time",
-}
+import {
+  vitalMetricLabels,
+  vitalMetrics,
+  vitalThresholdLabels,
+  type VitalMetric,
+} from "./search"
 
 function formatP75(metric: VitalMetric, value: number | null) {
   if (value === null) return "—"
@@ -44,13 +32,64 @@ function ratingShare(summary: VitalSummary) {
   }
 }
 
+function RatingBar({
+  good,
+  needsImprovement,
+  poor,
+  className,
+}: {
+  good: number
+  needsImprovement: number
+  poor: number
+  className?: string
+}) {
+  return (
+    <div
+      className={`flex h-2 overflow-hidden rounded-full bg-muted ${className ?? ""}`}
+    >
+      <span className="bg-emerald-600" style={{ width: `${good * 100}%` }} />
+      <span
+        className="bg-amber-500"
+        style={{ width: `${needsImprovement * 100}%` }}
+      />
+      <span className="bg-red-600" style={{ width: `${poor * 100}%` }} />
+    </div>
+  )
+}
+
+function RatingLegend({ metric }: { metric: VitalMetric }) {
+  return (
+    <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-emerald-600" />
+          Good
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-amber-500" />
+          Needs improvement
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className="size-2 rounded-full bg-red-600" />
+          Poor
+        </span>
+      </div>
+      <p className="font-mono text-[11px] text-muted-foreground">
+        {vitalThresholdLabels[metric]}
+      </p>
+    </div>
+  )
+}
+
 export function VitalsPanel({
   slug,
   siteId,
   range,
   filters,
   includeBots,
+  metric,
   activePath,
+  onSelectMetric,
   onSelectPath,
 }: {
   slug: string
@@ -58,16 +97,17 @@ export function VitalsPanel({
   range: StatsRange
   filters: StatsFilters
   includeBots: boolean
+  metric: VitalMetric
   activePath: string | undefined
+  onSelectMetric: (metric: VitalMetric) => void
   onSelectPath: (path: string) => void
 }) {
-  const [metric, setMetric] = useState<VitalMetric>("lcp")
   const { data } = useSuspenseQuery(
     siteVitalsQueryOptions(slug, siteId, range, filters, includeBots, metric)
   )
 
   const byMetric = new Map(data.metrics.map((row) => [row.metric, row]))
-  const cards = metricOrder.map(
+  const cards = vitalMetrics.map(
     (key) =>
       byMetric.get(key) ?? {
         metric: key,
@@ -79,80 +119,80 @@ export function VitalsPanel({
       }
   )
   const hasSamples = cards.some((card) => card.samples > 0)
+  const selected = byMetric.get(metric) ?? cards.find((c) => c.metric === metric)!
 
   if (!hasSamples) {
     return (
-      <section className="rounded-lg border border-border/70 p-4">
-        <h2 className="text-[15px] font-semibold tracking-tight">Web vitals</h2>
-        <p className="mt-2 text-xs text-muted-foreground">
-          No vitals yet. They arrive after a hard page load with the script
-          installed.
+      <section className="space-y-2">
+        <h2 className="text-sm text-muted-foreground">No vitals yet</h2>
+        <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
+          Hard page loads with the script installed send LCP, INP, CLS, and
+          load. Soft SPA navigations do not.
         </p>
       </section>
     )
   }
 
   return (
-    <section className="space-y-3 rounded-lg border border-border/70 p-4">
-      <div className="flex items-baseline justify-between gap-3">
-        <h2 className="text-[15px] font-semibold tracking-tight">Web vitals</h2>
-        <p className="text-xs text-muted-foreground">P75 · hard navigations</p>
-      </div>
+    <div className="flex flex-col gap-6">
+      <RatingLegend metric={metric} />
 
-      <div className="grid grid-cols-2 gap-2 md:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         {cards.map((card) => {
-          const selected = card.metric === metric
+          const active = card.metric === metric
           const share = ratingShare(card)
           return (
             <button
               key={card.metric}
               type="button"
-              onClick={() => setMetric(card.metric)}
-              className={`rounded-xl border px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${selected ? "border-foreground/30 bg-muted/50" : "border-border/80 hover:bg-muted/30"}`}
+              onClick={() => onSelectMetric(card.metric)}
+              className={`rounded-xl border px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${active ? "border-foreground/30 bg-muted/50" : "border-border/80 hover:bg-muted/30"}`}
             >
-              <div className="text-sm text-muted-foreground">
-                {metricLabels[card.metric]}
+              <div className="flex items-baseline justify-between gap-2">
+                <div className="text-sm text-muted-foreground">
+                  {vitalMetricLabels[card.metric]}
+                </div>
+                <div className="font-mono text-[11px] text-muted-foreground tabular-nums">
+                  {card.samples} samples
+                </div>
               </div>
-              <div className="mt-1 font-mono text-2xl font-medium tracking-tight tabular-nums">
+              <div className="mt-1 font-mono text-3xl font-medium tracking-tight tabular-nums">
                 {formatP75(card.metric, card.p75)}
               </div>
-              <div className="mt-2 flex h-1.5 overflow-hidden rounded-full bg-muted">
-                <span
-                  className="bg-emerald-600"
-                  style={{ width: `${share.good * 100}%` }}
-                />
-                <span
-                  className="bg-amber-500"
-                  style={{ width: `${share.needsImprovement * 100}%` }}
-                />
-                <span
-                  className="bg-red-600"
-                  style={{ width: `${share.poor * 100}%` }}
-                />
+              <div className="mt-0.5 text-[11px] text-muted-foreground">
+                P75
               </div>
-              <div className="mt-1.5 text-[11px] text-muted-foreground">
-                {metricHints[card.metric]}
+              <RatingBar
+                className="mt-3"
+                good={share.good}
+                needsImprovement={share.needsImprovement}
+                poor={share.poor}
+              />
+              <div className="mt-1.5 flex justify-between font-mono text-[11px] text-muted-foreground tabular-nums">
+                <span>{Math.round(share.good * 100)}% good</span>
+                <span>{Math.round(share.poor * 100)}% poor</span>
               </div>
             </button>
           )
         })}
       </div>
 
-      <div className="space-y-1.5">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-xs font-medium text-muted-foreground">
-            By path · {metricLabels[metric]}
-          </h3>
-          {data.truncated ? (
-            <span className="text-[11px] text-muted-foreground">Truncated</span>
-          ) : null}
+      <section className="space-y-3">
+        <div className="flex items-baseline justify-between gap-2">
+          <h2 className="text-[15px] font-semibold tracking-tight">
+            By path · {vitalMetricLabels[metric]}
+          </h2>
+          <p className="font-mono text-xs text-muted-foreground tabular-nums">
+            {selected.samples} samples · P75 {formatP75(metric, selected.p75)}
+          </p>
         </div>
-        <ul className="space-y-1.5">
+
+        <ul className="space-y-2">
           {data.paths.length === 0 ? (
             <li className="py-2 text-xs text-muted-foreground">No paths</li>
           ) : (
             data.paths.map((row) => {
-              const selected = activePath === row.path
+              const active = activePath === row.path
               const share = ratingShare({
                 metric,
                 samples: row.samples,
@@ -166,42 +206,51 @@ export function VitalsPanel({
                   <button
                     type="button"
                     onClick={() => onSelectPath(row.path)}
-                    className={`relative flex h-[30px] w-full items-center gap-2 overflow-hidden rounded-md px-2 text-left text-[13px] transition-colors hover:bg-muted/60 ${selected ? "bg-muted/60" : ""}`}
+                    className={`w-full rounded-lg border px-3 py-2.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${active ? "border-foreground/30 bg-muted/40" : "border-border/70 hover:bg-muted/30"}`}
                   >
-                    <span
-                      aria-hidden
-                      className="absolute inset-y-0 left-0 flex"
-                      style={{ width: "40%" }}
-                    >
-                      <span
-                        className="h-full bg-emerald-500/20"
-                        style={{ width: `${share.good * 100}%` }}
-                      />
-                      <span
-                        className="h-full bg-amber-500/20"
-                        style={{ width: `${share.needsImprovement * 100}%` }}
-                      />
-                      <span
-                        className="h-full bg-red-500/20"
-                        style={{ width: `${share.poor * 100}%` }}
-                      />
-                    </span>
-                    <span className="relative min-w-0 flex-1 truncate font-mono">
-                      {row.path || "(none)"}
-                    </span>
-                    <span className="relative font-mono text-[13px] text-muted-foreground tabular-nums">
-                      {formatP75(metric, row.p75)}
-                    </span>
-                    <span className="relative w-10 text-right font-mono text-[13px] text-muted-foreground tabular-nums">
-                      {row.samples}
-                    </span>
+                    <div className="flex items-baseline justify-between gap-3">
+                      <span className="min-w-0 truncate font-mono text-[13px]">
+                        {row.path || "(none)"}
+                      </span>
+                      <div className="flex shrink-0 items-baseline gap-3 font-mono text-[13px] tabular-nums">
+                        <span className="font-medium">
+                          {formatP75(metric, row.p75)}
+                          <span className="ml-1 text-[11px] font-normal text-muted-foreground">
+                            P75
+                          </span>
+                        </span>
+                        <span className="text-muted-foreground">
+                          {row.samples}
+                          <span className="ml-1 text-[11px]">samples</span>
+                        </span>
+                      </div>
+                    </div>
+                    <RatingBar
+                      className="mt-2"
+                      good={share.good}
+                      needsImprovement={share.needsImprovement}
+                      poor={share.poor}
+                    />
+                    <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px] text-muted-foreground tabular-nums">
+                      <span>{Math.round(share.good * 100)}% good</span>
+                      <span>
+                        {Math.round(share.needsImprovement * 100)}% needs
+                        improvement
+                      </span>
+                      <span>{Math.round(share.poor * 100)}% poor</span>
+                    </div>
                   </button>
                 </li>
               )
             })
           )}
         </ul>
-      </div>
-    </section>
+        {data.truncated ? (
+          <p className="text-xs text-muted-foreground">
+            Sample set truncated for this range.
+          </p>
+        ) : null}
+      </section>
+    </div>
   )
 }

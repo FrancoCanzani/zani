@@ -1,6 +1,8 @@
 import { z } from "zod"
 
 export const rangePresets = ["1d", "7d", "30d", "custom"] as const
+export const siteViews = ["analytics", "speed"] as const
+export const vitalMetrics = ["lcp", "inp", "cls", "load"] as const
 export const metrics = [
   "views",
   "visitors",
@@ -29,12 +31,16 @@ export const filterKeys = [
 ] as const
 
 export type RangePreset = (typeof rangePresets)[number]
+export type SiteView = (typeof siteViews)[number]
+export type VitalMetric = (typeof vitalMetrics)[number]
 export type Metric = (typeof metrics)[number]
 export type FilterKey = (typeof filterKeys)[number]
 
 export const siteSearchSchema = z.object({
+  view: z.enum(siteViews).default("analytics"),
   range: z.enum(rangePresets).default("7d"),
   metric: z.enum(metrics).default("views"),
+  vital: z.enum(vitalMetrics).default("lcp"),
   from: z.string().optional(),
   to: z.string().optional(),
   tz: z.string().default("UTC"),
@@ -242,6 +248,34 @@ export const metricLabels: Record<Metric, string> = {
   bounce: "Bounce rate",
   views_per_visit: "Views / visit",
 }
+
+export const siteViewLabels: Record<SiteView, string> = {
+  analytics: "Analytics",
+  speed: "Speed",
+}
+
+export const vitalMetricLabels: Record<VitalMetric, string> = {
+  lcp: "LCP",
+  inp: "INP",
+  cls: "CLS",
+  load: "Load",
+}
+
+export const vitalThresholdLabels: Record<VitalMetric, string> = {
+  lcp: "Good ≤2.5s · Needs improvement ≤4s · Poor >4s",
+  inp: "Good ≤200ms · Needs improvement ≤500ms · Poor >500ms",
+  cls: "Good ≤0.1 · Needs improvement ≤0.25 · Poor >0.25",
+  load: "Good ≤2.5s · Needs improvement ≤4s · Poor >4s",
+}
+
+export const speedFilterKeys = [
+  "path",
+  "country",
+  "city",
+  "browser",
+  "device",
+  "os",
+] as const satisfies readonly FilterKey[]
 
 export const rangeLabels: Record<RangePreset, string> = {
   "1d": "Today",

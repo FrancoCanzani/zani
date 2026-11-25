@@ -12,6 +12,7 @@ import {
   rangeFromSearch,
   type FilterKey,
   type SiteSearch,
+  type VitalMetric as SearchVitalMetric,
 } from "./search"
 
 export type { Breakdown }
@@ -64,7 +65,7 @@ export type StatsQuery = {
   includeBots: boolean
 }
 
-export type VitalMetric = "load" | "lcp" | "inp" | "cls"
+export type VitalMetric = SearchVitalMetric
 
 export type VitalSummary = {
   metric: VitalMetric
@@ -348,6 +349,33 @@ export async function preloadSiteStats(
 ) {
   const { range, filters, includeBots } = statsQueryFromSearch(search)
   const previous = previousStatsRange(range)
+  if (search.view === "speed") {
+    await Promise.all([
+      queryClient.query({
+        ...siteStatsQueryOptions(
+          slug,
+          siteId,
+          undefined,
+          range,
+          filters,
+          includeBots
+        ),
+        staleTime: statsStaleMs,
+      }),
+      queryClient.query({
+        ...siteVitalsQueryOptions(
+          slug,
+          siteId,
+          range,
+          filters,
+          includeBots,
+          search.vital
+        ),
+        staleTime: statsStaleMs,
+      }),
+    ])
+    return
+  }
   await Promise.all([
     queryClient.query({
       ...siteStatsQueryOptions(
