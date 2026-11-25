@@ -1,8 +1,8 @@
 import { zValidator } from "@hono/zod-validator"
-import { asc, eq, sql } from "drizzle-orm"
+import { and, asc, eq, sql } from "drizzle-orm"
 import { Hono } from "hono"
 
-import { event, site } from "../../../db/schema"
+import { event, eventProp, site } from "../../../db/schema"
 import { createDb } from "../../../lib/db"
 import { requireSession } from "../../../middleware/session"
 import { requireWorkspaceMember } from "../../../middleware/workspace"
@@ -17,6 +17,7 @@ import {
   loadBreakdownRows,
   parseRange,
   pointLimit,
+  propFilterConditions,
   siteWhere,
 } from "./lib/stats"
 
@@ -66,12 +67,28 @@ export const get = new Hono<AppEnv>()
 
       const range = parsed.range
       const where = siteWhere(matched.id, range, query)
-      const views = sql<number>`count(*)`
+      const propFilters = propFilterConditions(query)
+      const joinProps =
+        propFilters.length > 0 ||
+        query.breakdown === "prop_key" ||
+        query.breakdown === "prop_value"
+      const views = sql<number>`count(distinct ${event.id})`
       const visitors = sql<number>`count(distinct ${event.visitorId})`
       const sessions = sql<number>`count(distinct ${event.sessionId})`
+      const totalsWhere =
+        propFilters.length > 0 ? and(where, ...propFilters) : where
+
+      const totalsQuery = db
+        .select({ views, visitors, sessions })
+        .from(event)
+      const totalsPromise = joinProps
+        ? totalsQuery
+            .innerJoin(eventProp, eq(eventProp.eventId, event.id))
+            .where(totalsWhere)
+        : totalsQuery.where(where)
 
       const [[totals], [seen]] = await Promise.all([
-        db.select({ views, visitors, sessions }).from(event).where(where),
+        totalsPromise,
         db
           .select({ id: event.id })
           .from(event)
@@ -87,7 +104,7 @@ export const get = new Hono<AppEnv>()
           : Math.round((totalViews / totalSessions) * 100) / 100
 
       let bounceRate = 0
-      if (query.event === undefined && totalSessions > 0) {
+      if (query.event === undefined && !joinProps && totalSessions > 0) {
         const sessionRows = await db
           .select({
             sessionId: event.sessionId,
@@ -109,6 +126,7 @@ export const get = new Hono<AppEnv>()
         where,
         grain: range.grain,
         timeZone: query.tz,
+        filters: query,
       })
 
       return c.json(

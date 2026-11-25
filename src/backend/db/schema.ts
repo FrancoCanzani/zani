@@ -160,6 +160,7 @@ export const event = sqliteTable(
     sessionId: text("session_id").notNull(),
     path: text("path").notNull(),
     referrerHost: text("referrer_host").notNull().default(""),
+    referrerPath: text("referrer_path").notNull().default(""),
     country: text("country").notNull().default(""),
     city: text("city").notNull().default(""),
     browser: text("browser").notNull().default(""),
@@ -174,5 +175,26 @@ export const event = sqliteTable(
   },
   (table) => [
     index("event_site_timestamp_idx").on(table.siteId, table.timestamp),
+  ]
+)
+
+export const eventProp = sqliteTable(
+  "event_prop",
+  {
+    id: text("id").primaryKey(),
+    eventId: text("event_id")
+      .notNull()
+      .references(() => event.id, { onDelete: "cascade" }),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => site.id, { onDelete: "cascade" }),
+    timestamp: integer("timestamp").notNull(),
+    key: text("key").notNull(),
+    value: text("value").notNull(),
+  },
+  (table) => [
+    index("event_prop_eventId_idx").on(table.eventId),
+    index("event_prop_site_timestamp_idx").on(table.siteId, table.timestamp),
+    index("event_prop_site_key_idx").on(table.siteId, table.key),
   ]
 )

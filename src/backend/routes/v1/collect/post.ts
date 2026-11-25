@@ -2,7 +2,7 @@ import { zValidator } from "@hono/zod-validator"
 import { eq } from "drizzle-orm"
 import { Hono } from "hono"
 
-import { event, site } from "../../../db/schema"
+import { event, eventProp, site } from "../../../db/schema"
 import { createDb } from "../../../lib/db"
 import { newId, sha256Hex } from "../../../lib/utils"
 import type { AppEnv } from "../../../types"
@@ -13,6 +13,7 @@ import {
   cityFromRequest,
   countryFromRequest,
   normalizeEvent,
+  normalizeProps,
 } from "./lib/normalize"
 import { originAllowed, originHost } from "./lib/origin"
 import { collectBodySchema } from "./lib/schema"
@@ -41,8 +42,9 @@ export const post = new Hono<AppEnv>().post(
       return c.json({ error: "origin" as const }, 403)
     }
 
+    const body = c.req.valid("json")
     const userAgent = c.req.header("user-agent") ?? ""
-    const normalized = normalizeEvent(c.req.valid("json"), {
+    const normalized = normalizeEvent(body, {
       siteDomain: matched.domain,
       userAgent,
       country: countryFromRequest(c.req.raw),
@@ -61,14 +63,30 @@ export const post = new Hono<AppEnv>().post(
       now,
     })
 
+    const eventId = newId()
+    const props = normalizeProps(normalized.name, body.props)
+
     await db.insert(event).values({
-      id: newId(),
+      id: eventId,
       siteId: matched.id,
       timestamp: now,
       ...normalized,
       ...ids,
       browser: isBot(userAgent) ? botBrowser : normalized.browser,
     })
+
+    if (props.length > 0) {
+      await db.insert(eventProp).values(
+        props.map((prop) => ({
+          id: newId(),
+          eventId,
+          siteId: matched.id,
+          timestamp: now,
+          key: prop.key,
+          value: prop.value,
+        }))
+      )
+    }
 
     return c.body(null, 204)
   }

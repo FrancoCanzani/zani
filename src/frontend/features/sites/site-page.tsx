@@ -179,9 +179,21 @@ export function SitePage() {
   }
 
   function toggleFilter(key: FilterKey, value: string) {
-    patchSearch({
-      [key]: search[key] === value ? undefined : value,
-    })
+    const clearing = search[key] === value
+    const patch: Partial<SiteSearch> = {
+      [key]: clearing ? undefined : value,
+    }
+    if (key === "referrer") {
+      patch.referrer_path = undefined
+    }
+    if (key === "event") {
+      patch.prop = undefined
+      patch.prop_value = undefined
+    }
+    if (key === "prop") {
+      patch.prop_value = undefined
+    }
+    patchSearch(patch)
   }
 
   const simulate = useMutation({
@@ -423,7 +435,18 @@ function SiteDashboard({
             type="button"
             size="xs"
             variant="secondary"
-            onClick={() => patchSearch({ [chip.key]: undefined })}
+            onClick={() => {
+              const patch: Partial<SiteSearch> = {
+                [chip.key]: undefined,
+              }
+              if (chip.key === "referrer") patch.referrer_path = undefined
+              if (chip.key === "event") {
+                patch.prop = undefined
+                patch.prop_value = undefined
+              }
+              if (chip.key === "prop") patch.prop_value = undefined
+              patchSearch(patch)
+            }}
           >
             {filterLabels[chip.key]}: {chip.value || "(none)"}
             <XIcon data-icon="inline-end" />
@@ -497,8 +520,7 @@ function SiteDashboard({
         {breakdownPanels.map((panel) => (
           <BreakdownPanel
             key={panel.id}
-            title={panel.title}
-            tabs={panel.tabs}
+            panel={panel}
             slug={slug}
             siteId={siteId}
             range={range}

@@ -5,6 +5,9 @@ const source = `(() => {
   if (!key) return
   const endpoint = new URL("/api/v1/collect", el.src)
   const namePattern = /^[a-z0-9_-]{1,32}$/
+  const propKeyPattern = /^[a-z0-9_]{1,64}$/
+  const maxPropKeys = 8
+  const maxPropValueLength = 255
   let path = ""
   let utms = {
     utmSource: "",
@@ -44,22 +47,64 @@ const source = `(() => {
     if (!width || !height) return
     return Math.round(width) + "x" + Math.round(height)
   }
-  const send = (name, referrer) => {
+  const normalizeProps = (input) => {
+    if (!input || typeof input !== "object" || Array.isArray(input)) return
+    const props = {}
+    let count = 0
+    for (const [rawKey, rawValue] of Object.entries(input)) {
+      if (count >= maxPropKeys) break
+      const key = String(rawKey).trim().toLowerCase()
+      if (!propKeyPattern.test(key)) continue
+      if (rawValue === null) {
+        props[key] = null
+        count += 1
+        continue
+      }
+      const type = typeof rawValue
+      if (type === "boolean") {
+        props[key] = rawValue
+        count += 1
+        continue
+      }
+      if (type === "number") {
+        if (!Number.isFinite(rawValue)) continue
+        props[key] = rawValue
+        count += 1
+        continue
+      }
+      if (type !== "string") continue
+      const value = rawValue.trim().slice(0, maxPropValueLength)
+      let ok = true
+      for (let i = 0; i < value.length; i += 1) {
+        if (value.charCodeAt(i) < 32) {
+          ok = false
+          break
+        }
+      }
+      if (!ok) continue
+      props[key] = value
+      count += 1
+    }
+    return count > 0 ? props : undefined
+  }
+  const send = (name, referrer, props) => {
     captureUtms()
+    const body = {
+      name,
+      path: path || pagePath(),
+      referrer,
+      screen: screenSize(),
+      utmSource: utms.utmSource || undefined,
+      utmMedium: utms.utmMedium || undefined,
+      utmCampaign: utms.utmCampaign || undefined,
+      utmContent: utms.utmContent || undefined,
+      utmTerm: utms.utmTerm || undefined,
+    }
+    if (props) body.props = props
     void fetch(endpoint, {
       method: "POST",
       headers: { "content-type": "application/json", "x-write-key": key },
-      body: JSON.stringify({
-        name,
-        path: path || pagePath(),
-        referrer,
-        screen: screenSize(),
-        utmSource: utms.utmSource || undefined,
-        utmMedium: utms.utmMedium || undefined,
-        utmCampaign: utms.utmCampaign || undefined,
-        utmContent: utms.utmContent || undefined,
-        utmTerm: utms.utmTerm || undefined,
-      }),
+      body: JSON.stringify(body),
       keepalive: true,
     })
   }
@@ -70,12 +115,12 @@ const source = `(() => {
     path = next
     send("pageview", referrer)
   }
-  const track = (name) => {
+  const track = (name, props) => {
     if (typeof name !== "string") return
     const trimmed = name.trim().toLowerCase()
     if (!namePattern.test(trimmed) || trimmed === "pageview") return
     if (!path) path = pagePath()
-    send(trimmed, document.referrer)
+    send(trimmed, document.referrer, normalizeProps(props))
   }
   const push = history.pushState
   const replace = history.replaceState

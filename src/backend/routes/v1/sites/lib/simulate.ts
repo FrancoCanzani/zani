@@ -1,7 +1,7 @@
 import { newId } from "../../../../lib/utils"
 
 const dayMs = 24 * 60 * 60 * 1000
-// D1 caps bound parameters per query (~100); each event row binds 19 columns.
+// D1 caps bound parameters per query (~100); each event row binds 20 columns.
 const batchSize = 5
 const eventCount = 240
 
@@ -22,12 +22,13 @@ const devices = ["desktop", "mobile", "tablet"]
 const operatingSystems = ["macos", "windows", "ios", "android", "linux", "other"]
 const screens = ["1440x900", "1920x1080", "390x844", "1366x768", "2560x1440"]
 const referrers = [
-  "",
-  "google.com",
-  "t.co",
-  "github.com",
-  "news.ycombinator.com",
-  "bing.com",
+  { host: "", path: "" },
+  { host: "google.com", path: "/search" },
+  { host: "google.com", path: "/url" },
+  { host: "t.co", path: "/abc123" },
+  { host: "github.com", path: "/franco/zani" },
+  { host: "news.ycombinator.com", path: "/item" },
+  { host: "bing.com", path: "/search" },
 ]
 const utms = [
   {
@@ -59,9 +60,23 @@ const utms = [
     utmTerm: "analytics",
   },
 ]
-const customNames = ["signup", "click_cta", "purchase"]
+const customNames = ["signup", "click_cta", "purchase"] as const
+const propSets: Record<(typeof customNames)[number], Array<Record<string, string>>> =
+  {
+    signup: [
+      { plan: "free", source: "hero" },
+      { plan: "pro", source: "pricing" },
+      { plan: "free", source: "docs" },
+    ],
+    click_cta: [{ label: "start", place: "hero" }, { label: "demo", place: "nav" }],
+    purchase: [
+      { plan: "pro", amount: "20" },
+      { plan: "pro", amount: "20" },
+      { plan: "team", amount: "80" },
+    ],
+  }
 
-function pick<T>(values: T[], index: number): T {
+function pick<T>(values: readonly T[], index: number): T {
   return values[index % values.length]!
 }
 
@@ -75,20 +90,24 @@ function sessionToken(visitor: number, day: number) {
 
 export function buildSimulateRows(siteId: string, end = Date.now()) {
   const start = end - 7 * dayMs
-  return Array.from({ length: eventCount }, (_, index) => {
+  const events = Array.from({ length: eventCount }, (_, index) => {
     const visitor = index % 48
     const day = Math.floor((index / eventCount) * 7)
     const utm = pick(utms, index)
+    const referrer = pick(referrers, index + day)
+    const name: string =
+      index % 17 === 0 ? pick(customNames, index) : "pageview"
     return {
       id: newId(),
       siteId,
       timestamp:
         start + Math.floor(((index + 1) / (eventCount + 1)) * (end - start)),
-      name: index % 17 === 0 ? pick(customNames, index) : "pageview",
+      name,
       visitorId: visitorToken(visitor),
       sessionId: sessionToken(visitor, day),
       path: pick(paths, index + visitor),
-      referrerHost: pick(referrers, index + day),
+      referrerHost: referrer.host,
+      referrerPath: referrer.path,
       country: pick(countries, index),
       city: pick(cities, index),
       browser: index % 23 === 0 ? "bot" : pick(browsers, index + 1),
@@ -102,6 +121,22 @@ export function buildSimulateRows(siteId: string, end = Date.now()) {
       utmTerm: utm.utmTerm,
     }
   })
+
+  const props = events.flatMap((row, index) => {
+    if (row.name === "pageview") return []
+    const name = row.name as (typeof customNames)[number]
+    const set = pick(propSets[name], index)
+    return Object.entries(set).map(([key, value]) => ({
+      id: newId(),
+      eventId: row.id,
+      siteId,
+      timestamp: row.timestamp,
+      key,
+      value,
+    }))
+  })
+
+  return { events, props }
 }
 
 export { batchSize }

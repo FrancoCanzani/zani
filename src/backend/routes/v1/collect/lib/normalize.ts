@@ -3,11 +3,16 @@ import type { CollectBody } from "./schema"
 const namePattern = /^[a-z0-9_-]{1,32}$/
 const screenPattern = /^\d{2,5}x\d{2,5}$/
 const cityPattern = /^[\p{L}\p{N} .'-]{1,80}$/u
+const propKeyPattern = /^[a-z0-9_]{1,64}$/
+const maxPropKeys = 8
+const maxPropValueLength = 255
+const pageviewName = "pageview"
 
 export type NormalizedEvent = {
   name: string
   path: string
   referrerHost: string
+  referrerPath: string
   utmSource: string
   utmMedium: string
   utmCampaign: string
@@ -19,6 +24,11 @@ export type NormalizedEvent = {
   device: string
   os: string
   screen: string
+}
+
+export type NormalizedProp = {
+  key: string
+  value: string
 }
 
 export function normalizeEvent(
@@ -35,10 +45,12 @@ export function normalizeEvent(
   if (!name || !path) return null
 
   const agent = classifyAgent(input.userAgent)
+  const referrer = referrerParts(body.referrer, input.siteDomain)
   return {
     name,
     path,
-    referrerHost: referrerHost(body.referrer, input.siteDomain),
+    referrerHost: referrer.host,
+    referrerPath: referrer.path,
     utmSource: normalizeUtm(body.utmSource),
     utmMedium: normalizeUtm(body.utmMedium),
     utmCampaign: normalizeUtm(body.utmCampaign),
@@ -51,6 +63,24 @@ export function normalizeEvent(
     os: agent.os,
     screen: normalizeScreen(body.screen),
   }
+}
+
+export function normalizeProps(
+  name: string,
+  props: CollectBody["props"]
+): NormalizedProp[] {
+  if (name === pageviewName || props === undefined) return []
+
+  const rows: NormalizedProp[] = []
+  for (const [rawKey, rawValue] of Object.entries(props)) {
+    if (rows.length >= maxPropKeys) break
+    const key = normalizePropKey(rawKey)
+    if (!key) continue
+    const value = normalizePropValue(rawValue)
+    if (value === null) continue
+    rows.push({ key, value })
+  }
+  return rows
 }
 
 function normalizeName(input: string | undefined): string | null {
@@ -95,18 +125,24 @@ function normalizePath(input: string): string | null {
   return path
 }
 
-function referrerHost(
+function referrerParts(
   input: string | undefined,
   siteDomain: string | null
-): string {
-  if (!input?.trim()) return ""
+): { host: string; path: string } {
+  if (!input?.trim()) return { host: "", path: "" }
   try {
-    const host = new URL(input.trim()).hostname.toLowerCase().replace(/\.$/, "")
-    if (!host) return ""
-    if (siteDomain && host === siteDomain.toLowerCase()) return ""
-    return host
+    const url = new URL(input.trim())
+    const host = url.hostname.toLowerCase().replace(/\.$/, "")
+    if (!host) return { host: "", path: "" }
+    if (siteDomain && host === siteDomain.toLowerCase()) {
+      return { host: "", path: "" }
+    }
+    let path = url.pathname || "/"
+    if (!path.startsWith("/")) path = `/${path}`
+    if (path.length > 1024) path = path.slice(0, 1024)
+    return { host, path: path === "/" ? "/" : path }
   } catch {
-    return ""
+    return { host: "", path: "" }
   }
 }
 
@@ -134,6 +170,30 @@ function normalizeScreen(input: string | undefined): string {
   if (!input) return ""
   const value = input.trim().toLowerCase()
   if (!screenPattern.test(value)) return ""
+  return value
+}
+
+function normalizePropKey(input: string): string | null {
+  const key = input.trim().toLowerCase()
+  if (!propKeyPattern.test(key)) return null
+  return key
+}
+
+function normalizePropValue(
+  input: string | number | boolean | null
+): string | null {
+  if (input === null) return ""
+  if (typeof input === "boolean") return input ? "true" : "false"
+  if (typeof input === "number") {
+    if (!Number.isFinite(input)) return null
+    const value = String(input)
+    if (value.length > maxPropValueLength) return null
+    return value
+  }
+  const value = input.trim().slice(0, maxPropValueLength)
+  for (const char of value) {
+    if (char.charCodeAt(0) < 32) return null
+  }
   return value
 }
 
