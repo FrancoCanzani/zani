@@ -69,6 +69,8 @@ export function parseRange(input: {
 
 export function bucketSize(grain: Grain): number {
   switch (grain) {
+    case "minute":
+      return 60_000
     case "hour":
       return hourMs
     case "day":

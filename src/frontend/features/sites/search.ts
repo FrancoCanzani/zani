@@ -42,7 +42,7 @@ export type Metric = (typeof metrics)[number]
 export type FilterKey = (typeof filterKeys)[number]
 export type AttributionDimension = (typeof attributionDimensions)[number]
 export type Touch = (typeof touches)[number]
-export type Grain = "hour" | "day" | "week"
+export type Grain = "minute" | "hour" | "day" | "week"
 
 export const siteSearchSchema = z.object({
   range: z.enum(rangePresets).default("30d"),
@@ -57,6 +57,10 @@ export const siteSearchSchema = z.object({
     .optional()
     .transform((value) => value === true || value === "true"),
   bots: z
+    .union([z.literal("true"), z.literal("false"), z.boolean()])
+    .optional()
+    .transform((value) => value === true || value === "true"),
+  live: z
     .union([z.literal("true"), z.literal("false"), z.boolean()])
     .optional()
     .transform((value) => value === true || value === "true"),
@@ -235,6 +239,18 @@ function parseDateInput(value: string) {
   }
 }
 
+export const liveWindowMs = 30 * 60_000
+export const liveTickMs = 10_000
+
+export function liveRange(now: number) {
+  const endMs = Math.ceil(now / liveTickMs) * liveTickMs
+  return {
+    start: new Date(endMs - liveWindowMs).toISOString(),
+    end: new Date(endMs).toISOString(),
+    grain: "minute" as const,
+  }
+}
+
 export function filtersFromSearch(
   search: SiteSearch
 ): Partial<Record<FilterKey, string>> {
@@ -243,6 +259,19 @@ export function filtersFromSearch(
     if (search[key] !== undefined) filters[key] = search[key]
   }
   return filters
+}
+
+export function dependentFilters(key: FilterKey): Partial<SiteSearch> {
+  switch (key) {
+    case "referrer":
+      return { referrer_path: undefined }
+    case "event":
+      return { prop: undefined, prop_value: undefined }
+    case "prop":
+      return { prop_value: undefined }
+    default:
+      return {}
+  }
 }
 
 export function activeFilterChips(search: SiteSearch) {

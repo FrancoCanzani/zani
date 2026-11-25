@@ -27,6 +27,8 @@ const dayMs = 24 * hourMs
 
 function bucketSize(grain: Grain) {
   switch (grain) {
+    case "minute":
+      return 60_000
     case "hour":
       return hourMs
     case "day":
@@ -43,9 +45,11 @@ function bucketSize(grain: Grain) {
 function formatTick(ms: number, grain: Grain, timeZone: string) {
   return new Intl.DateTimeFormat(undefined, {
     timeZone,
-    ...(grain === "hour"
-      ? { hour: "numeric" }
-      : { month: "short", day: "numeric" }),
+    ...(grain === "minute"
+      ? { hour: "numeric", minute: "2-digit" }
+      : grain === "hour"
+        ? { hour: "numeric" }
+        : { month: "short", day: "numeric" }),
   }).format(ms)
 }
 
@@ -53,6 +57,8 @@ function formatBucket(ms: number, grain: Grain, timeZone: string) {
   const format = (value: number, options: Intl.DateTimeFormatOptions) =>
     new Intl.DateTimeFormat(undefined, { timeZone, ...options }).format(value)
   switch (grain) {
+    case "minute":
+      return format(ms, { hour: "numeric", minute: "2-digit" })
     case "hour":
       return format(ms, {
         weekday: "short",

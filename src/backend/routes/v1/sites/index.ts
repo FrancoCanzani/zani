@@ -1,6 +1,7 @@
 import { Hono } from "hono"
 
 import type { AppEnv } from "../../../types"
+import { activity } from "../activity"
 import { revenue } from "../revenue"
 import { stripe } from "../stripe"
 
@@ -14,3 +15,4 @@ export const sites = new Hono<AppEnv>()
   .route("/", patch)
   .route("/:siteId/stripe", stripe)
   .route("/:siteId/revenue", revenue)
+  .route("/:siteId/activity", activity)

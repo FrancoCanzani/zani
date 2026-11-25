@@ -1,5 +1,5 @@
 import { zValidator } from "@hono/zod-validator"
-import { and, asc, eq, isNotNull, notLike, sql } from "drizzle-orm"
+import { and, asc, eq, gte, isNotNull, ne, notLike, sql } from "drizzle-orm"
 import { Hono } from "hono"
 
 import {
@@ -32,6 +32,8 @@ import {
   siteWhere,
   sourceCondition,
 } from "./lib/stats"
+
+const onlineWindowMs = 5 * 60_000
 
 export const get = new Hono<AppEnv>()
   .get("/", requireSession, requireWorkspaceMember, async (c) => {
@@ -123,6 +125,31 @@ export const get = new Hono<AppEnv>()
       },
       200
     )
+  })
+  .get("/:siteId/online", requireSession, requireWorkspaceMember, async (c) => {
+    const current = workspaceFromContext(c.var)
+    const db = createDb(c.env)
+    const matched = await loadSite(
+      db,
+      current.workspace.id,
+      c.req.param("siteId")
+    )
+    if (!matched) {
+      return c.json({ error: "not_found" as const }, 404)
+    }
+
+    const [row] = await db
+      .select({ online: sql<number>`count(distinct ${event.visitorId})` })
+      .from(event)
+      .where(
+        and(
+          eq(event.siteId, matched.id),
+          gte(event.timestamp, Date.now() - onlineWindowMs),
+          ne(event.browser, "bot")
+        )
+      )
+
+    return c.json({ online: asNumber(row?.online ?? 0) }, 200)
   })
   .get(
     "/:siteId/stats",

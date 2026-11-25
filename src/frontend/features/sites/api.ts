@@ -1,4 +1,5 @@
 import {
+  infiniteQueryOptions,
   keepPreviousData,
   queryOptions,
   type QueryClient,
@@ -9,6 +10,7 @@ import { api, requireJson } from "@lib/api"
 import { defaultPanelBreakdowns, type Breakdown } from "./panels"
 import {
   filtersFromSearch,
+  liveTickMs,
   rangeFromSearch,
   type FilterKey,
   type Grain,
@@ -326,4 +328,104 @@ export async function preloadSiteStats(
       })
     ),
   ])
+}
+
+export function siteOnlineQueryOptions(slug: string, siteId: string) {
+  return queryOptions({
+    queryKey: ["site-online", slug, siteId] as const,
+    queryFn: async () =>
+      requireJson<{ online: number }>(
+        await api.workspaces[":slug"].sites[":siteId"].online.$get({
+          param: { slug, siteId },
+        }),
+        "online"
+      ),
+    refetchInterval: liveTickMs,
+    refetchIntervalInBackground: false,
+  })
+}
+
+export const activityTypes = ["all", "pageviews", "signups", "revenue"] as const
+
+export type ActivityType = (typeof activityTypes)[number]
+
+export type ActivityItem =
+  | {
+      kind: "pageview" | "event"
+      id: string
+      at: number
+      name: string
+      path: string
+      source: string
+      referrer: string
+      country: string
+      city: string
+      browser: string
+      device: string
+    }
+  | {
+      kind: "signup"
+      id: string
+      at: number
+      firstSource: string
+      lastSource: string
+      landing: string
+      country: string
+      firstSeenAt: number
+    }
+  | {
+      kind: "revenue"
+      id: string
+      at: number
+      movement: "new" | "expansion" | "contraction" | "churn" | "reactivation"
+      amount: number
+      mrrAfter: number
+      currency: string
+      customer: string
+      firstSource: string | null
+      firstSeenAt: number | null
+    }
+
+type ActivityPage = { items: ActivityItem[]; nextBefore: number | null }
+
+export function activityQueryOptions(
+  slug: string,
+  siteId: string,
+  type: ActivityType,
+  range: StatsRange,
+  filters: StatsFilters,
+  includeBots: boolean
+) {
+  return infiniteQueryOptions({
+    queryKey: [
+      "activity",
+      slug,
+      siteId,
+      type,
+      range,
+      filters,
+      includeBots,
+    ] as const,
+    queryFn: async ({ pageParam }) =>
+      (
+        await requireJson<{ activity: ActivityPage }>(
+          await api.workspaces[":slug"].sites[":siteId"].activity.$get({
+            param: { slug, siteId },
+            query: {
+              start: range.start,
+              end: range.end,
+              type,
+              ...(range.tz ? { tz: range.tz } : {}),
+              ...(includeBots ? { bots: "1" as const } : {}),
+              ...(pageParam === null ? {} : { before: String(pageParam) }),
+              ...filters,
+            },
+          }),
+          "activity"
+        )
+      ).activity,
+    initialPageParam: null as number | null,
+    getNextPageParam: (page) => page.nextBefore,
+    staleTime: statsStaleMs,
+  })
 }

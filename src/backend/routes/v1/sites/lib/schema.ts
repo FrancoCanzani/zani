@@ -34,7 +34,7 @@ export const breakdowns = [
   "exit",
 ] as const
 
-export const grains = ["hour", "day", "week"] as const
+export const grains = ["minute", "hour", "day", "week"] as const
 
 export const filterKeys = [
   "source",

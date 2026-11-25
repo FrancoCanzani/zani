@@ -1,0 +1,156 @@
+import { XIcon } from "lucide-react"
+
+import { Button } from "@components/ui/button"
+
+import { Segmented } from "@features/revenue/segmented"
+
+import type { StatsRange } from "./api"
+import { RangePicker } from "./range-picker"
+import {
+  activeFilterChips,
+  dependentFilters,
+  filterKeys,
+  filterLabels,
+  rangeLabels,
+  type SiteSearch,
+} from "./search"
+
+const quickRanges = ["1d", "7d", "30d", "90d", "12m"] as const
+
+function dateInputValue(iso: string, timeZone: string) {
+  const parts = new Intl.DateTimeFormat("en-CA", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date(iso))
+  const year = parts.find((part) => part.type === "year")?.value
+  const month = parts.find((part) => part.type === "month")?.value
+  const day = parts.find((part) => part.type === "day")?.value
+  if (!year || !month || !day) return ""
+  return `${year}-${month}-${day}`
+}
+
+function clearFiltersPatch(): Partial<SiteSearch> {
+  const patch: Partial<SiteSearch> = {}
+  for (const key of filterKeys) {
+    patch[key] = undefined
+  }
+  return patch
+}
+
+export function Toolbar({
+  search,
+  range,
+  timeZone,
+  patchSearch,
+}: {
+  search: SiteSearch
+  range: StatsRange
+  timeZone: string
+  patchSearch: (patch: Partial<SiteSearch>) => void
+}) {
+  const chips = activeFilterChips(search)
+  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
+  const preset = search.range === "custom" ? null : search.range
+
+  return (
+    <div className="sticky top-14 z-10 -mx-1 flex flex-wrap items-center gap-2 bg-background/85 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+      {search.live ? (
+        <>
+          <span className="flex h-[26px] items-center gap-2 rounded-[7px] bg-muted px-2.5 text-[12px] text-foreground">
+            <span aria-hidden className="relative flex size-2">
+              <span className="absolute inline-flex size-full animate-ping rounded-full bg-emerald-500 opacity-60" />
+              <span className="relative inline-flex size-2 rounded-full bg-emerald-500" />
+            </span>
+            Last 30 minutes
+          </span>
+          <Button
+            type="button"
+            size="xs"
+            variant="ghost"
+            onClick={() => patchSearch({ live: undefined })}
+          >
+            Back to {rangeLabels[search.range].toLowerCase()}
+          </Button>
+        </>
+      ) : (
+        <>
+          <Segmented
+            label="Range"
+            options={quickRanges}
+            value={preset}
+            labels={rangeLabels}
+            onChange={(next) =>
+              patchSearch({ range: next, from: undefined, to: undefined })
+            }
+          />
+          <RangePicker
+            from={search.from ?? dateInputValue(range.start, timeZone)}
+            to={search.to ?? dateInputValue(range.end, timeZone)}
+            timeZone={timeZone}
+            localTz={localTz}
+            active={search.range === "custom"}
+            label={
+              search.range === "custom" && search.from && search.to
+                ? `${search.from} → ${search.to}`
+                : "Custom"
+            }
+            onCustom={(from, to) => patchSearch({ range: "custom", from, to })}
+            onTimeZone={(tz) => patchSearch({ tz })}
+          />
+          <Button
+            type="button"
+            size="xs"
+            variant={search.compare ? "secondary" : "ghost"}
+            aria-pressed={search.compare}
+            onClick={() =>
+              patchSearch({ compare: search.compare ? undefined : true })
+            }
+          >
+            Compare
+          </Button>
+        </>
+      )}
+      <Button
+        type="button"
+        size="xs"
+        variant={search.bots ? "secondary" : "ghost"}
+        aria-pressed={search.bots}
+        onClick={() => patchSearch({ bots: search.bots ? undefined : true })}
+      >
+        Bots
+      </Button>
+      {chips.map((chip) => (
+        <Button
+          key={`${chip.key}:${chip.value}`}
+          type="button"
+          size="xs"
+          variant="secondary"
+          onClick={() =>
+            patchSearch({
+              ...dependentFilters(chip.key),
+              [chip.key]: undefined,
+            })
+          }
+        >
+          <span className="text-muted-foreground">
+            {filterLabels[chip.key]}
+          </span>
+          {chip.value || "(none)"}
+          <XIcon data-icon="inline-end" />
+        </Button>
+      ))}
+      {chips.length > 1 ? (
+        <Button
+          type="button"
+          size="xs"
+          variant="ghost"
+          onClick={() => patchSearch(clearFiltersPatch())}
+        >
+          Clear
+        </Button>
+      ) : null}
+    </div>
+  )
+}

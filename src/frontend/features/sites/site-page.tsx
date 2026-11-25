@@ -4,23 +4,19 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { Link, getRouteApi } from "@tanstack/react-router"
-import { SettingsIcon, SparklesIcon, XIcon } from "lucide-react"
-import { Suspense, startTransition } from "react"
+import { SettingsIcon, SparklesIcon } from "lucide-react"
+import { Suspense, startTransition, useState } from "react"
 import { toast } from "sonner"
 
 import { InstallSnippet } from "@components/install-snippet"
 import { Button } from "@components/ui/button"
 import { Skeleton } from "@components/ui/skeleton"
-import {
-  revenueOverviewQueryOptions,
-  type RevenueOverview,
-} from "@features/revenue/api"
+import { revenueOverviewQueryOptions } from "@features/revenue/api"
 import {
   AttributionPanel,
   MovementsPanel,
   TopCustomersPanel,
 } from "@features/revenue/revenue-panels"
-import { Segmented } from "@features/revenue/segmented"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import {
   canManageBusiness,
@@ -36,26 +32,24 @@ import {
   type StatsFilters,
   type StatsRange,
 } from "./api"
+import { ActivityFeed } from "./activity-feed"
 import { BreakdownPanel } from "./breakdown-panel"
 import { DashboardChart } from "./dashboard-chart"
 import { InstallStatus } from "./install-status"
 import { KpiCards } from "./kpi-cards"
+import { LiveDashboard, LivePill } from "./live-dashboard"
 import { breakdownPanels } from "./panels"
-import { RangePicker } from "./range-picker"
 import {
-  activeFilterChips,
   chartSeriesFor,
-  filterKeys,
+  dependentFilters,
   filterLabels,
-  rangeLabels,
   type FilterKey,
   type SiteSearch,
 } from "./search"
+import { Toolbar } from "./toolbar"
 import { useRememberedWriteKey } from "./write-key"
 
 const routeApi = getRouteApi("/_authed/businesses/$slug/_shell/sites/$siteId/")
-
-const quickRanges = ["1d", "7d", "30d", "90d", "12m"] as const
 
 function formatStatsRange(start: string, end: string, timeZone: string) {
   const startDate = new Date(start)
@@ -77,41 +71,6 @@ function formatStatsRange(start: string, end: string, timeZone: string) {
   return `${monthDayYear.format(startDate)} – ${monthDayYear.format(endDate)}`
 }
 
-function dateInputValue(iso: string, timeZone: string) {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone,
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date(iso))
-  const year = parts.find((part) => part.type === "year")?.value
-  const month = parts.find((part) => part.type === "month")?.value
-  const day = parts.find((part) => part.type === "day")?.value
-  if (!year || !month || !day) return ""
-  return `${year}-${month}-${day}`
-}
-
-function clearFiltersPatch(): Partial<SiteSearch> {
-  const patch: Partial<SiteSearch> = {}
-  for (const key of filterKeys) {
-    patch[key] = undefined
-  }
-  return patch
-}
-
-function dependentFilters(key: FilterKey): Partial<SiteSearch> {
-  switch (key) {
-    case "referrer":
-      return { referrer_path: undefined }
-    case "event":
-      return { prop: undefined, prop_value: undefined }
-    case "prop":
-      return { prop_value: undefined }
-    default:
-      return {}
-  }
-}
-
 export function SitePage() {
   const { slug, siteId } = routeApi.useParams()
   const search = routeApi.useSearch()
@@ -123,9 +82,6 @@ export function SitePage() {
 
   const totals = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, undefined, range, filters, includeBots)
-  )
-  const revenue = useSuspenseQuery(
-    revenueOverviewQueryOptions(slug, siteId, range, filters)
   )
 
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
@@ -193,11 +149,23 @@ export function SitePage() {
             </a>
             <span aria-hidden>·</span>
             <span className="font-mono">
-              {formatStatsRange(range.start, range.end, timeZone)}
+              {search.live
+                ? "Last 30 minutes"
+                : formatStatsRange(range.start, range.end, timeZone)}
             </span>
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          {totals.data.hasEvents && !revoked ? (
+            <LivePill
+              slug={slug}
+              siteId={siteId}
+              active={search.live}
+              onToggle={() =>
+                patchSearch({ live: search.live ? undefined : true })
+              }
+            />
+          ) : null}
           {import.meta.env.DEV ? (
             <Button
               type="button"
@@ -228,7 +196,20 @@ export function SitePage() {
         </p>
       ) : null}
 
-      {totals.data.hasEvents ? (
+      {totals.data.hasEvents && search.live ? (
+        <Suspense fallback={<PanelSkeleton />}>
+          <LiveDashboard
+            slug={slug}
+            siteId={siteId}
+            search={search}
+            filters={filters}
+            includeBots={includeBots}
+            timeZone={timeZone}
+            patchSearch={patchSearch}
+            toggleFilter={toggleFilter}
+          />
+        </Suspense>
+      ) : totals.data.hasEvents ? (
         <Dashboard
           slug={slug}
           siteId={siteId}
@@ -239,7 +220,6 @@ export function SitePage() {
           includeBots={includeBots}
           timeZone={timeZone}
           totals={totals.data}
-          revenue={revenue.data}
           patchSearch={patchSearch}
           toggleFilter={toggleFilter}
         />
@@ -260,100 +240,6 @@ export function SitePage() {
   )
 }
 
-function Toolbar({
-  search,
-  range,
-  timeZone,
-  patchSearch,
-}: {
-  search: SiteSearch
-  range: StatsRange
-  timeZone: string
-  patchSearch: (patch: Partial<SiteSearch>) => void
-}) {
-  const chips = activeFilterChips(search)
-  const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-  const preset = search.range === "custom" ? null : search.range
-
-  return (
-    <div className="sticky top-14 z-10 -mx-1 flex flex-wrap items-center gap-2 bg-background/85 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
-      <Segmented
-        label="Range"
-        options={quickRanges}
-        value={preset}
-        labels={rangeLabels}
-        onChange={(next) =>
-          patchSearch({ range: next, from: undefined, to: undefined })
-        }
-      />
-      <RangePicker
-        from={search.from ?? dateInputValue(range.start, timeZone)}
-        to={search.to ?? dateInputValue(range.end, timeZone)}
-        timeZone={timeZone}
-        localTz={localTz}
-        active={search.range === "custom"}
-        label={
-          search.range === "custom" && search.from && search.to
-            ? `${search.from} → ${search.to}`
-            : "Custom"
-        }
-        onCustom={(from, to) => patchSearch({ range: "custom", from, to })}
-        onTimeZone={(tz) => patchSearch({ tz })}
-      />
-      <Button
-        type="button"
-        size="xs"
-        variant={search.compare ? "secondary" : "ghost"}
-        aria-pressed={search.compare}
-        onClick={() =>
-          patchSearch({ compare: search.compare ? undefined : true })
-        }
-      >
-        Compare
-      </Button>
-      <Button
-        type="button"
-        size="xs"
-        variant={search.bots ? "secondary" : "ghost"}
-        aria-pressed={search.bots}
-        onClick={() => patchSearch({ bots: search.bots ? undefined : true })}
-      >
-        Bots
-      </Button>
-      {chips.map((chip) => (
-        <Button
-          key={`${chip.key}:${chip.value}`}
-          type="button"
-          size="xs"
-          variant="secondary"
-          onClick={() =>
-            patchSearch({
-              ...dependentFilters(chip.key),
-              [chip.key]: undefined,
-            })
-          }
-        >
-          <span className="text-muted-foreground">
-            {filterLabels[chip.key]}
-          </span>
-          {chip.value || "(none)"}
-          <XIcon data-icon="inline-end" />
-        </Button>
-      ))}
-      {chips.length > 1 ? (
-        <Button
-          type="button"
-          size="xs"
-          variant="ghost"
-          onClick={() => patchSearch(clearFiltersPatch())}
-        >
-          Clear
-        </Button>
-      ) : null}
-    </div>
-  )
-}
-
 function Dashboard({
   slug,
   siteId,
@@ -364,7 +250,6 @@ function Dashboard({
   includeBots,
   timeZone,
   totals,
-  revenue,
   patchSearch,
   toggleFilter,
 }: {
@@ -377,10 +262,13 @@ function Dashboard({
   includeBots: boolean
   timeZone: string
   totals: SiteStats
-  revenue: RevenueOverview
   patchSearch: (patch: Partial<SiteSearch>) => void
   toggleFilter: (key: FilterKey, value: string) => void
 }) {
+  const [now] = useState(() => Date.now())
+  const { data: revenue } = useSuspenseQuery(
+    revenueOverviewQueryOptions(slug, siteId, range, filters)
+  )
   const previousTotals = useSuspenseQuery(
     siteStatsQueryOptions(
       slug,
@@ -458,6 +346,17 @@ function Dashboard({
           />
         ))}
       </div>
+
+      <ActivityFeed
+        slug={slug}
+        siteId={siteId}
+        range={range}
+        filters={filters}
+        includeBots={includeBots}
+        live={false}
+        now={now}
+        onSelect={toggleFilter}
+      />
 
       <section className="flex flex-col gap-3 pt-4">
         <div className="flex items-baseline justify-between gap-3">
