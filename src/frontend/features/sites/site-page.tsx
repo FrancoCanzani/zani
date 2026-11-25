@@ -175,6 +175,7 @@ export function SitePage() {
           }
           return next
         },
+        resetScroll: false,
       })
     })
   }

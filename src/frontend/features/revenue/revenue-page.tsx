@@ -82,6 +82,16 @@ function formatDate(ms: number | null) {
   }).format(ms)
 }
 
+function formatRange(start: number, end: number) {
+  const sameYear = new Date(start).getFullYear() === new Date(end).getFullYear()
+  const startFormat = new Intl.DateTimeFormat(undefined, {
+    month: "short",
+    day: "numeric",
+    ...(sameYear ? {} : { year: "numeric" }),
+  })
+  return `${startFormat.format(start)} – ${formatDate(end)}`
+}
+
 function signedMoney(value: number, currency: string) {
   if (value === 0) return formatMoney(0, currency)
   return `${value > 0 ? "+" : "−"}${formatMoney(Math.abs(value), currency)}`
@@ -100,7 +110,10 @@ export function RevenuePage() {
 
   function patchSearch(patch: Partial<RevenueSearch>) {
     startTransition(() => {
-      void navigate({ search: (prev) => ({ ...prev, ...patch }) })
+      void navigate({
+        search: (prev) => ({ ...prev, ...patch }),
+        resetScroll: false,
+      })
     })
   }
 
@@ -130,6 +143,11 @@ export function RevenuePage() {
             {site?.name}
           </h1>
           <p className="text-sm text-muted-foreground">{site?.domain}</p>
+          {overview.hasData ? (
+            <p className="font-mono text-sm text-muted-foreground">
+              {formatRange(overview.start, overview.end)}
+            </p>
+          ) : null}
         </div>
         <div className="flex shrink-0 items-center gap-2">
           {import.meta.env.DEV ? (
