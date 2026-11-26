@@ -23,6 +23,7 @@ export type Site = {
   domain: string
   createdAt: number
   revokedAt: number | null
+  hasSecretKey: boolean
 }
 
 export type StatsPoint = {
@@ -31,6 +32,7 @@ export type StatsPoint = {
   views: number
   visitors: number
   sessions: number
+  conversions: number
 }
 
 export type SiteStats = {
@@ -45,9 +47,32 @@ export type SiteStats = {
   sessions: number
   bounceRate: number
   viewsPerVisit: number
+  conversions: number
   hasEvents: boolean
   truncated: boolean
   points: StatsPoint[]
+}
+
+export type SiteGoal = {
+  key: string
+  kind: "event" | "signup" | "paid"
+  name: string
+  conversions: number
+  completions: number
+}
+
+export type FunnelStep =
+  | { type: "page"; path: string }
+  | { type: "event"; name: string }
+  | { type: "signup" }
+  | { type: "paid" }
+
+export type Funnel = {
+  id: string
+  name: string
+  steps: FunnelStep[]
+  createdAt: number
+  updatedAt: number
 }
 
 export type StatsRange = {
@@ -63,6 +88,7 @@ type StatsQuery = {
   range: StatsRange
   filters: StatsFilters
   includeBots: boolean
+  goal?: string
 }
 
 const statsStaleMs = 30_000
@@ -141,7 +167,8 @@ export function siteStatsQueryOptions(
   breakdown: Breakdown | undefined,
   range: StatsRange,
   filters: StatsFilters = {},
-  includeBots = false
+  includeBots = false,
+  goal?: string
 ) {
   return queryOptions({
     queryKey: [
@@ -152,6 +179,7 @@ export function siteStatsQueryOptions(
       range,
       filters,
       includeBots,
+      goal ?? "",
     ] as const,
     queryFn: async () =>
       requireJson<SiteStats>(
@@ -162,6 +190,7 @@ export function siteStatsQueryOptions(
             grain: range.grain,
             ...(breakdown ? { breakdown } : {}),
             ...(includeBots ? { bots: "1" as const } : {}),
+            ...(goal ? { goal } : {}),
           },
         }),
         "views"
@@ -169,6 +198,151 @@ export function siteStatsQueryOptions(
     staleTime: statsStaleMs,
     placeholderData: keepPreviousData,
   })
+}
+
+export function siteGoalsQueryOptions(
+  slug: string,
+  siteId: string,
+  range: StatsRange,
+  filters: StatsFilters = {},
+  includeBots = false
+) {
+  return queryOptions({
+    queryKey: ["site-goals", slug, siteId, range, filters, includeBots] as const,
+    queryFn: async () =>
+      requireJson<{ visitors: number; goals: SiteGoal[] }>(
+        await api.workspaces[":slug"].sites[":siteId"].goals.$get({
+          param: { slug, siteId },
+          query: {
+            ...rangeQuery(range, filters),
+            ...(includeBots ? { bots: "1" as const } : {}),
+          },
+        }),
+        "goals"
+      ),
+    staleTime: statsStaleMs,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export function funnelsQueryOptions(slug: string, siteId: string) {
+  return queryOptions({
+    queryKey: ["funnels", slug, siteId] as const,
+    queryFn: async () =>
+      requireJson<{ funnels: Funnel[] }>(
+        await api.workspaces[":slug"].sites[":siteId"].funnels.$get({
+          param: { slug, siteId },
+        }),
+        "funnels"
+      ),
+  })
+}
+
+export function funnelResultsQueryOptions(
+  slug: string,
+  siteId: string,
+  funnelId: string,
+  range: StatsRange,
+  filters: StatsFilters,
+  includeBots: boolean
+) {
+  return queryOptions({
+    queryKey: [
+      "funnel-results",
+      slug,
+      siteId,
+      funnelId,
+      range,
+      filters,
+      includeBots,
+    ] as const,
+    queryFn: async () =>
+      requireJson<{
+        funnel: Funnel
+        steps: Array<{ step: FunnelStep; visitors: number }>
+      }>(
+        await api.workspaces[":slug"].sites[":siteId"].funnels[
+          ":funnelId"
+        ].results.$get({
+          param: { slug, siteId, funnelId },
+          query: {
+            ...rangeQuery(range, filters),
+            ...(includeBots ? { bots: "1" as const } : {}),
+          },
+        }),
+        "steps"
+      ),
+    staleTime: statsStaleMs,
+    placeholderData: keepPreviousData,
+  })
+}
+
+export async function createFunnel(
+  slug: string,
+  siteId: string,
+  body: { name: string; steps: FunnelStep[] }
+) {
+  const response = await api.workspaces[":slug"].sites[":siteId"].funnels.$post(
+    {
+      param: { slug, siteId },
+      json: body,
+    }
+  )
+  if (response.status === 403) throw new Error("You cannot edit funnels.")
+  if (response.status === 409) throw new Error("This site already has 20 funnels.")
+  if (!response.ok) throw new Error("Could not create the funnel.")
+  return requireJson<{ funnel: Funnel }>(response, "funnel")
+}
+
+export async function updateFunnel(
+  slug: string,
+  siteId: string,
+  funnelId: string,
+  body: { name: string; steps: FunnelStep[] }
+) {
+  const response = await api.workspaces[":slug"].sites[":siteId"].funnels[
+    ":funnelId"
+  ].$patch({
+    param: { slug, siteId, funnelId },
+    json: body,
+  })
+  if (response.status === 403) throw new Error("You cannot edit funnels.")
+  if (response.status === 404) throw new Error("Funnel not found.")
+  if (!response.ok) throw new Error("Could not save the funnel.")
+  return requireJson<{ funnel: Funnel }>(response, "funnel")
+}
+
+export async function deleteFunnel(
+  slug: string,
+  siteId: string,
+  funnelId: string
+) {
+  const response = await api.workspaces[":slug"].sites[":siteId"].funnels[
+    ":funnelId"
+  ].$delete({
+    param: { slug, siteId, funnelId },
+  })
+  if (response.status === 403) throw new Error("You cannot edit funnels.")
+  if (response.status === 404) throw new Error("Funnel not found.")
+  if (!response.ok) throw new Error("Could not delete the funnel.")
+}
+
+export async function replaceSecretKey(slug: string, siteId: string) {
+  const response = await api.workspaces[":slug"].sites[":siteId"][
+    "secret-key"
+  ].$post({
+    param: { slug, siteId },
+  })
+  if (response.status === 403) {
+    throw new Error("You cannot replace this secret key.")
+  }
+  if (response.status === 409) {
+    throw new Error("This site is revoked.")
+  }
+  if (!response.ok) {
+    throw new Error("Could not replace the secret key.")
+  }
+  return requireJson<{ site: Site; secretKey: string }>(response, "secretKey")
 }
 
 export async function createSite(
@@ -287,6 +461,7 @@ export function statsQueryFromSearch(search: StatsSearch): StatsQuery {
     range: { ...range, tz: search.tz },
     filters: filtersFromSearch(search),
     includeBots: Boolean(search.bots),
+    goal: search.goal,
   }
 }
 
@@ -318,6 +493,7 @@ export async function preloadSiteStats(
 ) {
   const { range, filters, includeBots } = statsQueryFromSearch(search)
   const previous = previousStatsRange(range)
+  const goal = search.goal
   await Promise.all([
     queryClient.query(
       siteStatsQueryOptions(
@@ -326,7 +502,8 @@ export async function preloadSiteStats(
         undefined,
         range,
         filters,
-        includeBots
+        includeBots,
+        goal
       )
     ),
     queryClient.query(
@@ -336,7 +513,8 @@ export async function preloadSiteStats(
         undefined,
         previous,
         filters,
-        includeBots
+        includeBots,
+        goal
       )
     ),
     ...defaultPanelBreakdowns.map((breakdown) =>
@@ -347,7 +525,8 @@ export async function preloadSiteStats(
           breakdown,
           range,
           filters,
-          includeBots
+          includeBots,
+          goal
         )
       )
     ),

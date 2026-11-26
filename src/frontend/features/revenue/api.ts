@@ -41,6 +41,15 @@ export type RevenueOverview = {
   churnedCustomers: number
   revenueChurnRate: number
   signups: number
+  hasPayments: boolean
+  revenue: number
+  refunds: number
+  oneTimeRevenue: number
+  payments: number
+  ltv: number | null
+  trials: number
+  trialConversions: number
+  medianDaysToPay: number | null
   points: RevenuePoint[]
 }
 
@@ -57,6 +66,9 @@ export type AttributionRow = {
   customers: number
   newMrr: number
   mrr: number
+  revenue: number
+  ltv: number | null
+  daysToPay: number | null
 }
 
 export type RevenueCustomer = {

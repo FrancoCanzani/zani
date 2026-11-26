@@ -17,7 +17,7 @@ export type Goal =
 
 const eventGoalPrefix = "event:"
 const eventNamePattern = /^[a-z0-9_-]{1,32}$/
-export const reservedEventNames = ["pageview", "identify"]
+export const reservedEventNames = ["pageview", "identify", "signup"]
 
 export function parseGoal(value: string | undefined): Goal | null {
   if (value === undefined) return null

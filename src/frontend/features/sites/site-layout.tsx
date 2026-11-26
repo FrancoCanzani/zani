@@ -52,6 +52,7 @@ export function SiteLayout() {
     range,
     filters,
     includeBots,
+    goal,
     timeZone,
     patchSearch,
   } = useSiteSearch()
@@ -63,7 +64,15 @@ export function SiteLayout() {
   const queryClient = useQueryClient()
 
   const totals = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, undefined, range, filters, includeBots)
+    siteStatsQueryOptions(
+      slug,
+      siteId,
+      undefined,
+      range,
+      filters,
+      includeBots,
+      goal
+    )
   )
   const { data: workspaceData } = useSuspenseQuery(workspaceQueryOptions(slug))
   const role = parseWorkspaceRole(workspaceData.workspace.role)

@@ -11,6 +11,7 @@ import { revenueOverviewQueryOptions } from "./api"
 import {
   AttributionPanel,
   MovementsPanel,
+  PaymentsPanel,
   TopCustomersPanel,
 } from "./revenue-panels"
 
@@ -58,6 +59,7 @@ export function RevenuePage() {
       </Suspense>
       <div className="grid gap-3 md:grid-cols-2">
         <MovementsPanel overview={revenue} />
+        <PaymentsPanel overview={revenue} />
         <Suspense fallback={<PanelSkeleton />}>
           <TopCustomersPanel slug={slug} siteId={siteId} />
         </Suspense>

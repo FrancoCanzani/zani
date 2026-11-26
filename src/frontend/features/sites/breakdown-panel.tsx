@@ -53,11 +53,12 @@ const revenueBreakdowns = new Set<Breakdown>([
 
 const visibleRows = 8
 
-type SortKey = "visitors" | "revenue"
+type SortKey = "visitors" | "revenue" | "conversions"
 
 type Row = {
   value: string
   visitors: number
+  conversions: number
   customers: number
   newMrr: number
 }
@@ -97,12 +98,19 @@ function ColumnHeader({
   )
 }
 
+function conversionRate(conversions: number, visitors: number) {
+  if (visitors <= 0) return "—"
+  const value = (conversions / visitors) * 100
+  return `${value < 10 ? value.toFixed(1) : Math.round(value)}%`
+}
+
 function RowList({
   dimension,
   filterKey,
   rows,
   activeValue,
   showRevenue,
+  showConversions,
   sort,
   currency,
   onSort,
@@ -113,14 +121,28 @@ function RowList({
   rows: Row[]
   activeValue: string | undefined
   showRevenue: boolean
+  showConversions: boolean
   sort: SortKey
   currency: string
   onSort?: (sort: SortKey) => void
   onSelect: (key: FilterKey, value: string) => void
 }) {
-  const metricOf = (row: Row) =>
-    sort === "revenue" ? row.newMrr : row.visitors
+  const metricOf = (row: Row) => {
+    switch (sort) {
+      case "revenue":
+        return row.newMrr
+      case "conversions":
+        return row.conversions
+      case "visitors":
+        return row.visitors
+      default: {
+        const exhaustive: never = sort
+        return exhaustive
+      }
+    }
+  }
   const max = Math.max(1, ...rows.map(metricOf))
+  const sortable = showRevenue || showConversions
 
   return (
     <div>
@@ -128,10 +150,21 @@ function RowList({
         <span className="flex-1" />
         <ColumnHeader
           label="Visitors"
-          active={showRevenue && sort === "visitors"}
-          onClick={showRevenue && onSort ? () => onSort("visitors") : undefined}
+          active={sortable && sort === "visitors"}
+          onClick={sortable && onSort ? () => onSort("visitors") : undefined}
           className="w-20 text-right"
         />
+        {showConversions ? (
+          <>
+            <ColumnHeader
+              label="Conv."
+              active={sort === "conversions"}
+              onClick={onSort ? () => onSort("conversions") : undefined}
+              className="w-14 text-right"
+            />
+            <span className="w-12 text-right">CR</span>
+          </>
+        ) : null}
         {showRevenue ? (
           <ColumnHeader
             label="Revenue"
@@ -172,6 +205,16 @@ function RowList({
                 <span className="relative w-20 text-right font-mono text-muted-foreground tabular-nums">
                   {row.visitors.toLocaleString()}
                 </span>
+                {showConversions ? (
+                  <>
+                    <span className="relative w-14 text-right font-mono tabular-nums">
+                      {row.conversions.toLocaleString()}
+                    </span>
+                    <span className="relative w-12 text-right font-mono text-muted-foreground tabular-nums">
+                      {conversionRate(row.conversions, row.visitors)}
+                    </span>
+                  </>
+                ) : null}
                 {showRevenue ? (
                   <span
                     className={`relative w-24 text-right font-mono tabular-nums ${row.newMrr > 0 ? "text-foreground" : "text-muted-foreground/60"}`}
@@ -212,6 +255,7 @@ function BreakdownBody({
   range,
   filters,
   includeBots,
+  goal,
   search,
   revenue,
   onSelect,
@@ -223,6 +267,7 @@ function BreakdownBody({
   range: StatsRange
   filters: StatsFilters
   includeBots: boolean
+  goal: string | undefined
   search: SiteSearch
   revenue: RevenueContext
   onSelect: (key: FilterKey, value: string) => void
@@ -230,7 +275,15 @@ function BreakdownBody({
   const dataKey = breakdownKey(tab)
   const [sort, setSort] = useState<SortKey>("visitors")
   const { data } = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, dataKey, range, filters, includeBots)
+    siteStatsQueryOptions(
+      slug,
+      siteId,
+      dataKey,
+      range,
+      filters,
+      includeBots,
+      goal
+    )
   )
   const revenueSupported = revenue.enabled && revenueBreakdowns.has(dataKey)
   const revenueData = useQuery({
@@ -244,6 +297,7 @@ function BreakdownBody({
       merged.set(point.series, {
         value: point.series,
         visitors: point.visitors,
+        conversions: point.conversions,
         customers: 0,
         newMrr: 0,
       })
@@ -254,6 +308,7 @@ function BreakdownBody({
         const target = merged.get(row.key) ?? {
           value: row.key,
           visitors: 0,
+          conversions: 0,
           customers: 0,
           newMrr: 0,
         }
@@ -263,12 +318,28 @@ function BreakdownBody({
       }
     }
     const list = [...merged.values()]
-    return sort === "revenue"
-      ? list.sort((a, b) => b.newMrr - a.newMrr || b.visitors - a.visitors)
-      : list.sort((a, b) => b.visitors - a.visitors || b.newMrr - a.newMrr)
+    switch (sort) {
+      case "revenue":
+        return list.sort(
+          (a, b) => b.newMrr - a.newMrr || b.visitors - a.visitors
+        )
+      case "conversions":
+        return list.sort(
+          (a, b) => b.conversions - a.conversions || b.visitors - a.visitors
+        )
+      case "visitors":
+        return list.sort(
+          (a, b) => b.visitors - a.visitors || b.newMrr - a.newMrr
+        )
+      default: {
+        const exhaustive: never = sort
+        return exhaustive
+      }
+    }
   }, [data.points, revenueData.data, revenueSupported, sort])
 
   const showRevenue = revenueSupported && rows.some((row) => row.newMrr > 0)
+  const showConversions = Boolean(goal)
   const currency = revenueData.data?.currency ?? revenue.currency
 
   if (tab.view === "map") {
@@ -276,14 +347,16 @@ function BreakdownBody({
       <CountriesMap
         points={rows.map((row) => ({
           series: row.value,
-          value: row.visitors,
+          value: showConversions ? row.conversions : row.visitors,
           weight: row.newMrr,
           detail:
             row.newMrr > 0
               ? `${formatMoney(row.newMrr, currency)} new MRR · ${row.customers} ${row.customers === 1 ? "customer" : "customers"}`
-              : undefined,
+              : showConversions
+                ? `${row.conversions.toLocaleString()} conversions · ${conversionRate(row.conversions, row.visitors)} CR`
+                : undefined,
         }))}
-        valueLabel="visitors"
+        valueLabel={showConversions ? "conversions" : "visitors"}
         activeValue={search.country}
         onSelect={(country) => onSelect("country", country)}
       />
@@ -303,7 +376,9 @@ function BreakdownBody({
     filterKey: tab.filterKey,
     activeValue: search[tab.filterKey],
     showRevenue,
-    sort: showRevenue ? sort : ("visitors" as const),
+    showConversions,
+    sort:
+      showRevenue || showConversions ? sort : ("visitors" as const),
     currency,
     onSort: setSort,
   }
@@ -333,9 +408,11 @@ function BreakdownBody({
                 {title} · {tab.label}
               </SheetTitle>
               <SheetDescription>
-                {showRevenue
-                  ? "Visitors and new MRR from customers whose first visit matched."
-                  : "Visitors in the selected range."}
+                {showConversions
+                  ? "Visitors and conversions for the selected goal."
+                  : showRevenue
+                    ? "Visitors and new MRR from customers whose first visit matched."
+                    : "Visitors in the selected range."}
               </SheetDescription>
             </SheetHeader>
             <div className="px-4 pb-6">
@@ -400,7 +477,8 @@ export function BreakdownPanel({
         breakdown,
         range,
         filters,
-        includeBots
+        includeBots,
+        search.goal
       )
     )
   }
@@ -433,6 +511,7 @@ export function BreakdownPanel({
           range={range}
           filters={filters}
           includeBots={includeBots}
+          goal={search.goal}
           search={search}
           revenue={revenue}
           onSelect={onSelect}

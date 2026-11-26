@@ -189,6 +189,87 @@ export function MovementsPanel({ overview }: { overview: RevenueOverview }) {
   )
 }
 
+function daysLabel(value: number | null) {
+  if (value === null) return "—"
+  const rounded = Math.round(value * 10) / 10
+  return `${rounded} ${rounded === 1 ? "day" : "days"}`
+}
+
+export function PaymentsPanel({ overview }: { overview: RevenueOverview }) {
+  if (!overview.hasPayments) {
+    return (
+      <Panel
+        title="Payments"
+        description="Cash collected from Stripe charges"
+      >
+        <p className="py-6 text-sm leading-relaxed text-muted-foreground">
+          No charges imported yet. Add Charges read on the restricted key and
+          re-sync, or wait for{" "}
+          <code className="font-mono text-xs">charge.succeeded</code> webhooks.
+        </p>
+      </Panel>
+    )
+  }
+
+  const rows = [
+    {
+      label: "Collected",
+      value: formatMoney(overview.revenue, overview.currency),
+      detail: `${overview.payments} payments`,
+    },
+    {
+      label: "Refunds",
+      value: formatMoney(overview.refunds, overview.currency),
+      detail: "amount refunded",
+    },
+    {
+      label: "One-time",
+      value: formatMoney(overview.oneTimeRevenue, overview.currency),
+      detail: "no invoice",
+    },
+    {
+      label: "LTV",
+      value:
+        overview.ltv === null
+          ? "—"
+          : formatMoney(overview.ltv, overview.currency),
+      detail: "avg lifetime revenue",
+    },
+    {
+      label: "Trial → paid",
+      value: rate(overview.trialConversions, overview.trials),
+      detail: `${overview.trialConversions} of ${overview.trials}`,
+    },
+    {
+      label: "Days to pay",
+      value: daysLabel(overview.medianDaysToPay),
+      detail: "median first visit → paid",
+    },
+  ]
+
+  return (
+    <Panel
+      title="Payments"
+      description="Cash collected, refunds, and time to pay"
+    >
+      <dl className="space-y-1.5 text-[13px]">
+        {rows.map((row) => (
+          <div
+            key={row.label}
+            className="flex items-center justify-between gap-3 rounded-md px-2 py-1.5"
+          >
+            <div className="min-w-0">
+              <dt>{row.label}</dt>
+              <dd className="text-xs text-muted-foreground">{row.detail}</dd>
+            </div>
+            <dd className="shrink-0 font-mono tabular-nums">{row.value}</dd>
+          </div>
+        ))}
+      </dl>
+    </Panel>
+  )
+}
+
 function CustomerSource({ customer }: { customer: RevenueCustomer }) {
   if (!customer.firstSource) {
     return <span className="text-muted-foreground italic">not identified</span>
@@ -412,9 +493,19 @@ export function AttributionPanel({
               Visit → paid
             </TableHead>
             <TableHead
+              className={`${headClass} hidden text-right xl:table-cell`}
+            >
+              Revenue
+            </TableHead>
+            <TableHead
+              className={`${headClass} hidden text-right xl:table-cell`}
+            >
+              LTV
+            </TableHead>
+            <TableHead
               className={`${headClass} hidden text-right lg:table-cell`}
             >
-              Per visitor
+              Days to pay
             </TableHead>
             <TableHead className={`${headClass} text-right`}>New MRR</TableHead>
           </TableRow>
@@ -423,7 +514,7 @@ export function AttributionPanel({
           {data.rows.length === 0 ? (
             <TableRow className="hover:bg-transparent">
               <TableCell
-                colSpan={7}
+                colSpan={9}
                 className="py-6 text-center text-muted-foreground"
               >
                 No signups or customers in this range.
@@ -476,9 +567,19 @@ export function AttributionPanel({
                       : rate(row.customers, visitors)}
                   </TableCell>
                   <TableCell
+                    className={`${cellClass} hidden text-muted-foreground xl:table-cell`}
+                  >
+                    {row.revenue > 0 ? money(row.revenue) : "—"}
+                  </TableCell>
+                  <TableCell
+                    className={`${cellClass} hidden text-muted-foreground xl:table-cell`}
+                  >
+                    {row.ltv === null ? "—" : money(row.ltv)}
+                  </TableCell>
+                  <TableCell
                     className={`${cellClass} hidden text-muted-foreground lg:table-cell`}
                   >
-                    {visitors ? money(Math.round(row.newMrr / visitors)) : "—"}
+                    {daysLabel(row.daysToPay)}
                   </TableCell>
                   <TableCell className={`${cellClass} font-medium`}>
                     {money(row.newMrr)}

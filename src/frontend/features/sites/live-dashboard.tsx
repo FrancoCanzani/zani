@@ -72,8 +72,16 @@ function Stat({ label, value }: { label: string; value: number }) {
 }
 
 export function LiveDashboard() {
-  const { slug, siteId, search, filters, includeBots, timeZone, toggleFilter } =
-    useSiteSearch()
+  const {
+    slug,
+    siteId,
+    search,
+    filters,
+    includeBots,
+    goal,
+    timeZone,
+    toggleFilter,
+  } = useSiteSearch()
   const [now, setNow] = useState(() => Date.now())
   useEffect(() => {
     const handle = window.setInterval(() => {
@@ -84,7 +92,15 @@ export function LiveDashboard() {
 
   const range = { ...liveRange(now), tz: search.tz }
   const totals = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, undefined, range, filters, includeBots)
+    siteStatsQueryOptions(
+      slug,
+      siteId,
+      undefined,
+      range,
+      filters,
+      includeBots,
+      goal
+    )
   )
   const online = useQuery(siteOnlineQueryOptions(slug, siteId))
 

@@ -40,6 +40,7 @@ import {
   updateSite,
 } from "./api"
 import { InstallStatus } from "./install-status"
+import { ServerSettings } from "./server-settings"
 import { useRememberedWriteKey } from "./write-key"
 
 const routeApi = getRouteApi(
@@ -318,6 +319,14 @@ export function SiteSettingsPage() {
           )}
         </section>
       ) : null}
+
+      <ServerSettings
+        slug={slug}
+        siteId={siteId}
+        site={site}
+        writeKey={writeKey}
+        canManage={canManage}
+      />
 
       <RevenueSettings
         slug={slug}

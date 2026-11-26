@@ -7,6 +7,8 @@ import { revenueOverviewQueryOptions } from "@features/revenue/api"
 import { previousStatsRange, siteStatsQueryOptions } from "./api"
 import { BreakdownPanel } from "./breakdown-panel"
 import { DashboardChart } from "./dashboard-chart"
+import { FunnelsPanel, FunnelsPanelFallback } from "./funnels-panel"
+import { GoalsPanel, GoalsPanelFallback } from "./goals-panel"
 import { KpiCards } from "./kpi-cards"
 import { LiveDashboard } from "./live-dashboard"
 import { breakdownPanels } from "./panels"
@@ -32,13 +34,22 @@ function Dashboard() {
     range,
     filters,
     includeBots,
+    goal,
     timeZone,
     patchSearch,
     toggleFilter,
   } = useSiteSearch()
   const previousRange = previousStatsRange(range)
   const { data: totals } = useSuspenseQuery(
-    siteStatsQueryOptions(slug, siteId, undefined, range, filters, includeBots)
+    siteStatsQueryOptions(
+      slug,
+      siteId,
+      undefined,
+      range,
+      filters,
+      includeBots,
+      goal
+    )
   )
   const { data: revenue } = useSuspenseQuery(
     revenueOverviewQueryOptions(slug, siteId, range, filters)
@@ -50,7 +61,8 @@ function Dashboard() {
       undefined,
       previousRange,
       filters,
-      includeBots
+      includeBots,
+      goal
     )
   )
   const previousRevenue = useSuspenseQuery(
@@ -104,6 +116,28 @@ function Dashboard() {
       />
 
       <div className="grid gap-3 md:grid-cols-2">
+        <Suspense fallback={<GoalsPanelFallback />}>
+          <GoalsPanel
+            slug={slug}
+            siteId={siteId}
+            range={range}
+            filters={filters}
+            includeBots={includeBots}
+            activeGoal={search.goal}
+            onSelect={(next) => patchSearch({ goal: next })}
+          />
+        </Suspense>
+        <Suspense fallback={<FunnelsPanelFallback />}>
+          <FunnelsPanel
+            slug={slug}
+            siteId={siteId}
+            range={range}
+            filters={filters}
+            includeBots={includeBots}
+            activeFunnel={search.funnel}
+            onSelect={(next) => patchSearch({ funnel: next })}
+          />
+        </Suspense>
         {breakdownPanels.map((panel) => (
           <BreakdownPanel
             key={panel.id}

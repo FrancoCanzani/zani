@@ -9,6 +9,7 @@ import {
   dependentFilters,
   filterKeys,
   filterLabels,
+  goalLabel,
   rangeLabels,
   zonedParts,
   type SiteSearch,
@@ -154,6 +155,18 @@ export function Toolbar({
       >
         Bots
       </Button>
+      {search.goal ? (
+        <Button
+          type="button"
+          size="xs"
+          variant="secondary"
+          onClick={() => patchSearch({ goal: undefined })}
+        >
+          <span className="text-muted-foreground">Goal</span>
+          {goalLabel(search.goal)}
+          <XIcon data-icon="inline-end" />
+        </Button>
+      ) : null}
       {chips.map((chip) => (
         <Button
           key={`${chip.key}:${chip.value}`}

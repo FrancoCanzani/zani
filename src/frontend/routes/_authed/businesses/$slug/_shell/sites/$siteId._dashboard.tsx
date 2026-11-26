@@ -24,7 +24,7 @@ export const Route = createFileRoute(
   pendingComponent: pendingScreen("Loading dashboard…"),
   notFoundComponent: NotFoundScreen,
   loader: async ({ context, params, deps }) => {
-    const { range, filters, includeBots } = statsQueryFromSearch(deps)
+    const { range, filters, includeBots, goal } = statsQueryFromSearch(deps)
     await Promise.all([
       context.queryClient.query({
         ...workspaceQueryOptions(params.slug),
@@ -37,7 +37,8 @@ export const Route = createFileRoute(
           undefined,
           range,
           filters,
-          includeBots
+          includeBots,
+          goal
         )
       ),
     ])

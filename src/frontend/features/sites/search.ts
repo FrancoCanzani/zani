@@ -72,6 +72,8 @@ export const siteSearchSchema = z.object({
     .union([z.literal("true"), z.literal("false"), z.boolean()])
     .optional()
     .transform((value) => value === true || value === "true"),
+  goal: z.string().trim().max(64).optional(),
+  funnel: z.string().trim().max(64).optional(),
   source: z.string().optional(),
   path: z.string().optional(),
   referrer: z.string().optional(),
@@ -107,12 +109,23 @@ export const siteSearchDefaults = {
 
 export type StatsSearch = Pick<
   SiteSearch,
-  "range" | "from" | "to" | "tz" | "bots" | FilterKey
+  "range" | "from" | "to" | "tz" | "bots" | "goal" | FilterKey
 >
 
 export function statsSearch(search: SiteSearch): StatsSearch {
-  const { range, from, to, tz, bots } = search
-  return { range, from, to, tz, bots, ...filtersFromSearch(search) }
+  const { range, from, to, tz, bots, goal } = search
+  return { range, from, to, tz, bots, goal, ...filtersFromSearch(search) }
+}
+
+export function goalLabel(goal: string) {
+  switch (goal) {
+    case "signup":
+      return "Signed up"
+    case "paid":
+      return "Paid"
+    default:
+      return goal.startsWith("event:") ? goal.slice("event:".length) : goal
+  }
 }
 
 export const hourMs = 60 * 60 * 1000
