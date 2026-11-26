@@ -58,8 +58,8 @@ export function KpiCards({
   ]
 
   return (
-    <div className="flex flex-wrap">
-      {kpis.map((kpi, index) => {
+    <div className="flex flex-wrap gap-1 p-1.5">
+      {kpis.map((kpi) => {
         const active = selected === kpi.metric
         return (
           <button
@@ -67,15 +67,15 @@ export function KpiCards({
             type="button"
             aria-pressed={active}
             onClick={() => onSelect(kpi.metric)}
-            className={`min-w-[7.5rem] flex-1 px-3 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-              index > 0 ? "border-l border-border/60" : ""
-            } ${active ? "bg-muted/60" : "hover:bg-muted/35"}`}
+            className={`min-w-[7rem] flex-1 rounded-lg px-2.5 py-1.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+              active ? "bg-muted/70" : "hover:bg-muted/40"
+            }`}
           >
-            <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
+            <div className="text-[11px] text-muted-foreground">
               {metricLabels[kpi.metric]}
             </div>
-            <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-              <span className="font-mono text-2xl font-medium tracking-tight tabular-nums">
+            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="font-mono text-xl font-medium tracking-tight tabular-nums">
                 {kpi.value}
               </span>
               {kpi.delta === null ? null : (
