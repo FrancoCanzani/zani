@@ -141,6 +141,7 @@ export const site = sqliteTable(
     name: text("name").notNull(),
     domain: text("domain").notNull(),
     writeKeyHash: text("write_key_hash").notNull().unique(),
+    secretKeyHash: text("secret_key_hash").unique(),
     createdAt: integer("created_at").notNull(),
     revokedAt: integer("revoked_at"),
   },
@@ -175,6 +176,11 @@ export const event = sqliteTable(
   },
   (table) => [
     index("event_site_timestamp_idx").on(table.siteId, table.timestamp),
+    index("event_site_visitor_idx").on(
+      table.siteId,
+      table.visitorId,
+      table.timestamp
+    ),
   ]
 )
 
@@ -302,7 +308,9 @@ export const stripeCustomer = sqliteTable(
     }),
     currency: text("currency").notNull().default(""),
     mrr: integer("mrr").notNull().default(0),
+    revenue: integer("revenue").notNull().default(0),
     firstPaidAt: integer("first_paid_at"),
+    trialStartedAt: integer("trial_started_at"),
     churnedAt: integer("churned_at"),
     createdAt: integer("created_at").notNull(),
   },
@@ -336,6 +344,45 @@ export const mrrSnapshot = sqliteTable(
     ),
     index("mrr_snapshot_site_customer_idx").on(table.siteId, table.customerId),
   ]
+)
+
+export const stripePayment = sqliteTable(
+  "stripe_payment",
+  {
+    siteId: text("site_id")
+      .notNull()
+      .references(() => site.id, { onDelete: "cascade" }),
+    id: text("id").notNull(),
+    customerId: text("customer_id").notNull(),
+    invoiceId: text("invoice_id").notNull().default(""),
+    amount: integer("amount").notNull(),
+    refunded: integer("refunded").notNull().default(0),
+    currency: text("currency").notNull(),
+    at: integer("at").notNull(),
+  },
+  (table) => [
+    uniqueIndex("stripe_payment_site_id_idx").on(table.siteId, table.id),
+    index("stripe_payment_site_at_idx").on(table.siteId, table.at),
+    index("stripe_payment_site_customer_idx").on(
+      table.siteId,
+      table.customerId
+    ),
+  ]
+)
+
+export const funnel = sqliteTable(
+  "funnel",
+  {
+    id: text("id").primaryKey(),
+    siteId: text("site_id")
+      .notNull()
+      .references(() => site.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    steps: text("steps").notNull(),
+    createdAt: integer("created_at").notNull(),
+    updatedAt: integer("updated_at").notNull(),
+  },
+  (table) => [index("funnel_site_idx").on(table.siteId)]
 )
 
 export const revenueMovement = sqliteTable(
