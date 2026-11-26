@@ -11,6 +11,7 @@ export const rangePresets = [
 ] as const
 export const metrics = [
   "visitors",
+  "sessions",
   "views",
   "bounce",
   "signups",
@@ -371,7 +372,8 @@ export const filterLabels: Record<FilterKey, string> = {
 }
 
 export const metricLabels: Record<Metric, string> = {
-  visitors: "Visitors",
+  visitors: "Unique visitors",
+  sessions: "Visits",
   views: "Pageviews",
   bounce: "Bounce rate",
   signups: "Signups",
@@ -389,13 +391,14 @@ export const rangeLabels: Record<RangePreset, string> = {
   custom: "Custom",
 }
 
-export type TrafficMetric = "visitors" | "views" | "bounce"
-export type ChartTrafficMetric = "visitors" | "views"
+export type TrafficMetric = "visitors" | "sessions" | "views" | "bounce"
+export type ChartTrafficMetric = "visitors" | "sessions" | "views"
 export type RevenueChartMetric = "new_mrr" | "mrr"
 
 export function trafficMetricFromSearch(metric: Metric): TrafficMetric {
   switch (metric) {
     case "visitors":
+    case "sessions":
     case "views":
     case "bounce":
       return metric
@@ -418,6 +421,7 @@ export function revenueChartMetricFromSearch(
     case "mrr":
       return metric
     case "visitors":
+    case "sessions":
     case "views":
     case "bounce":
     case "signups":

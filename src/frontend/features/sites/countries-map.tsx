@@ -60,8 +60,8 @@ const countriesGeo = feature(
 ) as FeatureCollection<Geometry, GeoJsonProperties>
 
 const emptyFill = "#E8EAED"
-const dataGreen = "#10B981"
-const selectedGreen = "#047857"
+const dataBlue = "#3B82F6"
+const selectedBlue = "#1D4ED8"
 const defaultCenter: [number, number] = [0, 8]
 const minZoom = 1
 const maxZoom = 8
@@ -204,8 +204,8 @@ export function CountriesMap({
                   views == null
                     ? emptyFill
                     : selected
-                      ? selectedGreen
-                      : `color-mix(in srgb, ${dataGreen} ${maxWeight > 0 ? Math.round(18 + (weight / maxWeight) * 82) : 18}%, ${emptyFill})`
+                      ? selectedBlue
+                      : `color-mix(in srgb, ${dataBlue} ${maxWeight > 0 ? Math.round(18 + (weight / maxWeight) * 82) : 18}%, ${emptyFill})`
 
                 return (
                   <Geography

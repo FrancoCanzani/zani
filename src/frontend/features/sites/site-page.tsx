@@ -60,7 +60,7 @@ function Dashboard() {
           selected={metric}
           onSelect={(next) => patchSearch({ metric: next })}
         />
-        <div className="border-t border-border/60 px-3 pt-2 pb-3 sm:px-4">
+        <div className="px-3 pt-1 pb-3 sm:px-4">
           <DashboardChart
             points={totals.points}
             previousPoints={previousTotals.data.points}

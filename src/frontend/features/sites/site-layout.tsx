@@ -88,56 +88,58 @@ export function SiteLayout() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
-          <h1 className="truncate text-lg font-medium tracking-tight">
-            <a
-              href={`https://${site.domain}`}
-              target="_blank"
-              rel="noreferrer"
-              className="hover:underline"
-            >
-              {site.domain}
-            </a>
-          </h1>
-          {hasDashboard ? (
-            <LivePill
-              slug={slug}
-              siteId={siteId}
-              active={search.live}
-              onToggle={toggleLive}
-            />
-          ) : null}
-        </div>
-        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
-          {hasDashboard ? (
-            <Toolbar
-              search={search}
-              range={range}
-              timeZone={timeZone}
-              showCompare={onTraffic !== undefined}
-              patchSearch={patchSearch}
-            />
-          ) : null}
-          {import.meta.env.DEV ? (
-            <Button
-              type="button"
-              variant="outline"
-              size="xs"
-              disabled={simulate.isPending || revoked}
-              onClick={() => simulate.mutate()}
-            >
-              {simulate.isPending ? "Simulating…" : "Simulate data"}
+      <div className="sticky top-14 z-10 -mx-4 bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-6 sm:px-6">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+            <h1 className="truncate text-lg font-medium tracking-tight">
+              <a
+                href={`https://${site.domain}`}
+                target="_blank"
+                rel="noreferrer"
+                className="hover:underline"
+              >
+                {site.domain}
+              </a>
+            </h1>
+            {hasDashboard ? (
+              <LivePill
+                slug={slug}
+                siteId={siteId}
+                active={search.live}
+                onToggle={toggleLive}
+              />
+            ) : null}
+          </div>
+          <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+            {hasDashboard ? (
+              <Toolbar
+                search={search}
+                range={range}
+                timeZone={timeZone}
+                showCompare={onTraffic !== undefined}
+                patchSearch={patchSearch}
+              />
+            ) : null}
+            {import.meta.env.DEV ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="xs"
+                disabled={simulate.isPending || revoked}
+                onClick={() => simulate.mutate()}
+              >
+                {simulate.isPending ? "Simulating…" : "Simulate data"}
+              </Button>
+            ) : null}
+            <Button asChild variant="outline" size="xs">
+              <Link
+                to="/businesses/$slug/sites/$siteId/settings"
+                params={{ slug, siteId }}
+              >
+                Settings
+              </Link>
             </Button>
-          ) : null}
-          <Button asChild variant="outline" size="xs">
-            <Link
-              to="/businesses/$slug/sites/$siteId/settings"
-              params={{ slug, siteId }}
-            >
-              Settings
-            </Link>
-          </Button>
+          </div>
         </div>
       </div>
 

@@ -19,6 +19,8 @@ import {
   type ChartTrafficMetric,
 } from "./search"
 
+const trafficAccent = "#3B82F6"
+
 function bucketSize(grain: Grain) {
   switch (grain) {
     case "minute":
@@ -144,7 +146,7 @@ export function DashboardChart({
 
   const seriesLabel = metricLabels[metric]
   const chartConfig = {
-    value: { label: seriesLabel, color: "var(--foreground)" },
+    value: { label: seriesLabel, color: trafficAccent },
     previous: {
       label: `Previous ${seriesLabel.toLowerCase()}`,
       color: "var(--chart-2)",
@@ -192,7 +194,12 @@ export function DashboardChart({
               <stop
                 offset="0%"
                 stopColor="var(--color-value)"
-                stopOpacity={0.18}
+                stopOpacity={0.22}
+              />
+              <stop
+                offset="55%"
+                stopColor="var(--color-value)"
+                stopOpacity={0.06}
               />
               <stop
                 offset="100%"
@@ -201,7 +208,12 @@ export function DashboardChart({
               />
             </linearGradient>
           </defs>
-          <CartesianGrid vertical={false} strokeDasharray="3 3" />
+          <CartesianGrid
+            vertical={false}
+            stroke="var(--border)"
+            strokeOpacity={0.7}
+            strokeDasharray="3 3"
+          />
           <XAxis
             dataKey="bucket"
             ticks={ticks}
@@ -269,12 +281,12 @@ export function DashboardChart({
             dataKey="value"
             type="monotone"
             stroke="var(--color-value)"
-            strokeWidth={2}
+            strokeWidth={1.25}
             fill="url(#trafficFill)"
             dot={false}
             activeDot={{
-              r: 3.5,
-              strokeWidth: 2,
+              r: 3,
+              strokeWidth: 1.5,
               stroke: "var(--color-value)",
               fill: "var(--background)",
             }}
