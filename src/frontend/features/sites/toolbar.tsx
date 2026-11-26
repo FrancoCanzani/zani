@@ -3,6 +3,7 @@ import { XIcon } from "lucide-react"
 import { Button } from "@components/ui/button"
 
 import type { StatsRange } from "./api"
+import { FilterMenu } from "./filter-menu"
 import { RangePicker } from "./range-picker"
 import {
   activeFilterChips,
@@ -52,20 +53,18 @@ export function Toolbar({
   search,
   range,
   timeZone,
-  showCompare,
   patchSearch,
 }: {
   search: SiteSearch
   range: StatsRange
   timeZone: string
-  showCompare: boolean
   patchSearch: (patch: Partial<SiteSearch>) => void
 }) {
   const chips = activeFilterChips(search)
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
   return (
-    <div className="sticky top-14 z-10 -mx-1 flex flex-wrap items-center gap-2 bg-background/85 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
       {search.live ? (
         <>
           <span className="flex h-[26px] items-center gap-2 rounded-[7px] bg-muted px-2.5 text-[12px] text-foreground">
@@ -86,6 +85,11 @@ export function Toolbar({
         </>
       ) : (
         <>
+          <FilterMenu
+            search={search}
+            range={range}
+            patchSearch={patchSearch}
+          />
           <RangePicker
             range={search.range}
             from={search.from ?? dateInputValue(range.start, timeZone)}
@@ -128,19 +132,6 @@ export function Toolbar({
               }
             >
               <XIcon />
-            </Button>
-          ) : null}
-          {showCompare ? (
-            <Button
-              type="button"
-              size="xs"
-              variant={search.compare ? "secondary" : "ghost"}
-              aria-pressed={search.compare}
-              onClick={() =>
-                patchSearch({ compare: search.compare ? undefined : true })
-              }
-            >
-              Compare
             </Button>
           ) : null}
         </>

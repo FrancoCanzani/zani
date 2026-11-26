@@ -1,10 +1,8 @@
-import { formatCompactMoney, type RevenueOverview } from "@features/revenue/api"
-
 import { changePercent, type SiteStats } from "./api"
-import { metricLabels, type Metric } from "./search"
+import { metricLabels, type TrafficMetric } from "./search"
 
 type Kpi = {
-  metric: Metric
+  metric: TrafficMetric
   value: string
   delta: number | null
   invert?: boolean
@@ -15,49 +13,46 @@ function DeltaBadge({ value, invert }: { value: number; invert?: boolean }) {
   const bad = invert ? value > 0 : value < 0
   return (
     <span
-      className={`rounded-full px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums ${
+      className={`font-mono text-[12px] tabular-nums ${
         good
-          ? "bg-emerald-500/10 text-emerald-700"
+          ? "text-emerald-700"
           : bad
-            ? "bg-red-500/10 text-red-700"
-            : "bg-muted text-muted-foreground"
+            ? "text-red-700"
+            : "text-muted-foreground"
       }`}
     >
-      {value > 0 ? "+" : ""}
-      {value}%
+      {value > 0 ? "↑" : value < 0 ? "↓" : ""}
+      {Math.abs(value)}%
     </span>
   )
 }
 
-const revenueMetrics = new Set<Metric>(["signups", "new_mrr", "mrr"])
-
 export function KpiCards({
   totals,
   previousTotals,
-  revenue,
-  previousRevenue,
   selected,
   onSelect,
 }: {
   totals: SiteStats
   previousTotals: SiteStats
-  revenue: RevenueOverview
-  previousRevenue: RevenueOverview
-  selected: Metric
-  onSelect: (metric: Metric) => void
+  selected: TrafficMetric
+  onSelect: (metric: TrafficMetric) => void
 }) {
-  const currency = revenue.currency
-
   const kpis: Kpi[] = [
-    {
-      metric: "visitors",
-      value: totals.visitors.toLocaleString(),
-      delta: changePercent(totals.visitors, previousTotals.visitors),
-    },
     {
       metric: "views",
       value: totals.views.toLocaleString(),
       delta: changePercent(totals.views, previousTotals.views),
+    },
+    {
+      metric: "sessions",
+      value: totals.sessions.toLocaleString(),
+      delta: changePercent(totals.sessions, previousTotals.sessions),
+    },
+    {
+      metric: "visitors",
+      value: totals.visitors.toLocaleString(),
+      delta: changePercent(totals.visitors, previousTotals.visitors),
     },
     {
       metric: "bounce",
@@ -65,54 +60,27 @@ export function KpiCards({
       delta: changePercent(totals.bounceRate, previousTotals.bounceRate),
       invert: true,
     },
-    {
-      metric: "signups",
-      value: revenue.signups.toLocaleString(),
-      delta: changePercent(revenue.signups, previousRevenue.signups),
-    },
-    {
-      metric: "new_mrr",
-      value: formatCompactMoney(revenue.newMrr, currency),
-      delta: changePercent(revenue.newMrr, previousRevenue.newMrr),
-    },
-    {
-      metric: "mrr",
-      value: formatCompactMoney(revenue.mrr, currency),
-      delta:
-        revenue.mrrStart > 0
-          ? changePercent(revenue.mrr, revenue.mrrStart)
-          : null,
-    },
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="flex flex-wrap gap-1 p-1.5">
       {kpis.map((kpi) => {
         const active = selected === kpi.metric
-        const accent = revenueMetrics.has(kpi.metric)
         return (
           <button
             key={kpi.metric}
             type="button"
             aria-pressed={active}
             onClick={() => onSelect(kpi.metric)}
-            className={`relative min-w-0 overflow-hidden rounded-xl border bg-card px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-              active
-                ? "border-foreground/40 ring-1 ring-foreground/10"
-                : "border-border/70 hover:border-foreground/20 hover:bg-muted/30"
+            className={`min-w-[7rem] flex-1 rounded-lg px-2.5 py-1.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+              active ? "bg-muted/70" : "hover:bg-muted/40"
             }`}
           >
-            <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-              {accent ? (
-                <span
-                  aria-hidden
-                  className="size-1.5 rounded-full bg-emerald-600"
-                />
-              ) : null}
+            <div className="text-[11px] text-muted-foreground">
               {metricLabels[kpi.metric]}
             </div>
-            <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-              <span className="font-mono text-2xl font-medium tracking-tight tabular-nums">
+            <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="font-mono text-xl font-medium tracking-tight tabular-nums">
                 {kpi.value}
               </span>
               {kpi.delta === null ? null : (

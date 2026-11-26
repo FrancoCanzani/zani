@@ -11,6 +11,7 @@ export const rangePresets = [
 ] as const
 export const metrics = [
   "visitors",
+  "sessions",
   "views",
   "bounce",
   "signups",
@@ -371,7 +372,8 @@ export const filterLabels: Record<FilterKey, string> = {
 }
 
 export const metricLabels: Record<Metric, string> = {
-  visitors: "Visitors",
+  visitors: "Unique visitors",
+  sessions: "Visits",
   views: "Pageviews",
   bounce: "Bounce rate",
   signups: "Signups",
@@ -389,23 +391,41 @@ export const rangeLabels: Record<RangePreset, string> = {
   custom: "Custom",
 }
 
-export type TrafficMetric = "visitors" | "views"
-export type RevenueMetric = "signups" | "new_mrr" | "mrr"
+export type TrafficMetric = "visitors" | "sessions" | "views" | "bounce"
+export type ChartTrafficMetric = "visitors" | "sessions" | "views"
+export type RevenueChartMetric = "new_mrr" | "mrr"
 
-export function chartSeriesFor(metric: Metric): {
-  bars: TrafficMetric
-  line: RevenueMetric
-} {
+export function trafficMetricFromSearch(metric: Metric): TrafficMetric {
   switch (metric) {
     case "visitors":
+    case "sessions":
     case "views":
-      return { bars: metric, line: "new_mrr" }
+    case "bounce":
+      return metric
     case "signups":
     case "new_mrr":
     case "mrr":
-      return { bars: "visitors", line: metric }
+      return "visitors"
+    default: {
+      const exhaustive: never = metric
+      return exhaustive
+    }
+  }
+}
+
+export function revenueChartMetricFromSearch(
+  metric: Metric
+): RevenueChartMetric {
+  switch (metric) {
+    case "new_mrr":
+    case "mrr":
+      return metric
+    case "visitors":
+    case "sessions":
+    case "views":
     case "bounce":
-      return { bars: "visitors", line: "new_mrr" }
+    case "signups":
+      return "mrr"
     default: {
       const exhaustive: never = metric
       return exhaustive

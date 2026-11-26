@@ -27,6 +27,7 @@ import { Route as AuthedBusinessesSlugShellSitesSiteIdDashboardRouteImport } fro
 import { Route as AuthedBusinessesSlugShellSitesSiteIdSettingsRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId.settings'
 import { Route as AuthedBusinessesSlugShellSitesSiteIdDashboardIndexRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId._dashboard.index'
 import { Route as AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId._dashboard.activity'
+import { Route as AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId._dashboard.attribution'
 import { Route as AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRouteImport } from './routes/_authed/businesses/$slug/_shell/sites/$siteId._dashboard.revenue'
 
 const IndexRoute = IndexRouteImport.update({
@@ -126,6 +127,12 @@ const AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRoute =
     path: '/activity',
     getParentRoute: () => AuthedBusinessesSlugShellSitesSiteIdDashboardRoute,
   } as any)
+const AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRoute =
+  AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRouteImport.update({
+    id: '/attribution',
+    path: '/attribution',
+    getParentRoute: () => AuthedBusinessesSlugShellSitesSiteIdDashboardRoute,
+  } as any)
 const AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRoute =
   AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRouteImport.update({
     id: '/revenue',
@@ -148,6 +155,7 @@ export interface FileRoutesByFullPath {
   '/businesses/$slug/sites/$siteId': typeof AuthedBusinessesSlugShellSitesSiteIdRouteWithChildren
   '/businesses/$slug/sites/$siteId/settings': typeof AuthedBusinessesSlugShellSitesSiteIdSettingsRoute
   '/businesses/$slug/sites/$siteId/activity': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRoute
+  '/businesses/$slug/sites/$siteId/attribution': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRoute
   '/businesses/$slug/sites/$siteId/revenue': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRoute
   '/businesses/$slug/sites/$siteId/': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardIndexRoute
 }
@@ -165,6 +173,7 @@ export interface FileRoutesByTo {
   '/businesses/$slug/sites/$siteId': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardIndexRoute
   '/businesses/$slug/sites/$siteId/settings': typeof AuthedBusinessesSlugShellSitesSiteIdSettingsRoute
   '/businesses/$slug/sites/$siteId/activity': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRoute
+  '/businesses/$slug/sites/$siteId/attribution': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRoute
   '/businesses/$slug/sites/$siteId/revenue': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRoute
 }
 export interface FileRoutesById {
@@ -186,6 +195,7 @@ export interface FileRoutesById {
   '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardRouteWithChildren
   '/_authed/businesses/$slug/_shell/sites/$siteId/settings': typeof AuthedBusinessesSlugShellSitesSiteIdSettingsRoute
   '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/activity': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRoute
+  '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/attribution': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRoute
   '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/revenue': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRoute
   '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/': typeof AuthedBusinessesSlugShellSitesSiteIdDashboardIndexRoute
 }
@@ -206,6 +216,7 @@ export interface FileRouteTypes {
     | '/businesses/$slug/sites/$siteId'
     | '/businesses/$slug/sites/$siteId/settings'
     | '/businesses/$slug/sites/$siteId/activity'
+    | '/businesses/$slug/sites/$siteId/attribution'
     | '/businesses/$slug/sites/$siteId/revenue'
     | '/businesses/$slug/sites/$siteId/'
   fileRoutesByTo: FileRoutesByTo
@@ -223,6 +234,7 @@ export interface FileRouteTypes {
     | '/businesses/$slug/sites/$siteId'
     | '/businesses/$slug/sites/$siteId/settings'
     | '/businesses/$slug/sites/$siteId/activity'
+    | '/businesses/$slug/sites/$siteId/attribution'
     | '/businesses/$slug/sites/$siteId/revenue'
   id:
     | '__root__'
@@ -243,6 +255,7 @@ export interface FileRouteTypes {
     | '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard'
     | '/_authed/businesses/$slug/_shell/sites/$siteId/settings'
     | '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/activity'
+    | '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/attribution'
     | '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/revenue'
     | '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/'
   fileRoutesById: FileRoutesById
@@ -381,6 +394,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRouteImport
       parentRoute: typeof AuthedBusinessesSlugShellSitesSiteIdDashboardRoute
     }
+    '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/attribution': {
+      id: '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/attribution'
+      path: '/attribution'
+      fullPath: '/businesses/$slug/sites/$siteId/attribution'
+      preLoaderRoute: typeof AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRouteImport
+      parentRoute: typeof AuthedBusinessesSlugShellSitesSiteIdDashboardRoute
+    }
     '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/revenue': {
       id: '/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/revenue'
       path: '/revenue'
@@ -393,6 +413,7 @@ declare module '@tanstack/react-router' {
 
 interface AuthedBusinessesSlugShellSitesSiteIdDashboardRouteChildren {
   AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRoute: typeof AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRoute
+  AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRoute: typeof AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRoute
   AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRoute: typeof AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRoute
   AuthedBusinessesSlugShellSitesSiteIdDashboardIndexRoute: typeof AuthedBusinessesSlugShellSitesSiteIdDashboardIndexRoute
 }
@@ -401,6 +422,8 @@ const AuthedBusinessesSlugShellSitesSiteIdDashboardRouteChildren: AuthedBusiness
   {
     AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRoute:
       AuthedBusinessesSlugShellSitesSiteIdDashboardActivityRoute,
+    AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRoute:
+      AuthedBusinessesSlugShellSitesSiteIdDashboardAttributionRoute,
     AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRoute:
       AuthedBusinessesSlugShellSitesSiteIdDashboardRevenueRoute,
     AuthedBusinessesSlugShellSitesSiteIdDashboardIndexRoute:

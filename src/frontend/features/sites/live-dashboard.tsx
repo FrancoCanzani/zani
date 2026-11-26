@@ -11,7 +11,6 @@ import { useSiteSearch } from "./use-site-search"
 
 const livePanelIds = new Set(["pages", "sources", "countries"])
 const livePanels = breakdownPanels.filter((panel) => livePanelIds.has(panel.id))
-const noRevenue = { enabled: false, currency: "usd" }
 
 function PulseDot({ active }: { active: boolean }) {
   return (
@@ -45,17 +44,17 @@ export function LivePill({
       type="button"
       aria-pressed={active}
       onClick={onToggle}
-      className={`inline-flex h-6 items-center gap-1.5 rounded-full border px-2.5 text-xs transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+      className={`inline-flex items-center gap-1.5 text-sm transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
         active
-          ? "border-emerald-600/30 bg-emerald-500/10 text-emerald-800"
-          : "border-border text-muted-foreground hover:border-foreground/20 hover:text-foreground"
+          ? "text-emerald-800"
+          : "text-muted-foreground hover:text-foreground"
       }`}
     >
       <PulseDot active={online > 0 || active} />
       <span className="font-mono tabular-nums">
         {data ? online.toLocaleString() : "–"}
       </span>
-      online now
+      current visitors
     </button>
   )
 }
@@ -99,12 +98,8 @@ export function LiveDashboard() {
       <DashboardChart
         points={totals.data.points}
         previousPoints={[]}
-        revenuePoints={[]}
         range={range}
-        bars="views"
-        line="new_mrr"
-        currency="usd"
-        showRevenue={false}
+        metric="views"
         compare={false}
         timeZone={timeZone}
       />
@@ -120,7 +115,6 @@ export function LiveDashboard() {
             filters={filters}
             includeBots={includeBots}
             search={search}
-            revenue={noRevenue}
             onSelect={toggleFilter}
           />
         ))}

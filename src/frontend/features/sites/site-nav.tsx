@@ -3,11 +3,15 @@ import { Link } from "@tanstack/react-router"
 const tabs = [
   {
     to: "/businesses/$slug/sites/$siteId",
-    label: "Overview",
+    label: "Traffic",
   },
   {
     to: "/businesses/$slug/sites/$siteId/revenue",
     label: "Revenue",
+  },
+  {
+    to: "/businesses/$slug/sites/$siteId/attribution",
+    label: "Attribution",
   },
   {
     to: "/businesses/$slug/sites/$siteId/activity",
@@ -29,7 +33,7 @@ export function SiteNav({ slug, siteId }: { slug: string; siteId: string }) {
             params={{ slug, siteId }}
             search={(prev) => ({ ...prev, live: false })}
             activeOptions={{ exact: true, includeSearch: false }}
-            className="flex h-8 items-center rounded-full px-4 text-[13px] text-muted-foreground transition-colors hover:text-foreground data-[status=active]:bg-foreground data-[status=active]:text-background"
+            className="flex h-8 items-center rounded-full px-3 text-[13px] text-muted-foreground transition-colors hover:text-foreground data-[status=active]:bg-foreground data-[status=active]:text-background sm:px-4"
           >
             {label}
           </Link>

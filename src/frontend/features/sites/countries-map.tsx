@@ -7,12 +7,18 @@ import {
   registerLocale,
 } from "i18n-iso-countries"
 import enLocale from "i18n-iso-countries/langs/en.json"
-import { ComposableMap, Geographies, Geography } from "react-simple-maps"
+import {
+  ComposableMap,
+  Geographies,
+  Geography,
+  ZoomableGroup,
+} from "react-simple-maps"
 import { feature } from "topojson-client"
 import type { FeatureCollection, Geometry, GeoJsonProperties } from "geojson"
 import type { Topology, GeometryCollection } from "topojson-specification"
 import countries110m from "world-atlas/countries-110m.json"
 
+import { Button } from "@components/ui/button"
 import { formatCount } from "@lib/utils"
 
 registerLocale(enLocale)
@@ -39,6 +45,11 @@ type HoverState = {
   y: number
 }
 
+type MapPosition = {
+  coordinates: [number, number]
+  zoom: number
+}
+
 const topology = countries110m as unknown as Topology<{
   countries: GeometryCollection
 }>
@@ -49,8 +60,12 @@ const countriesGeo = feature(
 ) as FeatureCollection<Geometry, GeoJsonProperties>
 
 const emptyFill = "#E8EAED"
-const dataGreen = "#10B981"
-const selectedGreen = "#047857"
+const dataBlue = "#3B82F6"
+const selectedBlue = "#1D4ED8"
+const defaultCenter: [number, number] = [0, 8]
+const minZoom = 1
+const maxZoom = 8
+const zoomStep = 1.6
 
 function hoverFromEvent(
   event: MouseEvent,
@@ -71,6 +86,10 @@ function hoverFromEvent(
   }
 }
 
+function clampZoom(zoom: number) {
+  return Math.min(maxZoom, Math.max(minZoom, zoom))
+}
+
 export function CountriesMap({
   points,
   valueLabel,
@@ -78,6 +97,10 @@ export function CountriesMap({
   onSelect,
 }: CountriesMapProps) {
   const [hover, setHover] = useState<HoverState | null>(null)
+  const [position, setPosition] = useState<MapPosition>({
+    coordinates: defaultCenter,
+    zoom: minZoom,
+  })
 
   const { byNumeric, weights, details, totalViews, maxWeight } = useMemo(() => {
     const map = new Map<string, number>()
@@ -133,85 +156,160 @@ export function CountriesMap({
       : null
 
   return (
-    <div className="relative w-full" onMouseLeave={() => setHover(null)}>
+    <div
+      className="relative w-full overflow-hidden rounded-md"
+      onMouseLeave={() => setHover(null)}
+    >
       <ComposableMap
         projection="geoEqualEarth"
-        projectionConfig={{ scale: 155, center: [0, 8] }}
+        projectionConfig={{ scale: 155, center: defaultCenter }}
         width={800}
         height={420}
         style={{ width: "100%", height: "auto", display: "block" }}
       >
-        <Geographies geography={countriesGeo}>
-          {({ geographies }) =>
-            geographies.map((geo) => {
-              const numeric = String(geo.id ?? "").padStart(3, "0")
-              const views = byNumeric.get(numeric)
-              const alpha2 = numericToAlpha2(numeric) ?? ""
-              const selected = activeValue === alpha2
-              const name =
-                (alpha2 ? getName(alpha2, "en") : undefined) ??
-                (typeof geo.properties?.name === "string"
-                  ? geo.properties.name
-                  : alpha2)
-              const weight = weights.get(numeric) ?? 0
-              const fill =
-                views == null
-                  ? emptyFill
-                  : selected
-                    ? selectedGreen
-                    : `color-mix(in srgb, ${dataGreen} ${maxWeight > 0 ? Math.round(18 + (weight / maxWeight) * 82) : 18}%, ${emptyFill})`
-
-              return (
-                <Geography
-                  key={geo.rsmKey}
-                  geography={geo}
-                  fill={fill}
-                  stroke="#fff"
-                  strokeWidth={0.5}
-                  style={{
-                    outline: "none",
-                    cursor: alpha2 ? "pointer" : "default",
-                  }}
-                  onMouseEnter={(event) => {
-                    if (!alpha2 || views == null) {
-                      setHover(null)
-                      return
-                    }
-                    setHover(
-                      hoverFromEvent(
-                        event,
-                        alpha2,
-                        name || alpha2,
-                        views,
-                        totalViews,
-                        details.get(numeric)
-                      )
-                    )
-                  }}
-                  onMouseMove={(event) => {
-                    if (!alpha2 || views == null) return
-                    setHover(
-                      hoverFromEvent(
-                        event,
-                        alpha2,
-                        name || alpha2,
-                        views,
-                        totalViews,
-                        details.get(numeric)
-                      )
-                    )
-                  }}
-                  onMouseLeave={() => setHover(null)}
-                  onClick={() => {
-                    if (!alpha2) return
-                    onSelect(alpha2)
-                  }}
-                />
-              )
+        <ZoomableGroup
+          center={position.coordinates}
+          zoom={position.zoom}
+          minZoom={minZoom}
+          maxZoom={maxZoom}
+          filterZoomEvent={(event) => {
+            if ("ctrlKey" in event && event.ctrlKey) return false
+            if ("button" in event && event.button) return false
+            return true
+          }}
+          onMoveEnd={(next) => {
+            const [lng, lat] = next.coordinates ?? []
+            if (lng === undefined || lat === undefined) return
+            if (next.zoom === undefined) return
+            setPosition({
+              coordinates: [lng, lat],
+              zoom: clampZoom(next.zoom),
             })
-          }
-        </Geographies>
+          }}
+        >
+          <Geographies geography={countriesGeo}>
+            {({ geographies }) =>
+              geographies.map((geo) => {
+                const numeric = String(geo.id ?? "").padStart(3, "0")
+                const views = byNumeric.get(numeric)
+                const alpha2 = numericToAlpha2(numeric) ?? ""
+                const selected = activeValue === alpha2
+                const name =
+                  (alpha2 ? getName(alpha2, "en") : undefined) ??
+                  (typeof geo.properties?.name === "string"
+                    ? geo.properties.name
+                    : alpha2)
+                const weight = weights.get(numeric) ?? 0
+                const fill =
+                  views == null
+                    ? emptyFill
+                    : selected
+                      ? selectedBlue
+                      : `color-mix(in srgb, ${dataBlue} ${maxWeight > 0 ? Math.round(18 + (weight / maxWeight) * 82) : 18}%, ${emptyFill})`
+
+                return (
+                  <Geography
+                    key={geo.rsmKey}
+                    geography={geo}
+                    fill={fill}
+                    stroke="#fff"
+                    strokeWidth={0.5}
+                    style={{
+                      outline: "none",
+                      cursor: alpha2 ? "pointer" : "default",
+                    }}
+                    onMouseEnter={(event) => {
+                      if (!alpha2 || views == null) {
+                        setHover(null)
+                        return
+                      }
+                      setHover(
+                        hoverFromEvent(
+                          event,
+                          alpha2,
+                          name || alpha2,
+                          views,
+                          totalViews,
+                          details.get(numeric)
+                        )
+                      )
+                    }}
+                    onMouseMove={(event) => {
+                      if (!alpha2 || views == null) return
+                      setHover(
+                        hoverFromEvent(
+                          event,
+                          alpha2,
+                          name || alpha2,
+                          views,
+                          totalViews,
+                          details.get(numeric)
+                        )
+                      )
+                    }}
+                    onMouseLeave={() => setHover(null)}
+                    onClick={() => {
+                      if (!alpha2) return
+                      onSelect(alpha2)
+                    }}
+                  />
+                )
+              })
+            }
+          </Geographies>
+        </ZoomableGroup>
       </ComposableMap>
+      <div className="absolute right-2 bottom-2 flex gap-1">
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          className="bg-background/90"
+          aria-label="Zoom in"
+          disabled={position.zoom >= maxZoom}
+          onClick={() =>
+            setPosition((prev) => ({
+              ...prev,
+              zoom: clampZoom(prev.zoom * zoomStep),
+            }))
+          }
+        >
+          +
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          className="bg-background/90"
+          aria-label="Zoom out"
+          disabled={position.zoom <= minZoom}
+          onClick={() =>
+            setPosition((prev) => ({
+              ...prev,
+              zoom: clampZoom(prev.zoom / zoomStep),
+            }))
+          }
+        >
+          −
+        </Button>
+        <Button
+          type="button"
+          size="xs"
+          variant="outline"
+          className="bg-background/90"
+          aria-label="Reset map"
+          disabled={
+            position.zoom === minZoom &&
+            position.coordinates[0] === defaultCenter[0] &&
+            position.coordinates[1] === defaultCenter[1]
+          }
+          onClick={() =>
+            setPosition({ coordinates: defaultCenter, zoom: minZoom })
+          }
+        >
+          Reset
+        </Button>
+      </div>
       {tooltip}
     </div>
   )

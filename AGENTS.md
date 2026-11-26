@@ -101,6 +101,6 @@ Install shadcn/ui components with the CLI. Do not copy component source by hand.
 
 Prefer shadcn primitives over custom markup. Keep `globals.css` to theme tokens + base only.
 
-A site has a Traffic page (KPIs, chart, breakdown panels, map) and a Revenue page (MRR KPIs, MRR chart, attribution table, customers). Do not add session replay, heatmaps, or unrelated chrome unless asked.
+A site has Traffic (KPIs, chart, breakdowns, map), Revenue (MRR KPIs, MRR chart, movements, customers), Attribution (funnel KPIs + first/last-touch table), and Activity. Do not add session replay, heatmaps, or unrelated chrome unless asked.
 
 In development, the site's "Simulate data" action fills pageviews, signups, Stripe-like customers, and MRR history. Keep it working when the data model changes.

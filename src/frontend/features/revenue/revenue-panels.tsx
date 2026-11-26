@@ -368,8 +368,8 @@ export function AttributionPanel({
 
   return (
     <Panel
-      title="Revenue attribution"
-      description="The full path from visit to paying customer, by channel"
+      title="Attribution"
+      description="Visitors to paying customers, by first or last touch"
       action={
         <div className="flex flex-wrap items-center gap-2">
           <Segmented
