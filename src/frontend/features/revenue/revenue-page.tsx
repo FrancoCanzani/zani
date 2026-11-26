@@ -52,16 +52,20 @@ export function RevenuePage() {
         </p>
       ) : null}
 
-      <RevenueKpiCards overview={revenue} previous={previous.data} />
-
-      <RevenueChart
-        points={revenue.points}
-        range={range}
-        metric={metric}
-        currency={revenue.currency}
-        timeZone={timeZone}
-        onMetricChange={(next) => patchSearch({ metric: next })}
-      />
+      <section className="overflow-hidden rounded-xl border border-border/70 bg-card">
+        <RevenueKpiCards overview={revenue} previous={previous.data} />
+        <div className="px-3 pt-1 pb-3 sm:px-4">
+          <RevenueChart
+            points={revenue.points}
+            range={range}
+            metric={metric}
+            currency={revenue.currency}
+            timeZone={timeZone}
+            onMetricChange={(next) => patchSearch({ metric: next })}
+            framed={false}
+          />
+        </div>
+      </section>
 
       <div className="grid gap-3 md:grid-cols-2">
         <MovementsPanel overview={revenue} />

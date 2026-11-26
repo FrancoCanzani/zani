@@ -3,6 +3,7 @@ import { XIcon } from "lucide-react"
 import { Button } from "@components/ui/button"
 
 import type { StatsRange } from "./api"
+import { FilterMenu } from "./filter-menu"
 import { RangePicker } from "./range-picker"
 import {
   activeFilterChips,
@@ -86,6 +87,11 @@ export function Toolbar({
         </>
       ) : (
         <>
+          <FilterMenu
+            search={search}
+            range={range}
+            patchSearch={patchSearch}
+          />
           <RangePicker
             range={search.range}
             from={search.from ?? dateInputValue(range.start, timeZone)}

@@ -51,6 +51,39 @@ export function AttributionPage() {
       ? Math.round(revenue.newMrr / totals.visitors)
       : null
 
+  const kpis = [
+    {
+      label: "Visitors",
+      value: totals.visitors.toLocaleString(),
+    },
+    {
+      label: "Signups",
+      value: revenue.signups.toLocaleString(),
+    },
+    {
+      label: "New customers",
+      value: revenue.newCustomers.toLocaleString(),
+    },
+    {
+      label: "Visit → paid",
+      value:
+        visitToPaid === null
+          ? "—"
+          : `${visitToPaid < 10 ? visitToPaid.toFixed(1) : Math.round(visitToPaid)}%`,
+    },
+    {
+      label: "Per visitor",
+      value:
+        perVisitor === null
+          ? "—"
+          : formatMoney(perVisitor, revenue.currency),
+    },
+    {
+      label: "New MRR",
+      value: formatCompactMoney(revenue.newMrr, revenue.currency),
+    },
+  ]
+
   return (
     <>
       {revenue.ignoredFilters.length > 0 || revenue.otherCurrencies > 0 ? (
@@ -68,40 +101,23 @@ export function AttributionPage() {
         </p>
       ) : null}
 
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
-        <FunnelKpi
-          label="Visitors"
-          value={totals.visitors.toLocaleString()}
-        />
-        <FunnelKpi
-          label="Signups"
-          value={revenue.signups.toLocaleString()}
-        />
-        <FunnelKpi
-          label="New customers"
-          value={revenue.newCustomers.toLocaleString()}
-        />
-        <FunnelKpi
-          label="Visit → paid"
-          value={
-            visitToPaid === null
-              ? "—"
-              : `${visitToPaid < 10 ? visitToPaid.toFixed(1) : Math.round(visitToPaid)}%`
-          }
-        />
-        <FunnelKpi
-          label="Per visitor"
-          value={
-            perVisitor === null
-              ? "—"
-              : formatMoney(perVisitor, revenue.currency)
-          }
-        />
-        <FunnelKpi
-          label="New MRR"
-          value={formatCompactMoney(revenue.newMrr, revenue.currency)}
-        />
-      </div>
+      <section className="overflow-hidden rounded-xl border border-border/70 bg-card">
+        <div className="flex flex-wrap gap-1 p-1.5">
+          {kpis.map((kpi) => (
+            <div
+              key={kpi.label}
+              className="min-w-[7rem] flex-1 rounded-lg px-2.5 py-1.5"
+            >
+              <div className="text-[11px] text-muted-foreground">
+                {kpi.label}
+              </div>
+              <div className="mt-0.5 font-mono text-xl font-medium tracking-tight tabular-nums">
+                {kpi.value}
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
 
       <Suspense fallback={<Skeleton className="h-64 rounded-xl" />}>
         <AttributionPanel
@@ -117,17 +133,6 @@ export function AttributionPage() {
         />
       </Suspense>
     </>
-  )
-}
-
-function FunnelKpi({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-xl border border-border/70 bg-card px-3 py-3">
-      <div className="text-[13px] text-muted-foreground">{label}</div>
-      <div className="mt-1 font-mono text-2xl font-medium tracking-tight tabular-nums">
-        {value}
-      </div>
-    </div>
   )
 }
 

@@ -98,6 +98,7 @@ export function RevenueChart({
   currency,
   timeZone,
   onMetricChange,
+  framed = true,
 }: {
   points: RevenuePoint[]
   range: StatsRange
@@ -105,6 +106,7 @@ export function RevenueChart({
   currency: string
   timeZone: string
   onMetricChange: (metric: RevenueChartMetric) => void
+  framed?: boolean
 }) {
   const grain = range.grain
   const rows = useMemo<ChartRow[]>(() => {
@@ -147,8 +149,8 @@ export function RevenueChart({
     return rows[rowIndex]?.bucket ?? 0
   })
 
-  return (
-    <section className="rounded-xl border border-border/70 bg-card p-4">
+  const chart = (
+    <>
       <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
         <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span
@@ -268,6 +270,13 @@ export function RevenueChart({
           )}
         </ComposedChart>
       </ChartContainer>
+    </>
+  )
+
+  if (!framed) return chart
+  return (
+    <section className="rounded-xl border border-border/70 bg-card p-4">
+      {chart}
     </section>
   )
 }

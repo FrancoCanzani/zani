@@ -1,9 +1,6 @@
 import { changePercent } from "@features/sites/api"
 
-import {
-  formatCompactMoney,
-  type RevenueOverview,
-} from "./api"
+import { formatCompactMoney, type RevenueOverview } from "./api"
 
 type Kpi = {
   key: string
@@ -18,16 +15,16 @@ function DeltaBadge({ value, invert }: { value: number; invert?: boolean }) {
   const bad = invert ? value > 0 : value < 0
   return (
     <span
-      className={`rounded-full px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums ${
+      className={`font-mono text-[12px] tabular-nums ${
         good
-          ? "bg-emerald-500/10 text-emerald-700"
+          ? "text-emerald-700"
           : bad
-            ? "bg-red-500/10 text-red-700"
-            : "bg-muted text-muted-foreground"
+            ? "text-red-700"
+            : "text-muted-foreground"
       }`}
     >
-      {value > 0 ? "+" : ""}
-      {value}%
+      {value > 0 ? "↑" : value < 0 ? "↓" : ""}
+      {Math.abs(value)}%
     </span>
   )
 }
@@ -68,8 +65,7 @@ export function RevenueKpiCards({
     {
       key: "churn",
       label: "Revenue churn",
-      value:
-        overview.mrrStart > 0 ? `${overview.revenueChurnRate}%` : "—",
+      value: overview.mrrStart > 0 ? `${overview.revenueChurnRate}%` : "—",
       delta:
         previous.mrrStart > 0
           ? changePercent(
@@ -82,15 +78,15 @@ export function RevenueKpiCards({
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+    <div className="flex flex-wrap gap-1 p-1.5">
       {kpis.map((kpi) => (
         <div
           key={kpi.key}
-          className="min-w-0 rounded-xl border border-border/70 bg-card px-3 py-3"
+          className="min-w-[7rem] flex-1 rounded-lg px-2.5 py-1.5"
         >
-          <div className="text-[13px] text-muted-foreground">{kpi.label}</div>
-          <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
-            <span className="font-mono text-2xl font-medium tracking-tight tabular-nums">
+          <div className="text-[11px] text-muted-foreground">{kpi.label}</div>
+          <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="font-mono text-xl font-medium tracking-tight tabular-nums">
               {kpi.value}
             </span>
             {kpi.delta === null ? null : (
