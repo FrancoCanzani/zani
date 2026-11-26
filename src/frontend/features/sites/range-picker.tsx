@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react"
-import { CalendarIcon, ChevronDownIcon } from "lucide-react"
+import { useState, type ReactNode } from "react"
+import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react"
 import type { DateRange } from "react-day-picker"
 import { cn } from "cn"
 
@@ -28,22 +28,11 @@ type RangePickerProps = {
   onTimeZone: (tz: string) => void
 }
 
-type ParsedBound = {
-  date: Date
-}
-
-function parseBound(value: string | undefined): ParsedBound | undefined {
+function parseBound(value: string | undefined): Date | undefined {
   if (!value) return undefined
   const match = /^(\d{4})-(\d{2})-(\d{2})/.exec(value.trim())
   if (!match) return undefined
-  return {
-    date: new Date(
-      Number(match[1]),
-      Number(match[2]) - 1,
-      Number(match[3]),
-      12
-    ),
-  }
+  return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]), 12)
 }
 
 function formatDay(date: Date) {
@@ -53,33 +42,37 @@ function formatDay(date: Date) {
   return `${year}-${month}-${day}`
 }
 
-const primaryPresets = [
-  { id: "1d", shortcut: "T" },
-  { id: "yesterday", shortcut: "Y" },
-  { id: "7d", shortcut: "W" },
-  { id: "30d", shortcut: "3" },
-] as const satisfies ReadonlyArray<{
-  id: Exclude<RangePreset, "custom">
-  shortcut: string
-}>
+const primaryPresets = ["1d", "yesterday", "7d", "30d"] as const satisfies ReadonlyArray<
+  Exclude<RangePreset, "custom">
+>
 
 const morePresets = ["90d", "12m"] as const satisfies ReadonlyArray<
   Exclude<RangePreset, "custom">
 >
 
-function currentTimeLabel(timeZone: string) {
-  return new Intl.DateTimeFormat(undefined, {
-    timeZone,
-    hour: "numeric",
-    minute: "2-digit",
-  }).format(new Date())
-}
-
-function Shortcut({ children }: { children: string }) {
+function PresetItem({
+  active,
+  children,
+  onSelect,
+}: {
+  active?: boolean
+  children: ReactNode
+  onSelect: () => void
+}) {
   return (
-    <kbd className="ml-auto flex h-5 min-w-5 items-center justify-center rounded border border-border bg-background px-1 font-sans text-[10px] font-medium text-muted-foreground">
+    <button
+      type="button"
+      className={cn(
+        "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-xs outline-none select-none hover:bg-accent hover:text-accent-foreground",
+        active && "bg-accent text-accent-foreground"
+      )}
+      onClick={onSelect}
+    >
       {children}
-    </kbd>
+      {active ? (
+        <CheckIcon className="pointer-events-none absolute right-2 size-3.5" />
+      ) : null}
+    </button>
   )
 }
 
@@ -98,56 +91,10 @@ export function RangePicker({
   const [open, setOpen] = useState(false)
   const [panel, setPanel] = useState<Panel>("presets")
   const [moreOpen, setMoreOpen] = useState(false)
-  const [draft, setDraft] = useState<DateRange | undefined>(() => {
-    const start = parseBound(from)
-    const end = parseBound(to)
-    return { from: start?.date, to: end?.date }
-  })
-  const [nowLabel, setNowLabel] = useState(() => currentTimeLabel(timeZone))
-
-  useEffect(() => {
-    if (!open || panel !== "presets") return
-    setNowLabel(currentTimeLabel(timeZone))
-    const id = window.setInterval(() => {
-      setNowLabel(currentTimeLabel(timeZone))
-    }, 30_000)
-    return () => window.clearInterval(id)
-  }, [open, panel, timeZone])
-
-  useEffect(() => {
-    if (!open || panel !== "presets") return
-
-    function onKeyDown(event: KeyboardEvent) {
-      if (event.metaKey || event.ctrlKey || event.altKey) return
-      const target = event.target
-      if (
-        target instanceof HTMLElement &&
-        (target.isContentEditable ||
-          target.tagName === "INPUT" ||
-          target.tagName === "TEXTAREA" ||
-          target.tagName === "SELECT")
-      ) {
-        return
-      }
-      const key = event.key.toLowerCase()
-      if (key === "n") {
-        event.preventDefault()
-        onLive()
-        setOpen(false)
-        return
-      }
-      const match = primaryPresets.find(
-        (preset) => preset.shortcut.toLowerCase() === key
-      )
-      if (!match) return
-      event.preventDefault()
-      onPreset(match.id)
-      setOpen(false)
-    }
-
-    window.addEventListener("keydown", onKeyDown)
-    return () => window.removeEventListener("keydown", onKeyDown)
-  }, [open, panel, onLive, onPreset])
+  const [draft, setDraft] = useState<DateRange | undefined>(() => ({
+    from: parseBound(from),
+    to: parseBound(to),
+  }))
 
   function openPresets() {
     setPanel("presets")
@@ -155,11 +102,12 @@ export function RangePicker({
   }
 
   function openCustom() {
-    const start = parseBound(from)
-    const end = parseBound(to)
-    setDraft({ from: start?.date, to: end?.date })
+    setDraft({ from: parseBound(from), to: parseBound(to) })
     setPanel("custom")
   }
+
+  const today = new Date()
+  today.setHours(23, 59, 59, 999)
 
   return (
     <Popover
@@ -190,19 +138,14 @@ export function RangePicker({
       <PopoverContent
         align="start"
         className={cn(
-          "gap-0",
-          panel === "presets" ? "w-56 p-1.5" : "w-fit p-2"
+          "gap-0 p-1",
+          panel === "presets" ? "min-w-36 w-auto" : "w-fit p-3"
         )}
       >
         {panel === "presets" ? (
           <>
-            <p className="px-2 pt-1 pb-1.5 text-[11px] text-muted-foreground">
-              Current time: {nowLabel}
-            </p>
-            <button
-              type="button"
-              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-accent hover:text-accent-foreground"
-              onClick={() => {
+            <PresetItem
+              onSelect={() => {
                 onLive()
                 setOpen(false)
               }}
@@ -212,83 +155,88 @@ export function RangePicker({
                 className="size-1.5 shrink-0 rounded-full bg-emerald-500"
               />
               Now
-              <Shortcut>N</Shortcut>
-            </button>
-            {primaryPresets.map((preset) => {
-              const active = range === preset.id
-              return (
-                <button
-                  key={preset.id}
-                  type="button"
-                  className={cn(
-                    "flex w-full items-center rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-accent hover:text-accent-foreground",
-                    active && "bg-accent text-accent-foreground"
-                  )}
-                  onClick={() => {
-                    onPreset(preset.id)
-                    setOpen(false)
-                  }}
-                >
-                  {rangeLabels[preset.id]}
-                  <Shortcut>{preset.shortcut}</Shortcut>
-                </button>
-              )
-            })}
+            </PresetItem>
+            {primaryPresets.map((id) => (
+              <PresetItem
+                key={id}
+                active={range === id}
+                onSelect={() => {
+                  onPreset(id)
+                  setOpen(false)
+                }}
+              >
+                {rangeLabels[id]}
+              </PresetItem>
+            ))}
             <button
               type="button"
-              className="flex w-full items-center rounded-md px-2 py-1.5 text-left text-xs outline-none hover:bg-accent hover:text-accent-foreground"
+              className="flex w-full items-center rounded-md py-1 pr-2 pl-1.5 text-left text-xs outline-none hover:bg-accent hover:text-accent-foreground"
               onClick={() => setMoreOpen((value) => !value)}
               aria-expanded={moreOpen}
             >
               More periods
               <ChevronDownIcon
                 className={cn(
-                  "ml-auto size-3.5 opacity-60 transition-transform",
+                  "ml-auto size-3.5 text-muted-foreground transition-transform",
                   moreOpen && "rotate-180"
                 )}
               />
             </button>
             {moreOpen
-              ? morePresets.map((id) => {
-                  const active = range === id
-                  return (
-                    <button
-                      key={id}
-                      type="button"
-                      className={cn(
-                        "flex w-full items-center rounded-md px-2 py-1.5 pl-4 text-left text-xs outline-none hover:bg-accent hover:text-accent-foreground",
-                        active && "bg-accent text-accent-foreground"
-                      )}
-                      onClick={() => {
-                        onPreset(id)
-                        setOpen(false)
-                      }}
-                    >
-                      {rangeLabels[id]}
-                    </button>
-                  )
-                })
+              ? morePresets.map((id) => (
+                  <PresetItem
+                    key={id}
+                    active={range === id}
+                    onSelect={() => {
+                      onPreset(id)
+                      setOpen(false)
+                    }}
+                  >
+                    {rangeLabels[id]}
+                  </PresetItem>
+                ))
               : null}
+            <div className="my-1 h-px bg-border" />
             <button
               type="button"
-              className="mt-1 flex w-full items-center rounded-md bg-foreground px-2.5 py-1.5 text-left text-xs font-medium text-background outline-none hover:bg-foreground/90"
+              className={cn(
+                "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-xs outline-none select-none hover:bg-accent hover:text-accent-foreground",
+                range === "custom" && "bg-accent text-accent-foreground"
+              )}
               onClick={openCustom}
             >
+              <CalendarIcon className="size-3.5 text-muted-foreground" />
               Custom
-              <CalendarIcon className="ml-auto size-3.5 opacity-80" />
+              {range === "custom" ? (
+                <CheckIcon className="pointer-events-none absolute right-2 size-3.5" />
+              ) : null}
             </button>
           </>
         ) : (
           <>
             <Calendar
               mode="range"
-              className="mx-auto w-fit p-0 [--cell-radius:var(--radius-sm)] [--cell-size:--spacing(7)]"
-              numberOfMonths={1}
+              numberOfMonths={2}
+              showOutsideDays={false}
+              disabled={{ after: today }}
+              className="w-fit p-0 [--cell-radius:var(--radius-sm)] [--cell-size:--spacing(8)]"
+              classNames={{
+                months: "relative flex flex-row gap-6",
+                month: "flex w-fit flex-col gap-3",
+              }}
               selected={draft}
               onSelect={setDraft}
-              defaultMonth={draft?.from ?? draft?.to}
+              defaultMonth={
+                draft?.from
+                  ? new Date(
+                      draft.from.getFullYear(),
+                      draft.from.getMonth(),
+                      1
+                    )
+                  : undefined
+              }
             />
-            <div className="mt-2 flex w-full items-center gap-1.5 border-t pt-2">
+            <div className="mt-3 flex w-full items-center gap-1.5 border-t pt-2">
               <Button
                 type="button"
                 size="xs"

@@ -128,7 +128,7 @@ function TotalsRow({ summaries }: { summaries: SiteSummary[] }) {
   const mrrChange = mrr ? mrr[1].value - mrr[1].previous : 0
 
   return (
-    <div className="flex items-baseline justify-between gap-3 rounded-md border border-border/70 bg-muted/60 px-3 py-2.5">
+    <div className="flex items-baseline justify-between gap-3 rounded-md bg-secondary px-3 py-2.5">
       <span className="text-sm font-medium">Total</span>
       <span className="flex shrink-0 items-baseline gap-2 font-mono text-xs text-muted-foreground">
         <MetricPair
@@ -219,7 +219,7 @@ export function BusinessesPage() {
           </div>
 
           <div className="flex flex-col gap-2">
-            <div className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/60 px-3 py-2 text-[11px] tracking-wide text-muted-foreground uppercase">
+            <div className="flex items-center justify-between gap-3 rounded-md bg-secondary px-3 py-2 text-[11px] tracking-wide text-muted-foreground uppercase">
               <button
                 type="button"
                 className="inline-flex items-center gap-1 rounded-sm hover:text-foreground"
