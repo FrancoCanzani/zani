@@ -128,35 +128,33 @@ function TotalsRow({ summaries }: { summaries: SiteSummary[] }) {
   const mrrChange = mrr ? mrr[1].value - mrr[1].previous : 0
 
   return (
-    <li className="border-t border-dashed px-3 py-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-sm font-medium">Total</span>
-        <span className="flex shrink-0 items-baseline gap-2 font-mono text-xs text-muted-foreground">
+    <div className="flex items-baseline justify-between gap-3 rounded-md border border-border/70 bg-muted/60 px-3 py-2.5">
+      <span className="text-sm font-medium">Total</span>
+      <span className="flex shrink-0 items-baseline gap-2 font-mono text-xs text-muted-foreground">
+        <MetricPair
+          total={visitors.toLocaleString()}
+          variation={
+            <Delta
+              value={visitorsChange}
+              label={visitorsDeltaLabel(visitorsChange)}
+            />
+          }
+        />
+        {mrr ? (
           <MetricPair
-            total={visitors.toLocaleString()}
+            total={formatMoney(mrr[1].value, mrr[0])}
             variation={
               <Delta
-                value={visitorsChange}
-                label={visitorsDeltaLabel(visitorsChange)}
+                value={mrrChange}
+                label={mrrDeltaLabel(mrrChange, mrr[0])}
               />
             }
           />
-          {mrr ? (
-            <MetricPair
-              total={formatMoney(mrr[1].value, mrr[0])}
-              variation={
-                <Delta
-                  value={mrrChange}
-                  label={mrrDeltaLabel(mrrChange, mrr[0])}
-                />
-              }
-            />
-          ) : (
-            <span className="hidden w-28 sm:block sm:w-32" />
-          )}
-        </span>
-      </div>
-    </li>
+        ) : (
+          <span className="hidden w-28 sm:block sm:w-32" />
+        )}
+      </span>
+    </div>
   )
 }
 
@@ -220,8 +218,8 @@ export function BusinessesPage() {
             </Button>
           </div>
 
-          <ul className="flex flex-col overflow-hidden rounded-md bg-secondary">
-            <li className="flex items-center justify-between gap-3 px-3 py-2 text-[11px] tracking-wide text-muted-foreground uppercase">
+          <div className="flex flex-col gap-2">
+            <div className="flex items-center justify-between gap-3 rounded-md border border-border/70 bg-muted/60 px-3 py-2 text-[11px] tracking-wide text-muted-foreground uppercase">
               <button
                 type="button"
                 className="inline-flex items-center gap-1 rounded-sm hover:text-foreground"
@@ -244,39 +242,43 @@ export function BusinessesPage() {
                   MRR
                 </span>
               </span>
-            </li>
-            {sortedSites.map((site) => (
-              <li
-                key={site.id}
-                className="relative border-t border-dashed transition-colors hover:bg-muted"
-              >
-                <Link
-                  to="/businesses/$slug/sites/$siteId"
-                  params={{ slug: site.slug, siteId: site.id }}
-                  className="absolute inset-0"
-                  aria-label={`Open ${site.name}`}
-                />
-                <div className="pointer-events-none relative flex items-center justify-between gap-3 px-3 py-3">
-                  <span className="flex min-w-0 flex-1 items-baseline gap-3">
-                    <span className="truncate text-sm">{site.name}</span>
-                    <span className="hidden truncate font-mono text-xs text-muted-foreground sm:inline">
-                      {site.domain}
+            </div>
+
+            <ul className="flex flex-col overflow-hidden rounded-md border border-border/70 bg-card">
+              {sortedSites.map((site) => (
+                <li
+                  key={site.id}
+                  className="relative border-b border-border/60 transition-colors last:border-none hover:bg-muted/40"
+                >
+                  <Link
+                    to="/businesses/$slug/sites/$siteId"
+                    params={{ slug: site.slug, siteId: site.id }}
+                    className="absolute inset-0"
+                    aria-label={`Open ${site.name}`}
+                  />
+                  <div className="pointer-events-none relative flex items-center justify-between gap-3 px-3 py-3">
+                    <span className="flex min-w-0 flex-1 items-baseline gap-3">
+                      <span className="truncate text-sm">{site.name}</span>
+                      <span className="hidden truncate font-mono text-xs text-muted-foreground sm:inline">
+                        {site.domain}
+                      </span>
                     </span>
-                  </span>
-                  <span className="flex shrink-0 items-baseline gap-2 font-mono text-xs text-muted-foreground">
-                    {site.revokedAt ? (
-                      <span>Stopped</span>
-                    ) : (
-                      <SiteNumbers summary={summaries.get(site.id)} />
-                    )}
-                  </span>
-                </div>
-              </li>
-            ))}
+                    <span className="flex shrink-0 items-baseline gap-2 font-mono text-xs text-muted-foreground">
+                      {site.revokedAt ? (
+                        <span>Stopped</span>
+                      ) : (
+                        <SiteNumbers summary={summaries.get(site.id)} />
+                      )}
+                    </span>
+                  </div>
+                </li>
+              ))}
+            </ul>
+
             {activeSummaries.length > 0 ? (
               <TotalsRow summaries={activeSummaries} />
             ) : null}
-          </ul>
+          </div>
         </div>
       )}
     </div>
