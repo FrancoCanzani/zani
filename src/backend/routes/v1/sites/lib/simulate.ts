@@ -3,6 +3,8 @@ import type {
   eventProp,
   mrrSnapshot,
   stripeCustomer,
+  stripePayment,
+  visitor,
   visitorIdentity,
 } from "../../../../db/schema"
 import { sourceFor } from "../../../../lib/source"
@@ -13,6 +15,7 @@ const monthMs = 30 * dayMs
 const historyDays = 180
 const launchDay = 128
 const trialDays = 14
+const lifetimeDealPrice = 19900
 
 export const simVisitorPrefix = "sim_vis_"
 export const simUserPrefix = "sim_user_"
@@ -232,10 +235,10 @@ const devices = [
 ]
 
 const plans = [
-  { mrr: 1900, weight: 45 },
-  { mrr: 4900, weight: 35 },
-  { mrr: 4083, weight: 10 },
-  { mrr: 9900, weight: 10 },
+  { mrr: 1900, months: 1, weight: 45 },
+  { mrr: 4900, months: 1, weight: 35 },
+  { mrr: 4083, months: 12, weight: 10 },
+  { mrr: 9900, months: 1, weight: 10 },
 ]
 
 const firstNames = [
@@ -316,8 +319,10 @@ export function buildSimulation(siteId: string, now = Date.now()) {
   const events: Array<typeof event.$inferInsert> = []
   const props: Array<typeof eventProp.$inferInsert> = []
   const identities: Array<typeof visitorIdentity.$inferInsert> = []
+  const visitors: Array<typeof visitor.$inferInsert> = []
   const customers: Array<typeof stripeCustomer.$inferInsert> = []
   const snapshots: Array<typeof mrrSnapshot.$inferInsert> = []
+  const payments: Array<typeof stripePayment.$inferInsert> = []
   const dayStart = Math.floor(now / dayMs) * dayMs - historyDays * dayMs
   let visitorIndex = 0
 
@@ -402,9 +407,35 @@ export function buildSimulation(siteId: string, now = Date.now()) {
         })
       }
 
+      if (random() < 0.55) {
+        events.push({
+          ...base,
+          id: newId(),
+          timestamp: Math.min(signedUpAt + 4 * 60_000, now - 60_000),
+          name: "project_created",
+          path: "/app",
+        })
+      }
+
       const source = sourceFor(channel.utmSource, channel.referrer)
       const userRef = `${simUserPrefix}${index}`
       const identityId = newId()
+      visitors.push({
+        id: newId(),
+        siteId,
+        anonymousId: visitorId,
+        userId: userRef,
+        firstPath: landing,
+        firstReferrerHost: channel.referrer,
+        firstUtmSource: channel.utmSource,
+        firstUtmMedium: channel.utmMedium,
+        firstUtmCampaign: channel.utmCampaign,
+        firstUtmContent: channel.utmContent,
+        firstUtmTerm: channel.utmTerm,
+        firstSeenAt: visitStart,
+        lastSeenAt: signedUpAt,
+        identifiedAt: signedUpAt,
+      })
       const returned = random() < 0.25 ? channels[1]! : channel
       identities.push({
         id: identityId,
@@ -430,7 +461,10 @@ export function buildSimulation(siteId: string, now = Date.now()) {
 
       const paidAt =
         signedUpAt + trialDays * dayMs + Math.round(random() * 5 * dayMs)
-      if (paidAt > now || random() > channel.paidRate) continue
+      const subscribes = paidAt <= now && random() <= channel.paidRate
+      const buysOnce = !subscribes && random() < 0.05
+      const trials = subscribes || (!buysOnce && random() < 0.35)
+      if (!subscribes && !buysOnce && !trials) continue
 
       const firstName = pick(firstNames, random())
       const lastName = pick(lastNames, random())
@@ -447,10 +481,35 @@ export function buildSimulation(siteId: string, now = Date.now()) {
         identityId: identified ? identityId : null,
         currency: "usd",
         mrr: 0,
+        trialStartedAt: trials ? signedUpAt : null,
         createdAt: signedUpAt,
       })
 
-      let mrr = weighted(plans, random()).mrr
+      if (buysOnce) {
+        payments.push({
+          siteId,
+          id: `ch_sim_${index}_once`,
+          customerId,
+          amount: lifetimeDealPrice,
+          refunded: random() < 0.1 ? lifetimeDealPrice : 0,
+          currency: "usd",
+          at: Math.min(signedUpAt + 10 * 60_000, now - 60_000),
+        })
+        continue
+      }
+      if (!subscribes) continue
+
+      events.push({
+        ...base,
+        id: newId(),
+        sessionId: `sim_ses_${index.toString(36)}_pay`,
+        timestamp: paidAt - 2 * 60_000,
+        name: "checkout_started",
+        path: "/billing",
+      })
+
+      const plan = weighted(plans, random())
+      let mrr = plan.mrr
       let cycle = 0
       for (let paid = paidAt; paid <= now; paid += monthMs) {
         if (cycle > 0 && random() < 0.04) {
@@ -478,10 +537,31 @@ export function buildSimulation(siteId: string, now = Date.now()) {
           mrr,
           currency: "usd",
         })
+        if (cycle % plan.months === 0) {
+          const amount = mrr * plan.months
+          payments.push({
+            siteId,
+            id: `ch_sim_${index}_${cycle}`,
+            customerId,
+            invoiceId: `in_sim_${index}_${cycle}`,
+            amount,
+            refunded: random() < 0.02 ? Math.round(amount / 2) : 0,
+            currency: "usd",
+            at: paid,
+          })
+        }
         cycle += 1
       }
     }
   }
 
-  return { events, props, identities, customers, snapshots }
+  return {
+    events,
+    props,
+    visitors,
+    identities,
+    customers,
+    snapshots,
+    payments,
+  }
 }
