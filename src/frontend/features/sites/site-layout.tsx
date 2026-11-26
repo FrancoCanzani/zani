@@ -4,7 +4,7 @@ import {
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router"
+import { Link, Outlet, useNavigate } from "@tanstack/react-router"
 import { Hashvatar } from "hashvatar/react"
 import { startTransition, useEffect } from "react"
 import { toast } from "sonner"
@@ -38,10 +38,6 @@ export function SiteLayout() {
     patchSearch,
   } = useSiteSearch()
   const navigate = useNavigate()
-  const onTraffic = useMatch({
-    from: "/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/",
-    shouldThrow: false,
-  })
   const queryClient = useQueryClient()
 
   const totals = useSuspenseQuery(
@@ -116,7 +112,6 @@ export function SiteLayout() {
                 search={search}
                 range={range}
                 timeZone={timeZone}
-                showCompare={onTraffic !== undefined}
                 patchSearch={patchSearch}
               />
             ) : null}

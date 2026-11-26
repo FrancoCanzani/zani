@@ -2,7 +2,6 @@ import { useQuery } from "@tanstack/react-query"
 import {
   AppWindowIcon,
   CrosshairIcon,
-  FilterIcon,
   GlobeIcon,
   LaptopIcon,
   LinkIcon,
@@ -10,6 +9,7 @@ import {
   MonitorIcon,
   TagIcon,
   WavesIcon,
+  type LucideIcon,
 } from "lucide-react"
 import { useState } from "react"
 
@@ -23,16 +23,8 @@ import {
   CommandList,
 } from "@components/ui/command"
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@components/ui/dialog"
-import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuItem,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
@@ -45,7 +37,6 @@ import { DimensionIcon, dimensionLabel } from "./dimension-icon"
 import type { Breakdown } from "./panels"
 import {
   dependentFilters,
-  filterLabels,
   type FilterKey,
   type SiteSearch,
 } from "./search"
@@ -55,13 +46,12 @@ type FilterOption = {
   filterKey: FilterKey
   breakdown: Breakdown
   label: string
-  description: string
 }
 
 type FilterCategory = {
   id: string
   label: string
-  icon: typeof FilterIcon
+  icon: LucideIcon
   options: FilterOption[]
 }
 
@@ -71,12 +61,7 @@ const filterCategories: FilterCategory[] = [
     label: "Page",
     icon: LinkIcon,
     options: [
-      {
-        filterKey: "path",
-        breakdown: "path",
-        label: "Path",
-        description: "Filter by page path",
-      },
+      { filterKey: "path", breakdown: "path", label: "Path" },
     ],
   },
   {
@@ -84,23 +69,12 @@ const filterCategories: FilterCategory[] = [
     label: "Source",
     icon: WavesIcon,
     options: [
-      {
-        filterKey: "source",
-        breakdown: "source",
-        label: "Channel",
-        description: "Direct, search, referral, and more",
-      },
-      {
-        filterKey: "referrer",
-        breakdown: "referrer",
-        label: "Referrer",
-        description: "Referring site host",
-      },
+      { filterKey: "source", breakdown: "source", label: "Channel" },
+      { filterKey: "referrer", breakdown: "referrer", label: "Referrer" },
       {
         filterKey: "referrer_path",
         breakdown: "referrer_path",
         label: "Referrer path",
-        description: "Path on the referring site",
       },
     ],
   },
@@ -109,36 +83,19 @@ const filterCategories: FilterCategory[] = [
     label: "UTM tags",
     icon: CrosshairIcon,
     options: [
-      {
-        filterKey: "utm_source",
-        breakdown: "utm_source",
-        label: "UTM source",
-        description: "utm_source parameter",
-      },
-      {
-        filterKey: "utm_medium",
-        breakdown: "utm_medium",
-        label: "UTM medium",
-        description: "utm_medium parameter",
-      },
+      { filterKey: "utm_source", breakdown: "utm_source", label: "UTM source" },
+      { filterKey: "utm_medium", breakdown: "utm_medium", label: "UTM medium" },
       {
         filterKey: "utm_campaign",
         breakdown: "utm_campaign",
         label: "UTM campaign",
-        description: "utm_campaign parameter",
       },
       {
         filterKey: "utm_content",
         breakdown: "utm_content",
         label: "UTM content",
-        description: "utm_content parameter",
       },
-      {
-        filterKey: "utm_term",
-        breakdown: "utm_term",
-        label: "UTM term",
-        description: "utm_term parameter",
-      },
+      { filterKey: "utm_term", breakdown: "utm_term", label: "UTM term" },
     ],
   },
   {
@@ -146,18 +103,8 @@ const filterCategories: FilterCategory[] = [
     label: "Location",
     icon: MapPinIcon,
     options: [
-      {
-        filterKey: "country",
-        breakdown: "country",
-        label: "Country",
-        description: "Visitor country",
-      },
-      {
-        filterKey: "city",
-        breakdown: "city",
-        label: "City",
-        description: "Visitor city",
-      },
+      { filterKey: "country", breakdown: "country", label: "Country" },
+      { filterKey: "city", breakdown: "city", label: "City" },
     ],
   },
   {
@@ -165,18 +112,8 @@ const filterCategories: FilterCategory[] = [
     label: "Screen size",
     icon: MonitorIcon,
     options: [
-      {
-        filterKey: "screen",
-        breakdown: "screen",
-        label: "Screen",
-        description: "Viewport width bucket",
-      },
-      {
-        filterKey: "device",
-        breakdown: "device",
-        label: "Device",
-        description: "Desktop, mobile, or tablet",
-      },
+      { filterKey: "screen", breakdown: "screen", label: "Screen" },
+      { filterKey: "device", breakdown: "device", label: "Device" },
     ],
   },
   {
@@ -184,38 +121,21 @@ const filterCategories: FilterCategory[] = [
     label: "Browser",
     icon: AppWindowIcon,
     options: [
-      {
-        filterKey: "browser",
-        breakdown: "browser",
-        label: "Browser",
-        description: "Chrome, Safari, Firefox, and more",
-      },
+      { filterKey: "browser", breakdown: "browser", label: "Browser" },
     ],
   },
   {
     id: "os",
     label: "Operating system",
     icon: LaptopIcon,
-    options: [
-      {
-        filterKey: "os",
-        breakdown: "os",
-        label: "OS",
-        description: "macOS, Windows, iOS, Android",
-      },
-    ],
+    options: [{ filterKey: "os", breakdown: "os", label: "OS" }],
   },
   {
     id: "event",
     label: "Event",
     icon: GlobeIcon,
     options: [
-      {
-        filterKey: "event",
-        breakdown: "event",
-        label: "Event name",
-        description: "Custom event name",
-      },
+      { filterKey: "event", breakdown: "event", label: "Event name" },
     ],
   },
   {
@@ -223,27 +143,15 @@ const filterCategories: FilterCategory[] = [
     label: "Property",
     icon: TagIcon,
     options: [
-      {
-        filterKey: "prop",
-        breakdown: "prop_key",
-        label: "Property",
-        description: "Custom event property key",
-      },
+      { filterKey: "prop", breakdown: "prop_key", label: "Property" },
       {
         filterKey: "prop_value",
         breakdown: "prop_value",
         label: "Property value",
-        description: "Value for the selected property",
       },
     ],
   },
 ]
-
-type Picker = {
-  filterKey: FilterKey
-  breakdown: Breakdown
-  label: string
-}
 
 export function FilterMenu({
   search,
@@ -255,153 +163,99 @@ export function FilterMenu({
   patchSearch: (patch: Partial<SiteSearch>) => void
 }) {
   const { slug, siteId, filters, includeBots } = useSiteSearch()
-  const [picker, setPicker] = useState<Picker | null>(null)
+  const [open, setOpen] = useState(false)
   const activeCount = Object.keys(filters).length
 
-  function openPicker(option: FilterOption) {
-    if (option.filterKey === "prop_value" && search.prop === undefined) {
-      setPicker({
-        filterKey: "prop",
-        breakdown: "prop_key",
-        label: "Property",
-      })
-      return
-    }
-    if (option.filterKey === "prop" && search.event === undefined) {
-      setPicker({
-        filterKey: "event",
-        breakdown: "event",
-        label: "Event name",
-      })
-      return
-    }
-    setPicker({
-      filterKey: option.filterKey,
-      breakdown: option.breakdown,
-      label: option.label,
-    })
-  }
-
-  function applyValue(value: string) {
-    if (!picker) return
-    const key = picker.filterKey
+  function apply(key: FilterKey, value: string) {
     patchSearch({
       ...dependentFilters(key),
       [key]: value,
     })
-    if (key === "prop") {
-      setPicker({
-        filterKey: "prop_value",
-        breakdown: "prop_value",
-        label: "Property value",
-      })
-      return
-    }
-    setPicker(null)
+    setOpen(false)
   }
 
   return (
-    <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button
-            type="button"
-            size="xs"
-            variant={activeCount > 0 ? "secondary" : "outline"}
-          >
-            <FilterIcon data-icon="inline-start" />
-            Filter
-            {activeCount > 0 ? (
-              <span className="font-mono tabular-nums">{activeCount}</span>
-            ) : null}
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" className="min-w-52">
-          {filterCategories.map((category) => {
-            const Icon = category.icon
-            const only = category.options[0]
-            if (category.options.length === 1 && only) {
-              return (
-                <DropdownMenuItem
-                  key={category.id}
-                  onSelect={() => openPicker(only)}
-                >
-                  <Icon />
-                  {category.label}
-                </DropdownMenuItem>
-              )
-            }
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          size="xs"
+          variant={activeCount > 0 ? "secondary" : "outline"}
+        >
+          Filter
+          {activeCount > 0 ? (
+            <span className="font-mono tabular-nums">{activeCount}</span>
+          ) : null}
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="min-w-52">
+        {filterCategories.map((category) => {
+          const Icon = category.icon
+          const only = category.options[0]
+          if (category.options.length === 1 && only) {
             return (
               <DropdownMenuSub key={category.id}>
                 <DropdownMenuSubTrigger>
                   <Icon />
                   {category.label}
                 </DropdownMenuSubTrigger>
-                <DropdownMenuSubContent className="min-w-56">
-                  {category.options.map((option) => (
-                    <DropdownMenuItem
-                      key={option.filterKey}
-                      onSelect={() => openPicker(option)}
-                      className="items-start py-2"
-                    >
-                      <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="truncate">{option.label}</span>
-                        <span className="truncate text-xs text-muted-foreground">
-                          {option.description}
-                        </span>
-                      </span>
-                    </DropdownMenuItem>
-                  ))}
+                <DropdownMenuSubContent className="w-64 p-0">
+                  <FilterValueCommand
+                    slug={slug}
+                    siteId={siteId}
+                    range={range}
+                    filters={filters}
+                    includeBots={includeBots}
+                    option={only}
+                    selected={search[only.filterKey]}
+                    onSelect={(value) => apply(only.filterKey, value)}
+                  />
                 </DropdownMenuSubContent>
               </DropdownMenuSub>
             )
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
-
-      <Dialog
-        open={picker !== null}
-        onOpenChange={(open) => {
-          if (!open) setPicker(null)
-        }}
-      >
-        <DialogContent
-          showCloseButton={false}
-          className="top-[20%] translate-y-0 gap-0 overflow-hidden p-0 sm:max-w-md"
-        >
-          <DialogHeader className="sr-only">
-            <DialogTitle>
-              {picker ? `Filter by ${picker.label}` : "Filter"}
-            </DialogTitle>
-            <DialogDescription>
-              Choose a value to filter the dashboard.
-            </DialogDescription>
-          </DialogHeader>
-          {picker ? (
-            <FilterValuePicker
-              slug={slug}
-              siteId={siteId}
-              range={range}
-              filters={filters}
-              includeBots={includeBots}
-              picker={picker}
-              selected={search[picker.filterKey]}
-              onSelect={applyValue}
-            />
-          ) : null}
-        </DialogContent>
-      </Dialog>
-    </>
+          }
+          return (
+            <DropdownMenuSub key={category.id}>
+              <DropdownMenuSubTrigger>
+                <Icon />
+                {category.label}
+              </DropdownMenuSubTrigger>
+              <DropdownMenuSubContent className="min-w-44 p-1">
+                {category.options.map((option) => (
+                  <DropdownMenuSub key={option.filterKey}>
+                    <DropdownMenuSubTrigger>
+                      {option.label}
+                    </DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="w-64 p-0">
+                      <FilterValueCommand
+                        slug={slug}
+                        siteId={siteId}
+                        range={range}
+                        filters={filters}
+                        includeBots={includeBots}
+                        option={option}
+                        selected={search[option.filterKey]}
+                        onSelect={(value) => apply(option.filterKey, value)}
+                      />
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                ))}
+              </DropdownMenuSubContent>
+            </DropdownMenuSub>
+          )
+        })}
+      </DropdownMenuContent>
+    </DropdownMenu>
   )
 }
 
-function FilterValuePicker({
+function FilterValueCommand({
   slug,
   siteId,
   range,
   filters,
   includeBots,
-  picker,
+  option,
   selected,
   onSelect,
 }: {
@@ -410,7 +264,7 @@ function FilterValuePicker({
   range: StatsRange
   filters: Partial<Record<FilterKey, string>>
   includeBots: boolean
-  picker: Picker
+  option: FilterOption
   selected: string | undefined
   onSelect: (value: string) => void
 }) {
@@ -419,7 +273,7 @@ function FilterValuePicker({
     siteStatsQueryOptions(
       slug,
       siteId,
-      picker.breakdown,
+      option.breakdown,
       range,
       filters,
       includeBots
@@ -434,26 +288,21 @@ function FilterValuePicker({
   const allowCustom =
     trimmed.length > 0 &&
     !hasExact &&
-    (picker.filterKey === "path" ||
-      picker.filterKey === "referrer" ||
-      picker.filterKey === "referrer_path" ||
-      picker.filterKey === "event" ||
-      picker.filterKey === "prop" ||
-      picker.filterKey === "prop_value" ||
-      picker.filterKey.startsWith("utm_"))
+    (option.filterKey === "path" ||
+      option.filterKey === "referrer" ||
+      option.filterKey === "referrer_path" ||
+      option.filterKey === "event" ||
+      option.filterKey === "prop" ||
+      option.filterKey === "prop_value" ||
+      option.filterKey.startsWith("utm_"))
 
   return (
     <Command shouldFilter>
-      <div className="border-b border-border/60 px-3 py-2.5">
-        <p className="text-sm font-medium">{filterLabels[picker.filterKey]}</p>
-        <p className="text-xs text-muted-foreground">
-          Values from the current range
-        </p>
-      </div>
       <CommandInput
-        placeholder={`Search ${picker.label.toLowerCase()}…`}
+        placeholder={`Filter ${option.label.toLowerCase()}…`}
         value={query}
         onValueChange={setQuery}
+        autoFocus
       />
       <CommandList>
         {isPending ? (
@@ -475,7 +324,7 @@ function FilterValuePicker({
                 </CommandItem>
               ) : null}
               {rows.map((row) => {
-                const label = dimensionLabel(picker.breakdown, row.value)
+                const label = dimensionLabel(option.breakdown, row.value)
                 return (
                   <CommandItem
                     key={row.value || "(none)"}
@@ -484,7 +333,7 @@ function FilterValuePicker({
                     onSelect={() => onSelect(row.value)}
                   >
                     <DimensionIcon
-                      dimension={picker.breakdown}
+                      dimension={option.breakdown}
                       value={row.value}
                     />
                     <span className="min-w-0 flex-1 truncate">{label}</span>

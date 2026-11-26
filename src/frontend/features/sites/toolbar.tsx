@@ -53,13 +53,11 @@ export function Toolbar({
   search,
   range,
   timeZone,
-  showCompare,
   patchSearch,
 }: {
   search: SiteSearch
   range: StatsRange
   timeZone: string
-  showCompare: boolean
   patchSearch: (patch: Partial<SiteSearch>) => void
 }) {
   const chips = activeFilterChips(search)
@@ -134,19 +132,6 @@ export function Toolbar({
               }
             >
               <XIcon />
-            </Button>
-          ) : null}
-          {showCompare ? (
-            <Button
-              type="button"
-              size="xs"
-              variant={search.compare ? "secondary" : "ghost"}
-              aria-pressed={search.compare}
-              onClick={() =>
-                patchSearch({ compare: search.compare ? undefined : true })
-              }
-            >
-              Compare
             </Button>
           ) : null}
         </>
