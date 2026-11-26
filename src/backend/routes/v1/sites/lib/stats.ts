@@ -5,6 +5,8 @@ import { event, eventProp } from "../../../../db/schema"
 import type { Database } from "../../../../lib/db"
 import { sourceFor } from "../../../../lib/source"
 
+import { conversionsSql } from "./goals"
+
 import {
   filterKeys,
   type Breakdown,
@@ -259,7 +261,8 @@ export async function sourceCondition(
 
 async function loadSourceBreakdown(
   db: Database,
-  where: ReturnType<typeof and>
+  where: ReturnType<typeof and>,
+  converted: SQL | null
 ) {
   const rows = await db
     .select({
@@ -268,6 +271,7 @@ async function loadSourceBreakdown(
       views: sql<number>`count(*)`,
       visitors: sql<number>`count(distinct ${event.visitorId})`,
       sessions: sql<number>`count(distinct ${event.sessionId})`,
+      conversions: conversionsSql(converted),
     })
     .from(event)
     .where(where)
@@ -275,7 +279,13 @@ async function loadSourceBreakdown(
 
   const merged = new Map<
     string,
-    { series: string; views: number; visitors: number; sessions: number }
+    {
+      series: string
+      views: number
+      visitors: number
+      sessions: number
+      conversions: number
+    }
   >()
   for (const row of rows) {
     const series = sourceFor(row.utmSource, row.referrerHost)
@@ -284,10 +294,12 @@ async function loadSourceBreakdown(
       views: 0,
       visitors: 0,
       sessions: 0,
+      conversions: 0,
     }
     current.views += asNumber(row.views)
     current.visitors += asNumber(row.visitors)
     current.sessions += asNumber(row.sessions)
+    current.conversions += asNumber(row.conversions)
     merged.set(series, current)
   }
   return [...merged.values()]
@@ -314,18 +326,20 @@ export async function loadBreakdownRows(
     grain: Grain
     timeZone?: string
     filters: Partial<Record<FilterKey, string | undefined>>
+    converted: SQL | null
   }
 ) {
-  const { breakdown, where, grain, timeZone, filters } = input
+  const { breakdown, where, grain, timeZone, filters, converted } = input
   const views = sql<number>`count(*)`
   const visitors = sql<number>`count(distinct ${event.visitorId})`
   const sessions = sql<number>`count(distinct ${event.sessionId})`
+  const conversions = conversionsSql(converted)
 
   if (breakdown === "entry" || breakdown === "exit") {
-    return loadEdgeBreakdown(db, { breakdown, where })
+    return loadEdgeBreakdown(db, { breakdown, where, converted })
   }
   if (breakdown === "source") {
-    return loadSourceBreakdown(db, where)
+    return loadSourceBreakdown(db, where, converted)
   }
 
   if (isPropBreakdown(breakdown)) {
@@ -333,6 +347,7 @@ export async function loadBreakdownRows(
       breakdown,
       where,
       filters,
+      conversions,
     })
   }
 
@@ -342,7 +357,9 @@ export async function loadBreakdownRows(
   const joinProps = needsPropJoin(breakdown, filters)
 
   if (breakdown) {
-    const query = db.select({ series, views, visitors, sessions }).from(event)
+    const query = db
+      .select({ series, views, visitors, sessions, conversions })
+      .from(event)
     const scoped = joinProps
       ? query
           .innerJoin(eventProp, eq(eventProp.eventId, event.id))
@@ -352,7 +369,7 @@ export async function loadBreakdownRows(
   }
 
   const query = db
-    .select({ bucket, series, views, visitors, sessions })
+    .select({ bucket, series, views, visitors, sessions, conversions })
     .from(event)
   const scoped = joinProps
     ? query
@@ -368,6 +385,7 @@ async function loadPropBreakdown(
     breakdown: "prop_key" | "prop_value"
     where: ReturnType<typeof and>
     filters: Partial<Record<FilterKey, string | undefined>>
+    conversions: SQL<number>
   }
 ) {
   const series =
@@ -379,7 +397,13 @@ async function loadPropBreakdown(
   const sessions = sql<number>`count(distinct ${event.sessionId})`
 
   return db
-    .select({ series, views, visitors, sessions })
+    .select({
+      series,
+      views,
+      visitors,
+      sessions,
+      conversions: input.conversions,
+    })
     .from(event)
     .innerJoin(eventProp, eq(eventProp.eventId, event.id))
     .where(and(input.where, ...propFilterConditions(input.filters)))
@@ -393,6 +417,7 @@ async function loadEdgeBreakdown(
   input: {
     breakdown: "entry" | "exit"
     where: ReturnType<typeof and>
+    converted: SQL | null
   }
 ) {
   const edgeExpr =
@@ -419,13 +444,21 @@ async function loadEdgeBreakdown(
       path: event.path,
       timestamp: event.timestamp,
       visitorId: event.visitorId,
+      converted: input.converted
+        ? sql<number>`case when ${input.converted} then 1 else 0 end`
+        : sql<number>`0`,
     })
     .from(event)
     .where(input.where)
 
   const counts = new Map<
     string,
-    { views: number; visitors: Set<string>; sessions: Set<string> }
+    {
+      views: number
+      visitors: Set<string>
+      sessions: Set<string>
+      converted: Set<string>
+    }
   >()
   for (const row of pageviews) {
     const edgeAt = bySession.get(row.sessionId)
@@ -434,10 +467,12 @@ async function loadEdgeBreakdown(
       views: 0,
       visitors: new Set<string>(),
       sessions: new Set<string>(),
+      converted: new Set<string>(),
     }
     current.views += 1
     current.visitors.add(row.visitorId)
     current.sessions.add(row.sessionId)
+    if (asNumber(row.converted) === 1) current.converted.add(row.visitorId)
     counts.set(row.path, current)
   }
 
@@ -447,6 +482,7 @@ async function loadEdgeBreakdown(
       views: value.views,
       visitors: value.visitors.size,
       sessions: value.sessions.size,
+      conversions: value.converted.size,
     }))
     .sort((a, b) => b.visitors - a.visitors)
     .slice(0, pointLimit)

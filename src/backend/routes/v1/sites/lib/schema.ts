@@ -82,6 +82,7 @@ export const statsQuerySchema = z.object({
   breakdown: z.enum(breakdowns).optional(),
   tz: z.string().trim().min(1).max(64).optional(),
   bots: z.enum(["0", "1"]).optional(),
+  goal: z.string().trim().max(64).optional(),
   source: filterValue.optional(),
   path: filterValue.optional(),
   referrer: filterValue.optional(),

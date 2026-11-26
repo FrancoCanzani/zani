@@ -1,5 +1,20 @@
 import { zValidator } from "@hono/zod-validator"
-import { and, asc, eq, gte, isNotNull, ne, notLike, sql } from "drizzle-orm"
+import {
+  and,
+  asc,
+  count,
+  countDistinct,
+  desc,
+  eq,
+  gte,
+  inArray,
+  isNotNull,
+  lt,
+  ne,
+  notInArray,
+  notLike,
+  sql,
+} from "drizzle-orm"
 import { Hono } from "hono"
 
 import {
@@ -15,6 +30,15 @@ import { requireWorkspaceMember } from "../../../middleware/workspace"
 import type { AppEnv } from "../../../types"
 import { workspaceFromContext } from "../workspaces/lib/context"
 
+import {
+  convertedCondition,
+  conversionsSql,
+  goalKey,
+  goalVisitors,
+  parseGoal,
+  reservedEventNames,
+  type Goal,
+} from "./lib/goals"
 import { loadSite } from "./lib/load"
 import {
   simCustomerPrefix,
@@ -35,6 +59,7 @@ import {
 } from "./lib/stats"
 
 const onlineWindowMs = 5 * 60_000
+const eventGoalLimit = 50
 
 export const get = new Hono<AppEnv>()
   .get("/", requireSession, requireWorkspaceMember, async (c) => {
@@ -47,6 +72,7 @@ export const get = new Hono<AppEnv>()
         domain: site.domain,
         createdAt: site.createdAt,
         revokedAt: site.revokedAt,
+        secretKeyHash: site.secretKeyHash,
       })
       .from(site)
       .where(eq(site.workspaceId, current.workspace.id))
@@ -204,10 +230,19 @@ export const get = new Hono<AppEnv>()
       const views = sql<number>`count(distinct ${event.id})`
       const visitors = sql<number>`count(distinct ${event.visitorId})`
       const sessions = sql<number>`count(distinct ${event.sessionId})`
+      const converted = convertedCondition(
+        db,
+        matched.id,
+        range,
+        parseGoal(query.goal)
+      )
+      const conversions = conversionsSql(converted)
       const totalsWhere =
         propFilters.length > 0 ? and(where, ...propFilters) : where
 
-      const totalsQuery = db.select({ views, visitors, sessions }).from(event)
+      const totalsQuery = db
+        .select({ views, visitors, sessions, conversions })
+        .from(event)
       const totalsPromise = joinProps
         ? totalsQuery
             .innerJoin(eventProp, eq(eventProp.eventId, event.id))
@@ -252,6 +287,7 @@ export const get = new Hono<AppEnv>()
         grain: range.grain,
         timeZone: query.tz,
         filters: query,
+        converted,
       })
 
       return c.json(
@@ -267,6 +303,7 @@ export const get = new Hono<AppEnv>()
           sessions: totalSessions,
           bounceRate,
           viewsPerVisit,
+          conversions: asNumber(totals?.conversions),
           hasEvents: seen !== undefined,
           truncated: rows.length >= pointLimit,
           points: rows.map((row) => ({
@@ -275,7 +312,120 @@ export const get = new Hono<AppEnv>()
             views: asNumber(row.views),
             visitors: asNumber(row.visitors),
             sessions: asNumber(row.sessions),
+            conversions: asNumber(row.conversions),
           })),
+        },
+        200
+      )
+    }
+  )
+  .get(
+    "/:siteId/goals",
+    requireSession,
+    requireWorkspaceMember,
+    zValidator("query", statsQuerySchema),
+    async (c) => {
+      const query = c.req.valid("query")
+      const parsed = parseRange(query)
+      if (!parsed.ok) {
+        return c.json(
+          { error: "invalid_range" as const, message: parsed.message },
+          400
+        )
+      }
+
+      const current = workspaceFromContext(c.var)
+      const db = createDb(c.env)
+      const matched = await loadSite(
+        db,
+        current.workspace.id,
+        c.req.param("siteId")
+      )
+      if (!matched) {
+        return c.json({ error: "not_found" as const }, 404)
+      }
+
+      const range = parsed.range
+      const where = siteWhere(
+        matched.id,
+        range,
+        { ...query, breakdown: undefined },
+        query.source
+          ? [await sourceCondition(db, matched.id, range, query.source)]
+          : []
+      )
+      const propFilters = propFilterConditions(query)
+      const audienceQuery = db
+        .select({ visitorId: event.visitorId })
+        .from(event)
+      const audience =
+        propFilters.length > 0
+          ? audienceQuery
+              .innerJoin(eventProp, eq(eventProp.eventId, event.id))
+              .where(and(where, ...propFilters))
+          : audienceQuery.where(where)
+      const audienceRows = audience.as("audience")
+      const audienceSize = db
+        .select({ visitors: countDistinct(audienceRows.visitorId) })
+        .from(audienceRows)
+
+      const reached = (goal: Goal) => {
+        const matches = goalVisitors(db, matched.id, range, goal).as("reached")
+        return db
+          .select({ conversions: countDistinct(matches.visitorId) })
+          .from(matches)
+          .where(inArray(matches.visitorId, audience))
+      }
+
+      const [[totals], eventGoals, [signups], [paid]] = await Promise.all([
+        audienceSize,
+        db
+          .select({
+            name: event.name,
+            conversions: countDistinct(event.visitorId),
+            completions: count(),
+          })
+          .from(event)
+          .where(
+            and(
+              eq(event.siteId, matched.id),
+              gte(event.timestamp, range.start),
+              lt(event.timestamp, range.end),
+              notInArray(event.name, reservedEventNames),
+              inArray(event.visitorId, audience)
+            )
+          )
+          .groupBy(event.name)
+          .orderBy(desc(countDistinct(event.visitorId)))
+          .limit(eventGoalLimit),
+        reached({ kind: "signup" }),
+        reached({ kind: "paid" }),
+      ])
+
+      const automatic: Array<{ goal: Goal; conversions: number }> = [
+        { goal: { kind: "signup" }, conversions: asNumber(signups?.conversions) },
+        { goal: { kind: "paid" }, conversions: asNumber(paid?.conversions) },
+      ]
+
+      return c.json(
+        {
+          visitors: asNumber(totals?.visitors),
+          goals: [
+            ...automatic.map((row) => ({
+              key: goalKey(row.goal),
+              kind: row.goal.kind,
+              name: row.goal.kind,
+              conversions: row.conversions,
+              completions: row.conversions,
+            })),
+            ...eventGoals.map((row) => ({
+              key: goalKey({ kind: "event", name: row.name }),
+              kind: "event" as const,
+              name: row.name,
+              conversions: asNumber(row.conversions),
+              completions: asNumber(row.completions),
+            })),
+          ],
         },
         200
       )
