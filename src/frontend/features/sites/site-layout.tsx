@@ -6,7 +6,6 @@ import {
 } from "@tanstack/react-query"
 import { Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router"
 import { Hashvatar } from "hashvatar/react"
-import { SettingsIcon, SparklesIcon } from "lucide-react"
 import { startTransition, useEffect } from "react"
 import { toast } from "sonner"
 
@@ -165,7 +164,6 @@ export function SiteLayout() {
               disabled={simulate.isPending || revoked}
               onClick={() => simulate.mutate()}
             >
-              <SparklesIcon data-icon="inline-start" />
               {simulate.isPending ? "Simulating…" : "Simulate data"}
             </Button>
           ) : null}
@@ -174,7 +172,6 @@ export function SiteLayout() {
               to="/businesses/$slug/sites/$siteId/settings"
               params={{ slug, siteId }}
             >
-              <SettingsIcon data-icon="inline-start" />
               Settings
             </Link>
           </Button>
@@ -246,26 +243,15 @@ function WaitingForViews({
   return (
     <section className="flex flex-1 flex-col items-center justify-center px-6 pb-16 text-center">
       <div className="flex flex-col items-center gap-6">
-        <div className="relative flex size-28 items-center justify-center">
-          <span
-            aria-hidden
-            className="absolute inset-0 animate-ping rounded-full bg-foreground/5 [animation-duration:2.4s]"
-          />
-          <span
-            aria-hidden
-            className="absolute inset-3 rounded-full bg-foreground/[0.04]"
-          />
-          <Hashvatar
-            hash={domain}
-            size={88}
-            animated
-            className="relative size-[88px] shadow-lg shadow-black/10"
-          />
-        </div>
+        <Hashvatar
+          hash={domain}
+          size={88}
+          animated
+          tones={["#2563eb", "#0ea5e9", "#38bdf8"]}
+          className="size-[88px] shadow-lg shadow-sky-900/10"
+        />
         <div className="max-w-xs space-y-2">
-          <p className="text-xs tracking-wide text-muted-foreground uppercase">
-            Listening
-          </p>
+          <p className="text-sm text-muted-foreground">Listening</p>
           <h2 className="text-xl font-medium tracking-tight">
             Waiting for the first pageview
           </h2>
