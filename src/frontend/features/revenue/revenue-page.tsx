@@ -4,22 +4,30 @@ import { Suspense } from "react"
 
 import { Button } from "@components/ui/button"
 import { Skeleton } from "@components/ui/skeleton"
-import { filterLabels } from "@features/sites/search"
+import { previousStatsRange } from "@features/sites/api"
+import { filterLabels, revenueChartMetricFromSearch } from "@features/sites/search"
 import { useSiteSearch } from "@features/sites/use-site-search"
 
 import { revenueOverviewQueryOptions } from "./api"
-import {
-  AttributionPanel,
-  MovementsPanel,
-  TopCustomersPanel,
-} from "./revenue-panels"
+import { RevenueChart } from "./revenue-chart"
+import { RevenueKpiCards } from "./revenue-kpi-cards"
+import { MovementsPanel, TopCustomersPanel } from "./revenue-panels"
 
 export function RevenuePage() {
-  const { slug, siteId, search, range, filters, includeBots, patchSearch } =
+  const { slug, siteId, search, range, filters, timeZone, patchSearch } =
     useSiteSearch()
   const { data: revenue } = useSuspenseQuery(
     revenueOverviewQueryOptions(slug, siteId, range, filters)
   )
+  const previous = useSuspenseQuery(
+    revenueOverviewQueryOptions(
+      slug,
+      siteId,
+      previousStatsRange(range),
+      filters
+    )
+  )
+  const metric = revenueChartMetricFromSearch(search.metric)
 
   if (!revenue.hasData) {
     return (
@@ -43,19 +51,22 @@ export function RevenuePage() {
             : null}
         </p>
       ) : null}
-      <Suspense fallback={<PanelSkeleton />}>
-        <AttributionPanel
-          slug={slug}
-          siteId={siteId}
-          range={range}
-          filters={filters}
-          includeBots={includeBots}
-          by={search.by}
-          touch={search.touch}
-          overview={revenue}
-          onChange={patchSearch}
-        />
-      </Suspense>
+
+      <RevenueKpiCards
+        overview={revenue}
+        previous={previous.data}
+        selected={metric}
+        onSelect={(next) => patchSearch({ metric: next })}
+      />
+
+      <RevenueChart
+        points={revenue.points}
+        range={range}
+        metric={metric}
+        currency={revenue.currency}
+        timeZone={timeZone}
+      />
+
       <div className="grid gap-3 md:grid-cols-2">
         <MovementsPanel overview={revenue} />
         <Suspense fallback={<PanelSkeleton />}>
@@ -83,14 +94,12 @@ function RevenueSetup({
     <section className="flex flex-col gap-4 rounded-xl border border-dashed border-border p-6 sm:flex-row sm:items-center sm:justify-between">
       <div className="max-w-lg space-y-1">
         <h3 className="text-[15px] font-medium tracking-tight">
-          {connected
-            ? "Waiting for revenue"
-            : "See which channels bring paying customers"}
+          {connected ? "Waiting for revenue" : "Connect Stripe for MRR"}
         </h3>
         <p className="text-sm leading-relaxed text-muted-foreground">
           {connected
             ? "Stripe is connected. Run a sync from settings to import customers, subscriptions, and paid invoices."
-            : "Connect Stripe to see MRR, new customers, and churn. Then call zani.identify() at signup to tie every customer to the channel, page, and country they came from."}
+            : "Connect Stripe to see MRR, ARR, movements, and customers. Restricted key only — Zani never writes to your Stripe account."}
         </p>
       </div>
       <Button asChild variant="outline" className="shrink-0">

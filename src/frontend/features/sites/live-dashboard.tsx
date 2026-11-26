@@ -11,7 +11,6 @@ import { useSiteSearch } from "./use-site-search"
 
 const livePanelIds = new Set(["pages", "sources", "countries"])
 const livePanels = breakdownPanels.filter((panel) => livePanelIds.has(panel.id))
-const noRevenue = { enabled: false, currency: "usd" }
 
 function PulseDot({ active }: { active: boolean }) {
   return (
@@ -99,12 +98,8 @@ export function LiveDashboard() {
       <DashboardChart
         points={totals.data.points}
         previousPoints={[]}
-        revenuePoints={[]}
         range={range}
         bars="views"
-        line="new_mrr"
-        currency="usd"
-        showRevenue={false}
         compare={false}
         timeZone={timeZone}
       />
@@ -120,7 +115,6 @@ export function LiveDashboard() {
             filters={filters}
             includeBots={includeBots}
             search={search}
-            revenue={noRevenue}
             onSelect={toggleFilter}
           />
         ))}

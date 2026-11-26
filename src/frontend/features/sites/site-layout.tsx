@@ -56,7 +56,7 @@ export function SiteLayout() {
     patchSearch,
   } = useSiteSearch()
   const navigate = useNavigate()
-  const onOverview = useMatch({
+  const onTraffic = useMatch({
     from: "/_authed/businesses/$slug/_shell/sites/$siteId/_dashboard/",
     shouldThrow: false,
   })
@@ -173,7 +173,7 @@ export function SiteLayout() {
             search={search}
             range={range}
             timeZone={timeZone}
-            showCompare={onOverview !== undefined}
+            showCompare={onTraffic !== undefined}
             patchSearch={patchSearch}
           />
           <Outlet />

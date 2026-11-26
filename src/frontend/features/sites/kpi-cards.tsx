@@ -1,10 +1,8 @@
-import { formatCompactMoney, type RevenueOverview } from "@features/revenue/api"
-
 import { changePercent, type SiteStats } from "./api"
-import { metricLabels, type Metric } from "./search"
+import { metricLabels, type TrafficMetric } from "./search"
 
 type Kpi = {
-  metric: Metric
+  metric: TrafficMetric
   value: string
   delta: number | null
   invert?: boolean
@@ -29,25 +27,17 @@ function DeltaBadge({ value, invert }: { value: number; invert?: boolean }) {
   )
 }
 
-const revenueMetrics = new Set<Metric>(["signups", "new_mrr", "mrr"])
-
 export function KpiCards({
   totals,
   previousTotals,
-  revenue,
-  previousRevenue,
   selected,
   onSelect,
 }: {
   totals: SiteStats
   previousTotals: SiteStats
-  revenue: RevenueOverview
-  previousRevenue: RevenueOverview
-  selected: Metric
-  onSelect: (metric: Metric) => void
+  selected: TrafficMetric
+  onSelect: (metric: TrafficMetric) => void
 }) {
-  const currency = revenue.currency
-
   const kpis: Kpi[] = [
     {
       metric: "visitors",
@@ -65,31 +55,12 @@ export function KpiCards({
       delta: changePercent(totals.bounceRate, previousTotals.bounceRate),
       invert: true,
     },
-    {
-      metric: "signups",
-      value: revenue.signups.toLocaleString(),
-      delta: changePercent(revenue.signups, previousRevenue.signups),
-    },
-    {
-      metric: "new_mrr",
-      value: formatCompactMoney(revenue.newMrr, currency),
-      delta: changePercent(revenue.newMrr, previousRevenue.newMrr),
-    },
-    {
-      metric: "mrr",
-      value: formatCompactMoney(revenue.mrr, currency),
-      delta:
-        revenue.mrrStart > 0
-          ? changePercent(revenue.mrr, revenue.mrrStart)
-          : null,
-    },
   ]
 
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
+    <div className="grid grid-cols-3 gap-2">
       {kpis.map((kpi) => {
         const active = selected === kpi.metric
-        const accent = revenueMetrics.has(kpi.metric)
         return (
           <button
             key={kpi.metric}
@@ -102,13 +73,7 @@ export function KpiCards({
                 : "border-border/70 hover:border-foreground/20 hover:bg-muted/30"
             }`}
           >
-            <div className="flex items-center gap-1.5 text-[13px] text-muted-foreground">
-              {accent ? (
-                <span
-                  aria-hidden
-                  className="size-1.5 rounded-full bg-emerald-600"
-                />
-              ) : null}
+            <div className="text-[13px] text-muted-foreground">
               {metricLabels[kpi.metric]}
             </div>
             <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">

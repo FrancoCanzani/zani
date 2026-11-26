@@ -389,23 +389,39 @@ export const rangeLabels: Record<RangePreset, string> = {
   custom: "Custom",
 }
 
-export type TrafficMetric = "visitors" | "views"
-export type RevenueMetric = "signups" | "new_mrr" | "mrr"
+export type TrafficMetric = "visitors" | "views" | "bounce"
+export type ChartTrafficMetric = "visitors" | "views"
+export type RevenueChartMetric = "new_mrr" | "mrr"
 
-export function chartSeriesFor(metric: Metric): {
-  bars: TrafficMetric
-  line: RevenueMetric
-} {
+export function trafficMetricFromSearch(metric: Metric): TrafficMetric {
   switch (metric) {
     case "visitors":
     case "views":
-      return { bars: metric, line: "new_mrr" }
+    case "bounce":
+      return metric
     case "signups":
     case "new_mrr":
     case "mrr":
-      return { bars: "visitors", line: metric }
+      return "visitors"
+    default: {
+      const exhaustive: never = metric
+      return exhaustive
+    }
+  }
+}
+
+export function revenueChartMetricFromSearch(
+  metric: Metric
+): RevenueChartMetric {
+  switch (metric) {
+    case "new_mrr":
+    case "mrr":
+      return metric
+    case "visitors":
+    case "views":
     case "bounce":
-      return { bars: "visitors", line: "new_mrr" }
+    case "signups":
+      return "mrr"
     default: {
       const exhaustive: never = metric
       return exhaustive

@@ -7,12 +7,6 @@ import {
   type ChartConfig,
 } from "@components/ui/chart"
 
-import {
-  formatCompactMoney,
-  formatMoney,
-  type RevenuePoint,
-} from "@features/revenue/api"
-
 import { formatCount } from "@lib/utils"
 
 import type { StatsPoint, StatsRange } from "./api"
@@ -22,8 +16,7 @@ import {
   metricLabels,
   zonedOffsetMs,
   type Grain,
-  type RevenueMetric,
-  type TrafficMetric,
+  type ChartTrafficMetric,
 } from "./search"
 
 function bucketSize(grain: Grain) {
@@ -78,51 +71,25 @@ function formatBucket(ms: number, grain: Grain, timeZone: string) {
   }
 }
 
-function revenueValue(point: RevenuePoint | undefined, metric: RevenueMetric) {
-  if (!point) return 0
-  switch (metric) {
-    case "signups":
-      return point.signups
-    case "new_mrr":
-      return point.newMrr
-    case "mrr":
-      return point.mrr
-    default: {
-      const exhaustive: never = metric
-      return exhaustive
-    }
-  }
-}
-
 type ChartRow = {
   bucket: number
   bars: number
   previous: number | null
-  line: number | null
   partial: boolean
-  revenue: RevenuePoint | undefined
 }
 
 export function DashboardChart({
   points,
   previousPoints,
-  revenuePoints,
   range,
   bars,
-  line,
-  currency,
-  showRevenue,
   compare,
   timeZone,
 }: {
   points: StatsPoint[]
   previousPoints: StatsPoint[]
-  revenuePoints: RevenuePoint[]
   range: StatsRange
-  bars: TrafficMetric
-  line: RevenueMetric
-  currency: string
-  showRevenue: boolean
+  bars: ChartTrafficMetric
   compare: boolean
   timeZone: string
 }) {
@@ -145,58 +112,41 @@ export function DashboardChart({
         .map((point) => [point.bucket as number, point[bars]])
     )
     const firstPrevious = bucketOf(startMs - (endMs - startMs))
-    const revenue = new Map(revenuePoints.map((point) => [point.bucket, point]))
     const now = Date.now()
     const result: ChartRow[] = []
-    let lastMrr = 0
     for (
       let bucket = bucketOf(startMs), index = 0;
       bucket < endMs;
       bucket += size, index += 1
     ) {
-      const revenuePoint = revenue.get(bucket)
-      if (revenuePoint) lastMrr = revenuePoint.mrr
-      const value =
-        line === "mrr"
-          ? revenuePoint
-            ? revenuePoint.mrr
-            : lastMrr
-          : revenueValue(revenuePoint, line)
       result.push({
         bucket,
         bars: traffic.get(bucket) ?? 0,
         previous: compare
           ? (previousByBucket.get(firstPrevious + index * size) ?? 0)
           : null,
-        line: bucket > now ? null : value,
         partial: bucket + size > now,
-        revenue: revenuePoint,
       })
     }
     return result
   }, [
     points,
     previousPoints,
-    revenuePoints,
     range.start,
     range.end,
     grain,
     bars,
-    line,
     compare,
     timeZone,
   ])
 
-  const money = line !== "signups"
   const barLabel = metricLabels[bars]
-  const lineLabel = metricLabels[line]
   const chartConfig = {
     bars: { label: barLabel, color: "var(--foreground)" },
     previous: {
       label: `Previous ${barLabel.toLowerCase()}`,
       color: "var(--chart-2)",
     },
-    line: { label: lineLabel, color: "var(--color-emerald-600)" },
   } satisfies ChartConfig
 
   const tickCount = Math.min(7, Math.max(2, rows.length))
@@ -222,19 +172,6 @@ export function DashboardChart({
               className="h-0 w-3 border-t border-dashed border-muted-foreground"
             />
             Previous period
-          </span>
-        ) : null}
-        {showRevenue ? (
-          <span className="flex items-center gap-1.5">
-            <span
-              aria-hidden
-              className={
-                line === "mrr"
-                  ? "h-0.5 w-3 rounded-full bg-emerald-600"
-                  : "size-2.5 rounded-[3px] bg-emerald-600"
-              }
-            />
-            {lineLabel}
           </span>
         ) : null}
       </div>
@@ -263,7 +200,6 @@ export function DashboardChart({
             }
           />
           <YAxis
-            yAxisId="traffic"
             tickLine={false}
             axisLine={false}
             tickMargin={6}
@@ -271,22 +207,6 @@ export function DashboardChart({
             allowDecimals={false}
             tickFormatter={(value) => formatCount(Number(value))}
           />
-          {showRevenue ? (
-            <YAxis
-              yAxisId="revenue"
-              orientation="right"
-              tickLine={false}
-              axisLine={false}
-              tickMargin={6}
-              width="auto"
-              allowDecimals={false}
-              tickFormatter={(value) =>
-                money
-                  ? formatCompactMoney(Number(value), currency)
-                  : formatCount(Number(value))
-              }
-            />
-          ) : null}
           <ChartTooltip
             cursor={{ fill: "var(--muted)", opacity: 0.6 }}
             content={({ active, payload }) => {
@@ -314,30 +234,6 @@ export function DashboardChart({
                         muted
                       />
                     ) : null}
-                    {showRevenue ? (
-                      <>
-                        <TooltipRow
-                          label="Signups"
-                          value={String(row.revenue?.signups ?? 0)}
-                        />
-                        <TooltipRow
-                          label="New customers"
-                          value={String(row.revenue?.newCustomers ?? 0)}
-                        />
-                        <TooltipRow
-                          label="New MRR"
-                          value={formatMoney(
-                            row.revenue?.newMrr ?? 0,
-                            currency
-                          )}
-                          accent
-                        />
-                        <TooltipRow
-                          label="MRR"
-                          value={formatMoney(row.revenue?.mrr ?? 0, currency)}
-                        />
-                      </>
-                    ) : null}
                   </dl>
                 </div>
               )
@@ -345,7 +241,6 @@ export function DashboardChart({
           />
           {compare ? (
             <Line
-              yAxisId="traffic"
               dataKey="previous"
               type="monotone"
               stroke="var(--color-previous)"
@@ -357,7 +252,6 @@ export function DashboardChart({
             />
           ) : null}
           <Bar
-            yAxisId="traffic"
             dataKey="bars"
             fill="var(--color-bars)"
             fillOpacity={0.14}
@@ -385,35 +279,6 @@ export function DashboardChart({
             }}
             activeBar={{ fillOpacity: 0.3 }}
           />
-          {showRevenue && line !== "mrr" ? (
-            <Bar
-              yAxisId="revenue"
-              dataKey="line"
-              fill="var(--color-line)"
-              fillOpacity={0.85}
-              radius={[3, 3, 0, 0]}
-              maxBarSize={14}
-              isAnimationActive={false}
-            />
-          ) : null}
-          {showRevenue && line === "mrr" ? (
-            <Line
-              yAxisId="revenue"
-              dataKey="line"
-              type="stepAfter"
-              stroke="var(--color-line)"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{
-                r: 3.5,
-                strokeWidth: 2,
-                stroke: "var(--color-line)",
-                fill: "var(--background)",
-              }}
-              connectNulls={false}
-              isAnimationActive={false}
-            />
-          ) : null}
         </ComposedChart>
       </ChartContainer>
     </section>
@@ -424,25 +289,15 @@ function TooltipRow({
   label,
   value,
   muted,
-  accent,
 }: {
   label: string
   value: string
   muted?: boolean
-  accent?: boolean
 }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <dt className="font-sans text-muted-foreground">{label}</dt>
-      <dd
-        className={
-          accent
-            ? "text-emerald-700"
-            : muted
-              ? "text-muted-foreground"
-              : "text-foreground"
-        }
-      >
+      <dd className={muted ? "text-muted-foreground" : "text-foreground"}>
         {value}
       </dd>
     </div>

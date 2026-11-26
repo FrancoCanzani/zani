@@ -1,9 +1,7 @@
 import {
-  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
-import { ArrowDownIcon } from "lucide-react"
 import { Suspense, useMemo, useState } from "react"
 
 import { Segmented } from "@components/segmented"
@@ -17,12 +15,6 @@ import {
   SheetTrigger,
 } from "@components/ui/sheet"
 import { Skeleton } from "@components/ui/skeleton"
-
-import {
-  formatCompactMoney,
-  formatMoney,
-  revenueBreakdownQueryOptions,
-} from "@features/revenue/api"
 
 import {
   siteStatsQueryOptions,
@@ -40,61 +32,11 @@ import {
 } from "./panels"
 import type { FilterKey, SiteSearch } from "./search"
 
-const revenueBreakdowns = new Set<Breakdown>([
-  "source",
-  "referrer",
-  "path",
-  "entry",
-  "country",
-  "device",
-  "utm_medium",
-  "utm_campaign",
-])
-
 const visibleRows = 8
-
-type SortKey = "visitors" | "revenue"
 
 type Row = {
   value: string
   visitors: number
-  customers: number
-  newMrr: number
-}
-
-type RevenueContext = {
-  enabled: boolean
-  currency: string
-}
-
-function ColumnHeader({
-  label,
-  active,
-  onClick,
-  className,
-}: {
-  label: string
-  active: boolean
-  onClick?: () => void
-  className: string
-}) {
-  if (!onClick) {
-    return <span className={className}>{label}</span>
-  }
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={`${className} inline-flex items-center justify-end gap-1 rounded-sm transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${active ? "text-foreground" : ""}`}
-    >
-      <ArrowDownIcon
-        aria-hidden
-        className={`size-3 transition-opacity ${active ? "opacity-100" : "opacity-0"}`}
-      />
-      {label}
-    </button>
-  )
 }
 
 function RowList({
@@ -102,64 +44,36 @@ function RowList({
   filterKey,
   rows,
   activeValue,
-  showRevenue,
-  sort,
-  currency,
-  onSort,
   onSelect,
 }: {
   dimension: Breakdown
   filterKey: FilterKey
   rows: Row[]
   activeValue: string | undefined
-  showRevenue: boolean
-  sort: SortKey
-  currency: string
-  onSort?: (sort: SortKey) => void
   onSelect: (key: FilterKey, value: string) => void
 }) {
-  const metricOf = (row: Row) =>
-    sort === "revenue" ? row.newMrr : row.visitors
-  const max = Math.max(1, ...rows.map(metricOf))
+  const max = Math.max(1, ...rows.map((row) => row.visitors))
 
   return (
     <div>
       <div className="mt-3 mb-1 flex h-6 items-center gap-3 border-b border-border/60 px-2 pb-1 text-xs text-muted-foreground">
         <span className="flex-1" />
-        <ColumnHeader
-          label="Visitors"
-          active={showRevenue && sort === "visitors"}
-          onClick={showRevenue && onSort ? () => onSort("visitors") : undefined}
-          className="w-20 text-right"
-        />
-        {showRevenue ? (
-          <ColumnHeader
-            label="Revenue"
-            active={sort === "revenue"}
-            onClick={onSort ? () => onSort("revenue") : undefined}
-            className="w-24 text-right"
-          />
-        ) : null}
+        <span className="w-20 text-right">Visitors</span>
       </div>
       <ul className="space-y-0.5">
         {rows.map((row) => {
           const selected = activeValue === row.value
-          const perVisitor =
-            row.visitors > 0 && row.newMrr > 0
-              ? `${formatMoney(Math.round(row.newMrr / row.visitors), currency)} per visitor · ${row.customers} ${row.customers === 1 ? "customer" : "customers"}`
-              : undefined
           return (
             <li key={row.value || "(none)"}>
               <button
                 type="button"
-                title={perVisitor}
                 onClick={() => onSelect(filterKey, row.value)}
                 className={`group relative flex h-[30px] w-full items-center gap-3 overflow-hidden rounded-md px-2 text-left text-[13px] transition-colors hover:bg-muted/60 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${selected ? "bg-muted/70" : ""}`}
               >
                 <span
                   aria-hidden
-                  className={`absolute inset-y-0 left-0 rounded-md transition-[width] ${sort === "revenue" ? "bg-emerald-500/10" : "bg-foreground/[0.06]"}`}
-                  style={{ width: `${(metricOf(row) / max) * 100}%` }}
+                  className="absolute inset-y-0 left-0 rounded-md bg-foreground/[0.06] transition-[width]"
+                  style={{ width: `${(row.visitors / max) * 100}%` }}
                 />
                 <span className="relative flex min-w-0 flex-1 items-center gap-2">
                   <DimensionIcon dimension={dimension} value={row.value} />
@@ -172,15 +86,6 @@ function RowList({
                 <span className="relative w-20 text-right font-mono text-muted-foreground tabular-nums">
                   {row.visitors.toLocaleString()}
                 </span>
-                {showRevenue ? (
-                  <span
-                    className={`relative w-24 text-right font-mono tabular-nums ${row.newMrr > 0 ? "text-foreground" : "text-muted-foreground/60"}`}
-                  >
-                    {row.newMrr > 0
-                      ? formatCompactMoney(row.newMrr, currency)
-                      : "—"}
-                  </span>
-                ) : null}
               </button>
             </li>
           )
@@ -213,7 +118,6 @@ function BreakdownBody({
   filters,
   includeBots,
   search,
-  revenue,
   onSelect,
 }: {
   title: string
@@ -224,52 +128,23 @@ function BreakdownBody({
   filters: StatsFilters
   includeBots: boolean
   search: SiteSearch
-  revenue: RevenueContext
   onSelect: (key: FilterKey, value: string) => void
 }) {
   const dataKey = breakdownKey(tab)
-  const [sort, setSort] = useState<SortKey>("visitors")
   const { data } = useSuspenseQuery(
     siteStatsQueryOptions(slug, siteId, dataKey, range, filters, includeBots)
   )
-  const revenueSupported = revenue.enabled && revenueBreakdowns.has(dataKey)
-  const revenueData = useQuery({
-    ...revenueBreakdownQueryOptions(slug, siteId, dataKey, range, filters),
-    enabled: revenueSupported,
-  })
 
-  const rows = useMemo(() => {
-    const merged = new Map<string, Row>()
-    for (const point of data.points) {
-      merged.set(point.series, {
-        value: point.series,
-        visitors: point.visitors,
-        customers: 0,
-        newMrr: 0,
-      })
-    }
-    if (revenueSupported) {
-      for (const row of revenueData.data?.rows ?? []) {
-        if (row.newMrr === 0 && !merged.has(row.key)) continue
-        const target = merged.get(row.key) ?? {
-          value: row.key,
-          visitors: 0,
-          customers: 0,
-          newMrr: 0,
-        }
-        target.customers += row.customers
-        target.newMrr += row.newMrr
-        merged.set(row.key, target)
-      }
-    }
-    const list = [...merged.values()]
-    return sort === "revenue"
-      ? list.sort((a, b) => b.newMrr - a.newMrr || b.visitors - a.visitors)
-      : list.sort((a, b) => b.visitors - a.visitors || b.newMrr - a.newMrr)
-  }, [data.points, revenueData.data, revenueSupported, sort])
-
-  const showRevenue = revenueSupported && rows.some((row) => row.newMrr > 0)
-  const currency = revenueData.data?.currency ?? revenue.currency
+  const rows = useMemo(
+    () =>
+      data.points
+        .map((point) => ({
+          value: point.series,
+          visitors: point.visitors,
+        }))
+        .sort((a, b) => b.visitors - a.visitors),
+    [data.points]
+  )
 
   if (tab.view === "map") {
     return (
@@ -277,11 +152,6 @@ function BreakdownBody({
         points={rows.map((row) => ({
           series: row.value,
           value: row.visitors,
-          weight: row.newMrr,
-          detail:
-            row.newMrr > 0
-              ? `${formatMoney(row.newMrr, currency)} new MRR · ${row.customers} ${row.customers === 1 ? "customer" : "customers"}`
-              : undefined,
         }))}
         valueLabel="visitors"
         activeValue={search.country}
@@ -302,10 +172,6 @@ function BreakdownBody({
     dimension: dataKey,
     filterKey: tab.filterKey,
     activeValue: search[tab.filterKey],
-    showRevenue,
-    sort: showRevenue ? sort : ("visitors" as const),
-    currency,
-    onSort: setSort,
   }
 
   return (
@@ -333,9 +199,7 @@ function BreakdownBody({
                 {title} · {tab.label}
               </SheetTitle>
               <SheetDescription>
-                {showRevenue
-                  ? "Visitors and new MRR from customers whose first visit matched."
-                  : "Visitors in the selected range."}
+                Visitors in the selected range.
               </SheetDescription>
             </SheetHeader>
             <div className="px-4 pb-6">
@@ -361,7 +225,6 @@ export function BreakdownPanel({
   filters,
   includeBots,
   search,
-  revenue,
   onSelect,
 }: {
   panel: BreakdownPanelConfig
@@ -371,7 +234,6 @@ export function BreakdownPanel({
   filters: StatsFilters
   includeBots: boolean
   search: SiteSearch
-  revenue: RevenueContext
   onSelect: (key: FilterKey, value: string) => void
 }) {
   const queryClient = useQueryClient()
@@ -434,7 +296,6 @@ export function BreakdownPanel({
           filters={filters}
           includeBots={includeBots}
           search={search}
-          revenue={revenue}
           onSelect={onSelect}
         />
       </Suspense>
