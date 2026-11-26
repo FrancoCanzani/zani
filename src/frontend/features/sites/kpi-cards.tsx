@@ -13,16 +13,16 @@ function DeltaBadge({ value, invert }: { value: number; invert?: boolean }) {
   const bad = invert ? value > 0 : value < 0
   return (
     <span
-      className={`rounded-full px-1.5 py-0.5 font-mono text-[11px] font-medium tabular-nums ${
+      className={`font-mono text-[12px] tabular-nums ${
         good
-          ? "bg-emerald-500/10 text-emerald-700"
+          ? "text-emerald-700"
           : bad
-            ? "bg-red-500/10 text-red-700"
-            : "bg-muted text-muted-foreground"
+            ? "text-red-700"
+            : "text-muted-foreground"
       }`}
     >
-      {value > 0 ? "+" : ""}
-      {value}%
+      {value > 0 ? "↑" : value < 0 ? "↓" : ""}
+      {Math.abs(value)}%
     </span>
   )
 }
@@ -58,8 +58,8 @@ export function KpiCards({
   ]
 
   return (
-    <div className="grid grid-cols-3 gap-2">
-      {kpis.map((kpi) => {
+    <div className="flex flex-wrap">
+      {kpis.map((kpi, index) => {
         const active = selected === kpi.metric
         return (
           <button
@@ -67,16 +67,14 @@ export function KpiCards({
             type="button"
             aria-pressed={active}
             onClick={() => onSelect(kpi.metric)}
-            className={`relative min-w-0 overflow-hidden rounded-xl border bg-card px-3 py-3 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
-              active
-                ? "border-foreground/40 ring-1 ring-foreground/10"
-                : "border-border/70 hover:border-foreground/20 hover:bg-muted/30"
-            }`}
+            className={`min-w-[7.5rem] flex-1 px-3 py-2 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+              index > 0 ? "border-l border-border/60" : ""
+            } ${active ? "bg-muted/60" : "hover:bg-muted/35"}`}
           >
-            <div className="text-[13px] text-muted-foreground">
+            <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
               {metricLabels[kpi.metric]}
             </div>
-            <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-1">
+            <div className="mt-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
               <span className="font-mono text-2xl font-medium tracking-tight tabular-nums">
                 {kpi.value}
               </span>

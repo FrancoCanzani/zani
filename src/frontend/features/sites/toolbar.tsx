@@ -65,7 +65,7 @@ export function Toolbar({
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
 
   return (
-    <div className="sticky top-14 z-10 -mx-1 flex flex-wrap items-center gap-2 bg-background/85 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
+    <div className="flex flex-wrap items-center justify-end gap-1.5">
       {search.live ? (
         <>
           <span className="flex h-[26px] items-center gap-2 rounded-[7px] bg-muted px-2.5 text-[12px] text-foreground">

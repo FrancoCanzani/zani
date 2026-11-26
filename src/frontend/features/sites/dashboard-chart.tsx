@@ -1,5 +1,5 @@
 import { useMemo } from "react"
-import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts"
+import { Area, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts"
 
 import {
   ChartContainer,
@@ -73,7 +73,7 @@ function formatBucket(ms: number, grain: Grain, timeZone: string) {
 
 type ChartRow = {
   bucket: number
-  bars: number
+  value: number | null
   previous: number | null
   partial: boolean
 }
@@ -82,16 +82,18 @@ export function DashboardChart({
   points,
   previousPoints,
   range,
-  bars,
+  metric,
   compare,
   timeZone,
+  framed = true,
 }: {
   points: StatsPoint[]
   previousPoints: StatsPoint[]
   range: StatsRange
-  bars: ChartTrafficMetric
+  metric: ChartTrafficMetric
   compare: boolean
   timeZone: string
+  framed?: boolean
 }) {
   const grain = range.grain
   const rows = useMemo<ChartRow[]>(() => {
@@ -104,12 +106,12 @@ export function DashboardChart({
     const traffic = new Map(
       points
         .filter((point) => point.bucket !== null)
-        .map((point) => [point.bucket as number, point[bars]])
+        .map((point) => [point.bucket as number, point[metric]])
     )
     const previousByBucket = new Map(
       previousPoints
         .filter((point) => point.bucket !== null)
-        .map((point) => [point.bucket as number, point[bars]])
+        .map((point) => [point.bucket as number, point[metric]])
     )
     const firstPrevious = bucketOf(startMs - (endMs - startMs))
     const now = Date.now()
@@ -121,7 +123,7 @@ export function DashboardChart({
     ) {
       result.push({
         bucket,
-        bars: traffic.get(bucket) ?? 0,
+        value: bucket > now ? null : (traffic.get(bucket) ?? 0),
         previous: compare
           ? (previousByBucket.get(firstPrevious + index * size) ?? 0)
           : null,
@@ -135,16 +137,16 @@ export function DashboardChart({
     range.start,
     range.end,
     grain,
-    bars,
+    metric,
     compare,
     timeZone,
   ])
 
-  const barLabel = metricLabels[bars]
+  const seriesLabel = metricLabels[metric]
   const chartConfig = {
-    bars: { label: barLabel, color: "var(--foreground)" },
+    value: { label: seriesLabel, color: "var(--foreground)" },
     previous: {
-      label: `Previous ${barLabel.toLowerCase()}`,
+      label: `Previous ${seriesLabel.toLowerCase()}`,
       color: "var(--chart-2)",
     },
   } satisfies ChartConfig
@@ -155,17 +157,17 @@ export function DashboardChart({
     return rows[rowIndex]?.bucket ?? 0
   })
 
-  return (
-    <section className="rounded-xl border border-border/70 bg-card p-4">
-      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
-          <span
-            aria-hidden
-            className="size-2.5 rounded-[3px] bg-foreground/80"
-          />
-          {barLabel}
-        </span>
-        {compare ? (
+  const chart = (
+    <>
+      {compare ? (
+        <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <span
+              aria-hidden
+              className="h-0.5 w-3 rounded-full bg-foreground"
+            />
+            {seriesLabel}
+          </span>
           <span className="flex items-center gap-1.5">
             <span
               aria-hidden
@@ -173,8 +175,8 @@ export function DashboardChart({
             />
             Previous period
           </span>
-        ) : null}
-      </div>
+        </div>
+      ) : null}
       <ChartContainer
         config={chartConfig}
         className="aspect-auto h-72 w-full [&_.recharts-cartesian-axis-tick_text]:font-mono"
@@ -182,11 +184,23 @@ export function DashboardChart({
       >
         <ComposedChart
           data={rows}
-          margin={{ top: 8, right: 0, left: 0, bottom: 0 }}
-          barCategoryGap={rows.length > 60 ? 1 : "14%"}
-          barGap={1}
+          margin={{ top: 8, right: 4, left: 0, bottom: 0 }}
           accessibilityLayer
         >
+          <defs>
+            <linearGradient id="trafficFill" x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="0%"
+                stopColor="var(--color-value)"
+                stopOpacity={0.18}
+              />
+              <stop
+                offset="100%"
+                stopColor="var(--color-value)"
+                stopOpacity={0}
+              />
+            </linearGradient>
+          </defs>
           <CartesianGrid vertical={false} strokeDasharray="3 3" />
           <XAxis
             dataKey="bucket"
@@ -208,12 +222,12 @@ export function DashboardChart({
             tickFormatter={(value) => formatCount(Number(value))}
           />
           <ChartTooltip
-            cursor={{ fill: "var(--muted)", opacity: 0.6 }}
+            cursor={{ stroke: "var(--border)", strokeWidth: 1 }}
             content={({ active, payload }) => {
               const row = payload?.[0]?.payload as ChartRow | undefined
               if (!active || !row) return null
               return (
-                <div className="min-w-48 rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-md">
+                <div className="min-w-40 rounded-lg border border-border bg-popover px-3 py-2 text-xs shadow-md">
                   <p className="mb-1.5 font-medium text-foreground">
                     {formatBucket(row.bucket, grain, timeZone)}
                     {row.partial ? (
@@ -224,8 +238,8 @@ export function DashboardChart({
                   </p>
                   <dl className="space-y-1 font-mono tabular-nums">
                     <TooltipRow
-                      label={barLabel}
-                      value={row.bars.toLocaleString()}
+                      label={seriesLabel}
+                      value={(row.value ?? 0).toLocaleString()}
                     />
                     {compare && row.previous !== null ? (
                       <TooltipRow
@@ -251,36 +265,31 @@ export function DashboardChart({
               isAnimationActive={false}
             />
           ) : null}
-          <Bar
-            dataKey="bars"
-            fill="var(--color-bars)"
-            fillOpacity={0.14}
-            radius={[3, 3, 0, 0]}
-            isAnimationActive={false}
-            shape={(props: unknown) => {
-              const { x, y, width, height, payload } = props as {
-                x: number
-                y: number
-                width: number
-                height: number
-                payload: ChartRow
-              }
-              return (
-                <rect
-                  x={x}
-                  y={y}
-                  width={Math.max(0, width)}
-                  height={Math.max(0, height)}
-                  rx={Math.min(3, width / 2)}
-                  fill="var(--color-bars)"
-                  fillOpacity={payload.partial ? 0.07 : 0.16}
-                />
-              )
+          <Area
+            dataKey="value"
+            type="monotone"
+            stroke="var(--color-value)"
+            strokeWidth={2}
+            fill="url(#trafficFill)"
+            dot={false}
+            activeDot={{
+              r: 3.5,
+              strokeWidth: 2,
+              stroke: "var(--color-value)",
+              fill: "var(--background)",
             }}
-            activeBar={{ fillOpacity: 0.3 }}
+            connectNulls={false}
+            isAnimationActive={false}
           />
         </ComposedChart>
       </ChartContainer>
+    </>
+  )
+
+  if (!framed) return chart
+  return (
+    <section className="rounded-xl border border-border/70 bg-card p-4">
+      {chart}
     </section>
   )
 }

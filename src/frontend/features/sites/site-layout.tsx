@@ -26,42 +26,6 @@ import { SiteNav } from "./site-nav"
 import { Toolbar } from "./toolbar"
 import { useSiteSearch } from "./use-site-search"
 
-function formatStatsRange(start: string, end: string, timeZone: string) {
-  const startDate = new Date(start)
-  const endDate = new Date(Date.parse(end) - 1)
-  const startYear = Number(
-    new Intl.DateTimeFormat("en", { timeZone, year: "numeric" }).format(
-      startDate
-    )
-  )
-  const endYear = Number(
-    new Intl.DateTimeFormat("en", { timeZone, year: "numeric" }).format(
-      endDate
-    )
-  )
-  const nowYear = Number(
-    new Intl.DateTimeFormat("en", { timeZone, year: "numeric" }).format(
-      new Date()
-    )
-  )
-  const monthDay = new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    timeZone,
-  })
-  if (startYear === endYear) {
-    const span = `${monthDay.format(startDate)}–${monthDay.format(endDate)}`
-    return startYear === nowYear ? span : `${span} ${endYear}`
-  }
-  const withYear = new Intl.DateTimeFormat(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "2-digit",
-    timeZone,
-  })
-  return `${withYear.format(startDate)}–${withYear.format(endDate)}`
-}
-
 export function SiteLayout() {
   const {
     slug,
@@ -88,6 +52,7 @@ export function SiteLayout() {
   const canManage = role !== null && canManageBusiness(role)
   const site = totals.data.site
   const revoked = site.revokedAt !== null
+  const hasDashboard = totals.data.hasEvents && !revoked
 
   function toggleLive() {
     startTransition(() => {
@@ -122,38 +87,36 @@ export function SiteLayout() {
   })
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div className="min-w-0 space-y-1">
-          <h1 className="truncate text-3xl font-light tracking-tight sm:text-4xl">
-            {site.name}
-          </h1>
-          <p className="flex flex-wrap items-baseline gap-x-1.5 text-sm text-muted-foreground">
+    <div className="flex min-h-0 flex-1 flex-col gap-5">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
+          <h1 className="truncate text-lg font-medium tracking-tight">
             <a
               href={`https://${site.domain}`}
               target="_blank"
               rel="noreferrer"
-              className="hover:text-foreground hover:underline"
+              className="hover:underline"
             >
               {site.domain}
             </a>
-            <span aria-hidden className="text-muted-foreground/50">
-              ·
-            </span>
-            <span>
-              {search.live
-                ? "Last 30 minutes"
-                : formatStatsRange(range.start, range.end, timeZone)}
-            </span>
-          </p>
-        </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {totals.data.hasEvents && !revoked ? (
+          </h1>
+          {hasDashboard ? (
             <LivePill
               slug={slug}
               siteId={siteId}
               active={search.live}
               onToggle={toggleLive}
+            />
+          ) : null}
+        </div>
+        <div className="flex min-w-0 flex-wrap items-center justify-end gap-2">
+          {hasDashboard ? (
+            <Toolbar
+              search={search}
+              range={range}
+              timeZone={timeZone}
+              showCompare={onTraffic !== undefined}
+              patchSearch={patchSearch}
             />
           ) : null}
           {import.meta.env.DEV ? (
@@ -186,13 +149,6 @@ export function SiteLayout() {
 
       {totals.data.hasEvents ? (
         <>
-          <Toolbar
-            search={search}
-            range={range}
-            timeZone={timeZone}
-            showCompare={onTraffic !== undefined}
-            patchSearch={patchSearch}
-          />
           <Outlet />
           <SiteNav slug={slug} siteId={siteId} />
         </>

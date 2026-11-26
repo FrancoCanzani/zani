@@ -49,24 +49,29 @@ function Dashboard() {
     )
   )
   const metric = trafficMetricFromSearch(search.metric)
+  const chartMetric = metric === "bounce" ? "visitors" : metric
 
   return (
     <>
-      <KpiCards
-        totals={totals}
-        previousTotals={previousTotals.data}
-        selected={metric}
-        onSelect={(next) => patchSearch({ metric: next })}
-      />
-
-      <DashboardChart
-        points={totals.points}
-        previousPoints={previousTotals.data.points}
-        range={range}
-        bars={metric === "bounce" ? "visitors" : metric}
-        compare={search.compare}
-        timeZone={timeZone}
-      />
+      <section className="overflow-hidden rounded-xl border border-border/70 bg-card">
+        <KpiCards
+          totals={totals}
+          previousTotals={previousTotals.data}
+          selected={metric}
+          onSelect={(next) => patchSearch({ metric: next })}
+        />
+        <div className="border-t border-border/60 px-3 pt-2 pb-3 sm:px-4">
+          <DashboardChart
+            points={totals.points}
+            previousPoints={previousTotals.data.points}
+            range={range}
+            metric={chartMetric}
+            compare={search.compare}
+            timeZone={timeZone}
+            framed={false}
+          />
+        </div>
+      </section>
 
       <div className="grid gap-3 md:grid-cols-2">
         {breakdownPanels.map((panel) => (
