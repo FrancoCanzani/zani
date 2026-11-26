@@ -88,7 +88,7 @@ export function SiteLayout() {
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-5">
-      <div className="sticky top-14 z-10 -mx-4 bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-6 sm:px-6">
+      <div className="sticky top-0 z-20 -mx-4 bg-background/90 px-4 py-3 backdrop-blur supports-[backdrop-filter]:bg-background/75 sm:-mx-6 sm:px-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-2">
             <h1 className="truncate text-lg font-medium tracking-tight">
