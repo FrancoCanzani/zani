@@ -1,14 +1,14 @@
 import {
   useMutation,
+  useQuery,
   useQueryClient,
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router"
 import { SettingsIcon, SparklesIcon } from "lucide-react"
-import { startTransition } from "react"
+import { startTransition, useEffect } from "react"
 import { toast } from "sonner"
 
-import { InstallSnippet } from "@components/install-snippet"
 import { Button } from "@components/ui/button"
 import { workspaceQueryOptions } from "@features/workspaces/api"
 import {
@@ -16,13 +16,15 @@ import {
   parseWorkspaceRole,
 } from "@features/workspaces/role"
 
-import { simulateSiteViews, siteStatsQueryOptions } from "./api"
-import { InstallStatus } from "./install-status"
+import {
+  simulateSiteViews,
+  siteSetupQueryOptions,
+  siteStatsQueryOptions,
+} from "./api"
 import { LivePill } from "./live-dashboard"
 import { SiteNav } from "./site-nav"
 import { Toolbar } from "./toolbar"
 import { useSiteSearch } from "./use-site-search"
-import { useRememberedWriteKey } from "./write-key"
 
 function formatStatsRange(start: string, end: string, timeZone: string) {
   const startDate = new Date(start)
@@ -70,7 +72,6 @@ export function SiteLayout() {
   const canManage = role !== null && canManageBusiness(role)
   const site = totals.data.site
   const revoked = site.revokedAt !== null
-  const { writeKey } = useRememberedWriteKey(siteId)
 
   function toggleLive() {
     startTransition(() => {
@@ -186,7 +187,6 @@ export function SiteLayout() {
       ) : (
         <WaitingForViews
           domain={site.domain}
-          writeKey={writeKey}
           canManage={canManage}
           slug={slug}
           siteId={siteId}
@@ -196,64 +196,68 @@ export function SiteLayout() {
   )
 }
 
+const waitPollMs = 4_000
+
 function WaitingForViews({
   domain,
-  writeKey,
   canManage,
   slug,
   siteId,
 }: {
   domain: string
-  writeKey: string | null
   canManage: boolean
   slug: string
   siteId: string
 }) {
+  const queryClient = useQueryClient()
+  const { data } = useQuery({
+    ...siteSetupQueryOptions(slug, siteId),
+    refetchInterval: (query) =>
+      query.state.data?.setup.firstPageviewAt ? false : waitPollMs,
+  })
+  const installed = Boolean(data?.setup.firstPageviewAt)
+
+  useEffect(() => {
+    if (!installed) return
+    void queryClient.invalidateQueries({
+      queryKey: ["site-stats", slug, siteId],
+    })
+  }, [installed, queryClient, slug, siteId])
+
   return (
-    <section className="space-y-4 rounded-xl border border-border/70 bg-card p-6">
-      <div className="space-y-2">
-        <h2 className="text-[15px] font-medium tracking-tight">
-          Install the script
-        </h2>
-        <InstallStatus slug={slug} siteId={siteId} domain={domain} />
-        <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-          Only pageviews from {domain} count. Testing on localhost or a preview
-          URL? Those are ignored, and the browser console says so.
-        </p>
-        {writeKey ? (
-          import.meta.env.DEV ? (
-            <p className="text-sm text-muted-foreground">
-              Or press Simulate data to fill the dashboard with fake traffic and
-              revenue.
-            </p>
-          ) : null
-        ) : canManage ? (
-          <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-            The write key was shown once. Rotate it to copy a new script.
-          </p>
-        ) : (
-          <p className="max-w-lg text-sm leading-relaxed text-muted-foreground">
-            An owner or admin installs the script.
-          </p>
-        )}
+    <section className="flex flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border/80 px-6 py-16 text-center sm:py-20">
+      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+        <span aria-hidden className="relative flex size-2">
+          <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-500 opacity-60" />
+          <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
+        </span>
+        Listening for {domain}
       </div>
-      {writeKey ? (
-        <InstallSnippet
-          label="Write key"
-          writeKey={writeKey}
-          note="Shown once."
-        />
-      ) : canManage ? (
+      <div className="max-w-md space-y-2">
+        <h2 className="text-xl font-medium tracking-tight sm:text-2xl">
+          Waiting for the first pageview
+        </h2>
+        <p className="text-sm leading-relaxed text-muted-foreground">
+          Once the tracking script is on your site, traffic shows up here
+          automatically. Need the snippet again? Open install settings to copy
+          or rotate the write key.
+        </p>
+      </div>
+      {canManage ? (
         <Button asChild variant="outline">
           <Link
             to="/businesses/$slug/sites/$siteId/settings"
             params={{ slug, siteId }}
             hash="install"
           >
-            Get a new write key
+            Install instructions
           </Link>
         </Button>
-      ) : null}
+      ) : (
+        <p className="text-sm text-muted-foreground">
+          An owner or admin can reconnect the script from Settings.
+        </p>
+      )}
     </section>
   )
 }
