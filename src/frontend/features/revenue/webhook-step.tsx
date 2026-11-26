@@ -20,9 +20,12 @@ const webhookEvents = [
   "customer.created",
   "customer.updated",
   "checkout.session.completed",
+  "customer.subscription.created",
   "customer.subscription.updated",
   "customer.subscription.deleted",
   "invoice.paid",
+  "charge.succeeded",
+  "charge.refunded",
 ]
 
 export function WebhookStep({

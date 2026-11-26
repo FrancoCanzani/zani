@@ -80,6 +80,7 @@ export type SyncPhase =
   | "checkout_sessions"
   | "subscriptions"
   | "invoices"
+  | "charges"
   | "recompute"
   | "done"
 

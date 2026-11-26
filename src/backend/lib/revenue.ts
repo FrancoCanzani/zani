@@ -1,9 +1,10 @@
-import { and, eq, isNull, or } from "drizzle-orm"
+import { and, eq, isNull, or, sql } from "drizzle-orm"
 
 import {
   mrrSnapshot,
   revenueMovement,
   stripeCustomer,
+  stripePayment,
   visitorIdentity,
 } from "../db/schema"
 
@@ -81,25 +82,43 @@ export async function recomputeCustomer(
   siteId: string,
   customerId: string
 ) {
-  const snapshots = await db
-    .select({
-      sourceId: mrrSnapshot.sourceId,
-      subscriptionId: mrrSnapshot.subscriptionId,
-      at: mrrSnapshot.at,
-      mrr: mrrSnapshot.mrr,
-      currency: mrrSnapshot.currency,
-    })
-    .from(mrrSnapshot)
-    .where(
-      and(
-        eq(mrrSnapshot.siteId, siteId),
-        eq(mrrSnapshot.customerId, customerId)
-      )
-    )
+  const [snapshots, [payments]] = await Promise.all([
+    db
+      .select({
+        sourceId: mrrSnapshot.sourceId,
+        subscriptionId: mrrSnapshot.subscriptionId,
+        at: mrrSnapshot.at,
+        mrr: mrrSnapshot.mrr,
+        currency: mrrSnapshot.currency,
+      })
+      .from(mrrSnapshot)
+      .where(
+        and(
+          eq(mrrSnapshot.siteId, siteId),
+          eq(mrrSnapshot.customerId, customerId)
+        )
+      ),
+    db
+      .select({
+        revenue: sql<number | null>`sum(${stripePayment.amount} - ${stripePayment.refunded})`,
+        firstAt: sql<number | null>`min(${stripePayment.at})`,
+        currency: sql<string | null>`max(${stripePayment.currency})`,
+      })
+      .from(stripePayment)
+      .where(
+        and(
+          eq(stripePayment.siteId, siteId),
+          eq(stripePayment.customerId, customerId)
+        )
+      ),
+  ])
 
   const movements = movementsFromSnapshots(snapshots)
   const last = movements.at(-1)
   const firstPaid = movements.find((movement) => movement.amount > 0)
+  const paidTimes = [firstPaid?.at, payments?.firstAt ?? undefined].filter(
+    (value): value is number => typeof value === "number"
+  )
   const rows = movements.map((movement) => ({
     id: newId(),
     siteId,
@@ -123,8 +142,9 @@ export async function recomputeCustomer(
       .update(stripeCustomer)
       .set({
         mrr: last?.mrrAfter ?? 0,
-        currency: last?.currency ?? "",
-        firstPaidAt: firstPaid?.at ?? null,
+        currency: last?.currency ?? payments?.currency ?? "",
+        revenue: Number(payments?.revenue ?? 0),
+        firstPaidAt: paidTimes.length > 0 ? Math.min(...paidTimes) : null,
         churnedAt: last?.kind === "churn" ? last.at : null,
       })
       .where(

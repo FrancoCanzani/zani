@@ -1,6 +1,6 @@
 import { and, eq, isNull, sql } from "drizzle-orm"
 
-import { mrrSnapshot, stripeCustomer } from "../db/schema"
+import { mrrSnapshot, stripeCustomer, stripePayment } from "../db/schema"
 
 import type { Database } from "./db"
 import { emailHash, findIdentityId } from "./revenue"
@@ -34,6 +34,18 @@ export type StripeSubscription = {
   status: string
   currency: string
   ended_at: number | null
+  trial_start: number | null
+}
+
+export type StripeCharge = {
+  id: string
+  customer: string | null
+  invoice: string | null
+  status: string
+  amount: number
+  amount_refunded: number
+  currency: string
+  created: number
 }
 
 type StripeInvoiceLine = {
@@ -241,6 +253,58 @@ export function subscriptionEndSnapshot(
     mrr: 0,
     currency: subscription.currency,
   })
+}
+
+export function chargePayment(
+  db: Database,
+  siteId: string,
+  charge: StripeCharge
+) {
+  if (charge.status !== "succeeded" || !charge.customer) return null
+  const values = {
+    siteId,
+    id: charge.id,
+    customerId: charge.customer,
+    invoiceId: charge.invoice ?? "",
+    amount: charge.amount,
+    refunded: charge.amount_refunded,
+    currency: charge.currency,
+    at: charge.created * 1000,
+  }
+  return db
+    .insert(stripePayment)
+    .values(values)
+    .onConflictDoUpdate({
+      target: [stripePayment.siteId, stripePayment.id],
+      set: {
+        customerId: values.customerId,
+        invoiceId: values.invoiceId,
+        amount: values.amount,
+        refunded: values.refunded,
+        currency: values.currency,
+        at: values.at,
+      },
+    })
+}
+
+export function subscriptionTrial(
+  db: Database,
+  siteId: string,
+  subscription: StripeSubscription
+) {
+  if (subscription.trial_start === null) return null
+  const startedAt = subscription.trial_start * 1000
+  return db
+    .update(stripeCustomer)
+    .set({
+      trialStartedAt: sql`min(coalesce(${stripeCustomer.trialStartedAt}, ${startedAt}), ${startedAt})`,
+    })
+    .where(
+      and(
+        eq(stripeCustomer.siteId, siteId),
+        eq(stripeCustomer.id, subscription.customer)
+      )
+    )
 }
 
 export async function linkIdentity(

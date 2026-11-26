@@ -11,7 +11,6 @@ import {
   sql,
   type SQL,
 } from "drizzle-orm"
-import type { SQLiteColumn } from "drizzle-orm/sqlite-core"
 import { Hono } from "hono"
 
 import {
@@ -34,6 +33,7 @@ import {
 } from "../sites/lib/stats"
 import { workspaceFromContext } from "../workspaces/lib/context"
 
+import { customerRowsByKey, paymentSummary } from "./lib/customers"
 import { identityColumnFor, identityFilters } from "./lib/filters"
 import { bucketer, primaryCurrency, summarize } from "./lib/overview"
 import {
@@ -109,48 +109,6 @@ function signupConditions(siteId: string, range: StatsRange, filters: SQL[]) {
   )
 }
 
-function newCustomerRows(
-  db: Database,
-  input: {
-    siteId: string
-    currency: string
-    range: StatsRange
-    filters: SQL[]
-    key: SQLiteColumn
-  }
-) {
-  return db
-    .select({
-      key: input.key,
-      customers: count(),
-      newMrr: sql<number>`sum(${revenueMovement.amount})`,
-      mrr: sql<number>`sum(${stripeCustomer.mrr})`,
-    })
-    .from(revenueMovement)
-    .innerJoin(
-      stripeCustomer,
-      and(
-        eq(stripeCustomer.siteId, revenueMovement.siteId),
-        eq(stripeCustomer.id, revenueMovement.customerId)
-      )
-    )
-    .leftJoin(
-      visitorIdentity,
-      eq(visitorIdentity.id, stripeCustomer.identityId)
-    )
-    .where(
-      and(
-        eq(revenueMovement.siteId, input.siteId),
-        eq(revenueMovement.kind, "new"),
-        eq(revenueMovement.currency, input.currency),
-        gte(revenueMovement.at, input.range.start),
-        lt(revenueMovement.at, input.range.end),
-        ...input.filters
-      )
-    )
-    .groupBy(input.key)
-}
-
 export const get = new Hono<AppEnv>()
   .get(
     "/",
@@ -214,7 +172,7 @@ export const get = new Hono<AppEnv>()
         visitorIdentity.signedUpAt
       )
 
-      const [movements, signups, [identified]] = await Promise.all([
+      const [movements, signups, [identified], payments] = await Promise.all([
         filters.length === 0
           ? movementQuery.where(movementWhere).orderBy(asc(revenueMovement.at))
           : movementQuery
@@ -247,6 +205,12 @@ export const get = new Hono<AppEnv>()
               sql`${stripeCustomer.identityId} is not null`
             )
           ),
+        paymentSummary(db, {
+          siteId: matched.id,
+          currency,
+          range,
+          filters,
+        }),
       ])
 
       const summary = summarize({
@@ -273,6 +237,7 @@ export const get = new Hono<AppEnv>()
               : (identified?.value ?? 0),
           ignoredFilters: ignored,
           ...summary,
+          ...payments,
         },
         200
       )
@@ -316,12 +281,13 @@ export const get = new Hono<AppEnv>()
           .from(visitorIdentity)
           .where(signupConditions(matched.id, parsed.range, filters))
           .groupBy(key),
-        newCustomerRows(db, {
+        customerRowsByKey(db, {
           siteId: matched.id,
           currency,
           range: parsed.range,
           filters,
           key,
+          detailed: false,
         }),
       ])
 
@@ -342,7 +308,7 @@ export const get = new Hono<AppEnv>()
         if (row.key === null) continue
         const target = rowFor(row.key)
         target.customers += row.customers
-        target.newMrr += asNumber(row.newMrr)
+        target.newMrr += row.newMrr
       }
 
       return c.json(
@@ -386,12 +352,13 @@ export const get = new Hono<AppEnv>()
           .from(visitorIdentity)
           .where(signupConditions(matched.id, parsed.range, filters))
           .groupBy(key),
-        newCustomerRows(db, {
+        customerRowsByKey(db, {
           siteId: matched.id,
           currency,
           range: parsed.range,
           filters,
           key,
+          detailed: true,
         }),
       ])
 
@@ -403,6 +370,9 @@ export const get = new Hono<AppEnv>()
           customers: number
           newMrr: number
           mrr: number
+          revenue: number
+          ltv: number | null
+          daysToPay: number | null
         }
       >()
       const rowFor = (value: string | null) => {
@@ -415,6 +385,9 @@ export const get = new Hono<AppEnv>()
           customers: 0,
           newMrr: 0,
           mrr: 0,
+          revenue: 0,
+          ltv: null,
+          daysToPay: null,
         }
         rows.set(label, created)
         return created
@@ -423,8 +396,11 @@ export const get = new Hono<AppEnv>()
       for (const row of converted) {
         const target = rowFor(row.key)
         target.customers += row.customers
-        target.newMrr += asNumber(row.newMrr)
-        target.mrr += asNumber(row.mrr)
+        target.newMrr += row.newMrr
+        target.mrr += row.mrr
+        target.revenue += row.revenue
+        target.ltv = row.ltv
+        target.daysToPay = row.daysToPay
       }
 
       return c.json(
@@ -435,6 +411,7 @@ export const get = new Hono<AppEnv>()
           rows: [...rows.values()].sort(
             (a, b) =>
               b.newMrr - a.newMrr ||
+              b.revenue - a.revenue ||
               b.customers - a.customers ||
               b.signups - a.signups
           ),

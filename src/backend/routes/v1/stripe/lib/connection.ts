@@ -5,6 +5,7 @@ import {
   revenueMovement,
   stripeConnection,
   stripeCustomer,
+  stripePayment,
 } from "../../../../db/schema"
 import type { Database } from "../../../../lib/db"
 import { encryptSecret } from "../../../../lib/secrets"
@@ -55,6 +56,7 @@ export function clearRevenueStatements(db: Database, siteId: string) {
   return [
     db.delete(revenueMovement).where(eq(revenueMovement.siteId, siteId)),
     db.delete(mrrSnapshot).where(eq(mrrSnapshot.siteId, siteId)),
+    db.delete(stripePayment).where(eq(stripePayment.siteId, siteId)),
     db.delete(stripeCustomer).where(eq(stripeCustomer.siteId, siteId)),
   ] as const
 }

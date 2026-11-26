@@ -6,6 +6,7 @@ import { createDb, type Database } from "../../../lib/db"
 import { recomputeCustomer } from "../../../lib/revenue"
 import { decryptSecret } from "../../../lib/secrets"
 import {
+  chargePayment,
   checkoutSessionLink,
   customerUpsert,
   customerValues,
@@ -14,7 +15,9 @@ import {
   StripeError,
   stripeGet,
   subscriptionEndSnapshot,
+  subscriptionTrial,
   verifyStripeSignature,
+  type StripeCharge,
   type StripeCheckoutSession,
   type StripeCustomer,
   type StripeEvent,
@@ -62,12 +65,18 @@ async function applyEvent(
       }
       break
     }
+    case "customer.subscription.created":
     case "customer.subscription.updated":
     case "customer.subscription.deleted": {
       const subscription = await stripeGet<StripeSubscription>(
         apiKey,
         `subscriptions/${event.data.object.id}`
       )
+      const trial = subscriptionTrial(db, siteId, subscription)
+      if (trial) {
+        await syncCustomer(db, siteId, apiKey, subscription.customer)
+        await trial
+      }
       const snapshot = subscriptionEndSnapshot(db, siteId, subscription)
       if (snapshot) {
         await snapshot
@@ -85,6 +94,21 @@ async function applyEvent(
         await syncCustomer(db, siteId, apiKey, invoice.customer)
         await snapshot
         await recomputeCustomer(db, siteId, invoice.customer)
+      }
+      break
+    }
+    case "charge.succeeded":
+    case "charge.refunded":
+    case "charge.updated": {
+      const charge = await stripeGet<StripeCharge>(
+        apiKey,
+        `charges/${event.data.object.id}`
+      )
+      const payment = chargePayment(db, siteId, charge)
+      if (payment && charge.customer) {
+        await syncCustomer(db, siteId, apiKey, charge.customer)
+        await payment
+        await recomputeCustomer(db, siteId, charge.customer)
       }
       break
     }

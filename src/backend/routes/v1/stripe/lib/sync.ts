@@ -4,13 +4,17 @@ import { stripeConnection, stripeCustomer } from "../../../../db/schema"
 import { runBatch, type Database } from "../../../../lib/db"
 import { recomputeCustomer } from "../../../../lib/revenue"
 import {
+  chargePayment,
   checkoutSessionLink,
   customerUpsert,
   customerValues,
   invoiceSnapshot,
   linkIdentity,
+  StripeError,
   stripeGet,
   subscriptionEndSnapshot,
+  subscriptionTrial,
+  type StripeCharge,
   type StripeCheckoutSession,
   type StripeCustomer,
   type StripeInvoice,
@@ -23,6 +27,7 @@ const syncPhases = [
   "checkout_sessions",
   "subscriptions",
   "invoices",
+  "charges",
   "recompute",
   "done",
 ] as const
@@ -113,7 +118,10 @@ export async function runSyncStep(
       await runBatch(
         db,
         page.items
-          .map((item) => subscriptionEndSnapshot(db, siteId, item))
+          .flatMap((item) => [
+            subscriptionEndSnapshot(db, siteId, item),
+            subscriptionTrial(db, siteId, item),
+          ])
           .filter((item) => item !== null)
       )
       step = { processed: page.items.length, cursor: page.cursor }
@@ -127,6 +135,27 @@ export async function runSyncStep(
         db,
         page.items
           .map((item) => invoiceSnapshot(db, siteId, item))
+          .filter((item) => item !== null)
+      )
+      step = { processed: page.items.length, cursor: page.cursor }
+      break
+    }
+    case "charges": {
+      let page: { items: StripeCharge[]; cursor: string | null }
+      try {
+        page = await pageOf<StripeCharge>(apiKey, "charges", cursor, {})
+      } catch (error) {
+        // Keys created before cash revenue existed lack charge access; MRR still works without it.
+        if (error instanceof StripeError && error.status === 403) {
+          step = { processed: 0, cursor: null }
+          break
+        }
+        throw error
+      }
+      await runBatch(
+        db,
+        page.items
+          .map((item) => chargePayment(db, siteId, item))
           .filter((item) => item !== null)
       )
       step = { processed: page.items.length, cursor: page.cursor }

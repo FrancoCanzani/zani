@@ -35,6 +35,7 @@ const phaseLabels: Record<SyncPhase, string> = {
   checkout_sessions: "Linking checkouts",
   subscriptions: "Importing subscriptions",
   invoices: "Importing invoices",
+  charges: "Importing payments",
   recompute: "Building MRR",
   done: "Done",
 }
@@ -100,6 +101,7 @@ const restrictedKeyUrl = (() => {
     "rak_customer_read",
     "rak_subscription_read",
     "rak_invoice_read",
+    "rak_charge_read",
     "rak_checkout_session_read",
     "rak_bucket_checkout_read",
   ]) {
@@ -160,8 +162,8 @@ function StripeKeyForm({ slug, siteId }: { slug: string; siteId: string }) {
           >
             Create the key in Stripe
           </a>{" "}
-          with read access to Customers, Checkout Sessions, Subscriptions, and
-          Invoices already ticked, then paste it here. Stored encrypted; nothing
+          with read access to Customers, Checkout Sessions, Subscriptions,
+          Invoices, and Charges already ticked, then paste it here. Stored encrypted; nothing
           is written to Stripe.
         </FieldDescription>
       </Field>
