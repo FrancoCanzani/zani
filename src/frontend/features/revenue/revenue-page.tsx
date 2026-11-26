@@ -52,12 +52,7 @@ export function RevenuePage() {
         </p>
       ) : null}
 
-      <RevenueKpiCards
-        overview={revenue}
-        previous={previous.data}
-        selected={metric}
-        onSelect={(next) => patchSearch({ metric: next })}
-      />
+      <RevenueKpiCards overview={revenue} previous={previous.data} />
 
       <RevenueChart
         points={revenue.points}
@@ -65,6 +60,7 @@ export function RevenuePage() {
         metric={metric}
         currency={revenue.currency}
         timeZone={timeZone}
+        onMetricChange={(next) => patchSearch({ metric: next })}
       />
 
       <div className="grid gap-3 md:grid-cols-2">

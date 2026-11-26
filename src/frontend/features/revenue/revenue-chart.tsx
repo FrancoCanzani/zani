@@ -1,6 +1,7 @@
 import { useMemo } from "react"
 import { Bar, CartesianGrid, ComposedChart, Line, XAxis, YAxis } from "recharts"
 
+import { Segmented } from "@components/segmented"
 import {
   ChartContainer,
   ChartTooltip,
@@ -21,6 +22,12 @@ import {
   formatMoney,
   type RevenuePoint,
 } from "./api"
+
+const chartMetrics = ["mrr", "new_mrr"] as const satisfies RevenueChartMetric[]
+const chartMetricLabels: Record<RevenueChartMetric, string> = {
+  mrr: "MRR",
+  new_mrr: "New MRR",
+}
 
 function bucketSize(grain: Grain) {
   switch (grain) {
@@ -90,12 +97,14 @@ export function RevenueChart({
   metric,
   currency,
   timeZone,
+  onMetricChange,
 }: {
   points: RevenuePoint[]
   range: StatsRange
   metric: RevenueChartMetric
   currency: string
   timeZone: string
+  onMetricChange: (metric: RevenueChartMetric) => void
 }) {
   const grain = range.grain
   const rows = useMemo<ChartRow[]>(() => {
@@ -140,8 +149,8 @@ export function RevenueChart({
 
   return (
     <section className="rounded-xl border border-border/70 bg-card p-4">
-      <div className="mb-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
-        <span className="flex items-center gap-1.5">
+      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+        <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <span
             aria-hidden
             className={
@@ -152,6 +161,13 @@ export function RevenueChart({
           />
           {label}
         </span>
+        <Segmented
+          label="Chart metric"
+          options={chartMetrics}
+          value={metric}
+          labels={chartMetricLabels}
+          onChange={onMetricChange}
+        />
       </div>
       <ChartContainer
         config={chartConfig}
