@@ -1,24 +1,14 @@
 import { useQuery } from "@tanstack/react-query"
-import {
-  AppWindowIcon,
-  CrosshairIcon,
-  GlobeIcon,
-  LaptopIcon,
-  LinkIcon,
-  MapPinIcon,
-  MonitorIcon,
-  TagIcon,
-  WavesIcon,
-  type LucideIcon,
-} from "lucide-react"
+import { Command as CommandPrimitive } from "cmdk"
+import { ChevronDownIcon } from "lucide-react"
 import { useState } from "react"
+import { cn } from "cn"
 
 import { Button } from "@components/ui/button"
 import {
   Command,
   CommandEmpty,
   CommandGroup,
-  CommandInput,
   CommandItem,
   CommandList,
 } from "@components/ui/command"
@@ -51,7 +41,6 @@ type FilterOption = {
 type FilterCategory = {
   id: string
   label: string
-  icon: LucideIcon
   options: FilterOption[]
 }
 
@@ -59,15 +48,11 @@ const filterCategories: FilterCategory[] = [
   {
     id: "page",
     label: "Page",
-    icon: LinkIcon,
-    options: [
-      { filterKey: "path", breakdown: "path", label: "Path" },
-    ],
+    options: [{ filterKey: "path", breakdown: "path", label: "Path" }],
   },
   {
     id: "source",
     label: "Source",
-    icon: WavesIcon,
     options: [
       { filterKey: "source", breakdown: "source", label: "Channel" },
       { filterKey: "referrer", breakdown: "referrer", label: "Referrer" },
@@ -81,7 +66,6 @@ const filterCategories: FilterCategory[] = [
   {
     id: "utm",
     label: "UTM tags",
-    icon: CrosshairIcon,
     options: [
       { filterKey: "utm_source", breakdown: "utm_source", label: "UTM source" },
       { filterKey: "utm_medium", breakdown: "utm_medium", label: "UTM medium" },
@@ -101,7 +85,6 @@ const filterCategories: FilterCategory[] = [
   {
     id: "location",
     label: "Location",
-    icon: MapPinIcon,
     options: [
       { filterKey: "country", breakdown: "country", label: "Country" },
       { filterKey: "city", breakdown: "city", label: "City" },
@@ -110,7 +93,6 @@ const filterCategories: FilterCategory[] = [
   {
     id: "screen",
     label: "Screen size",
-    icon: MonitorIcon,
     options: [
       { filterKey: "screen", breakdown: "screen", label: "Screen" },
       { filterKey: "device", breakdown: "device", label: "Device" },
@@ -119,7 +101,6 @@ const filterCategories: FilterCategory[] = [
   {
     id: "browser",
     label: "Browser",
-    icon: AppWindowIcon,
     options: [
       { filterKey: "browser", breakdown: "browser", label: "Browser" },
     ],
@@ -127,13 +108,11 @@ const filterCategories: FilterCategory[] = [
   {
     id: "os",
     label: "Operating system",
-    icon: LaptopIcon,
     options: [{ filterKey: "os", breakdown: "os", label: "OS" }],
   },
   {
     id: "event",
     label: "Event",
-    icon: GlobeIcon,
     options: [
       { filterKey: "event", breakdown: "event", label: "Event name" },
     ],
@@ -141,7 +120,6 @@ const filterCategories: FilterCategory[] = [
   {
     id: "property",
     label: "Property",
-    icon: TagIcon,
     options: [
       { filterKey: "prop", breakdown: "prop_key", label: "Property" },
       {
@@ -179,24 +157,30 @@ export function FilterMenu({
       <DropdownMenuTrigger asChild>
         <Button
           type="button"
-          size="xs"
           variant={activeCount > 0 ? "secondary" : "outline"}
+          size="xs"
+          className="gap-1.5"
         >
           Filter
           {activeCount > 0 ? (
             <span className="font-mono tabular-nums">{activeCount}</span>
           ) : null}
+          <ChevronDownIcon
+            data-icon="inline-end"
+            className={cn(
+              "opacity-60 transition-transform",
+              open && "rotate-180"
+            )}
+          />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="min-w-52">
+      <DropdownMenuContent align="end" className="min-w-44">
         {filterCategories.map((category) => {
-          const Icon = category.icon
           const only = category.options[0]
           if (category.options.length === 1 && only) {
             return (
               <DropdownMenuSub key={category.id}>
                 <DropdownMenuSubTrigger>
-                  <Icon />
                   {category.label}
                 </DropdownMenuSubTrigger>
                 <DropdownMenuSubContent className="w-64 p-0">
@@ -217,10 +201,9 @@ export function FilterMenu({
           return (
             <DropdownMenuSub key={category.id}>
               <DropdownMenuSubTrigger>
-                <Icon />
                 {category.label}
               </DropdownMenuSubTrigger>
-              <DropdownMenuSubContent className="min-w-44 p-1">
+              <DropdownMenuSubContent className="min-w-40 p-1">
                 {category.options.map((option) => (
                   <DropdownMenuSub key={option.filterKey}>
                     <DropdownMenuSubTrigger>
@@ -298,12 +281,15 @@ function FilterValueCommand({
 
   return (
     <Command shouldFilter>
-      <CommandInput
-        placeholder={`Filter ${option.label.toLowerCase()}…`}
-        value={query}
-        onValueChange={setQuery}
-        autoFocus
-      />
+      <div className="p-1 pb-0">
+        <CommandPrimitive.Input
+          value={query}
+          onValueChange={setQuery}
+          autoFocus
+          placeholder={`Filter ${option.label.toLowerCase()}…`}
+          className="h-7 w-full rounded-md border border-input/30 bg-input/30 px-2 text-xs outline-hidden placeholder:text-muted-foreground disabled:cursor-not-allowed disabled:opacity-50"
+        />
+      </div>
       <CommandList>
         {isPending ? (
           <div className="space-y-1.5 p-2">
