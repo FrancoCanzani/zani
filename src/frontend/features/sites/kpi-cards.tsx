@@ -1,8 +1,6 @@
 import { changePercent, type SiteStats } from "./api"
 import { metricLabels, type TrafficMetric } from "./search"
 
-const trafficAccent = "#3B82F6"
-
 type Kpi = {
   metric: TrafficMetric
   value: string
@@ -65,7 +63,7 @@ export function KpiCards({
   ]
 
   return (
-    <div className="flex flex-wrap gap-x-1 px-2 pt-2">
+    <div className="flex flex-wrap gap-1 p-1.5">
       {kpis.map((kpi) => {
         const active = selected === kpi.metric
         return (
@@ -74,9 +72,11 @@ export function KpiCards({
             type="button"
             aria-pressed={active}
             onClick={() => onSelect(kpi.metric)}
-            className="relative min-w-[7rem] flex-1 px-2.5 pt-1.5 pb-2.5 text-left transition-colors hover:bg-muted/30 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
+            className={`min-w-[7rem] flex-1 rounded-lg px-2.5 py-1.5 text-left transition-colors focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none ${
+              active ? "bg-muted/70" : "hover:bg-muted/40"
+            }`}
           >
-            <div className="text-[11px] tracking-wide text-muted-foreground uppercase">
+            <div className="text-[11px] text-muted-foreground">
               {metricLabels[kpi.metric]}
             </div>
             <div className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
@@ -87,13 +87,6 @@ export function KpiCards({
                 <DeltaBadge value={kpi.delta} invert={kpi.invert} />
               )}
             </div>
-            {active ? (
-              <span
-                aria-hidden
-                className="absolute inset-x-2 bottom-0 h-0.5 rounded-full"
-                style={{ backgroundColor: trafficAccent }}
-              />
-            ) : null}
           </button>
         )
       })}
