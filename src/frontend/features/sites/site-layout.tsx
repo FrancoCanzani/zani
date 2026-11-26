@@ -5,6 +5,7 @@ import {
   useSuspenseQuery,
 } from "@tanstack/react-query"
 import { Link, Outlet, useMatch, useNavigate } from "@tanstack/react-router"
+import { Hashvatar } from "hashvatar/react"
 import { SettingsIcon, SparklesIcon } from "lucide-react"
 import { startTransition, useEffect } from "react"
 import { toast } from "sonner"
@@ -29,21 +30,37 @@ import { useSiteSearch } from "./use-site-search"
 function formatStatsRange(start: string, end: string, timeZone: string) {
   const startDate = new Date(start)
   const endDate = new Date(Date.parse(end) - 1)
+  const startYear = Number(
+    new Intl.DateTimeFormat("en", { timeZone, year: "numeric" }).format(
+      startDate
+    )
+  )
+  const endYear = Number(
+    new Intl.DateTimeFormat("en", { timeZone, year: "numeric" }).format(
+      endDate
+    )
+  )
+  const nowYear = Number(
+    new Intl.DateTimeFormat("en", { timeZone, year: "numeric" }).format(
+      new Date()
+    )
+  )
   const monthDay = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
     timeZone,
   })
-  const monthDayYear = new Intl.DateTimeFormat(undefined, {
+  if (startYear === endYear) {
+    const span = `${monthDay.format(startDate)}–${monthDay.format(endDate)}`
+    return startYear === nowYear ? span : `${span} ${endYear}`
+  }
+  const withYear = new Intl.DateTimeFormat(undefined, {
     month: "short",
     day: "numeric",
-    year: "numeric",
+    year: "2-digit",
     timeZone,
   })
-  if (startDate.getFullYear() === endDate.getFullYear()) {
-    return `${monthDay.format(startDate)} – ${monthDayYear.format(endDate)}`
-  }
-  return `${monthDayYear.format(startDate)} – ${monthDayYear.format(endDate)}`
+  return `${withYear.format(startDate)}–${withYear.format(endDate)}`
 }
 
 export function SiteLayout() {
@@ -106,13 +123,13 @@ export function SiteLayout() {
   })
 
   return (
-    <div className="flex flex-col gap-6 pb-20">
+    <div className="flex min-h-0 flex-1 flex-col gap-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div className="min-w-0 space-y-1">
           <h1 className="truncate text-3xl font-light tracking-tight sm:text-4xl">
             {site.name}
           </h1>
-          <p className="flex flex-wrap items-center gap-x-2 text-sm text-muted-foreground">
+          <p className="flex flex-wrap items-baseline gap-x-1.5 text-sm text-muted-foreground">
             <a
               href={`https://${site.domain}`}
               target="_blank"
@@ -121,8 +138,10 @@ export function SiteLayout() {
             >
               {site.domain}
             </a>
-            <span aria-hidden>·</span>
-            <span className="font-mono">
+            <span aria-hidden className="text-muted-foreground/50">
+              ·
+            </span>
+            <span>
               {search.live
                 ? "Last 30 minutes"
                 : formatStatsRange(range.start, range.end, timeZone)}
@@ -225,39 +244,51 @@ function WaitingForViews({
   }, [installed, queryClient, slug, siteId])
 
   return (
-    <section className="flex flex-col items-center justify-center gap-5 rounded-xl border border-dashed border-border/80 px-6 py-16 text-center sm:py-20">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span aria-hidden className="relative flex size-2">
-          <span className="absolute inline-flex size-full animate-ping rounded-full bg-amber-500 opacity-60" />
-          <span className="relative inline-flex size-2 rounded-full bg-amber-500" />
-        </span>
-        Listening for {domain}
+    <section className="flex flex-1 flex-col items-center justify-center px-6 pb-16 text-center">
+      <div className="flex flex-col items-center gap-6">
+        <div className="relative flex size-28 items-center justify-center">
+          <span
+            aria-hidden
+            className="absolute inset-0 animate-ping rounded-full bg-foreground/5 [animation-duration:2.4s]"
+          />
+          <span
+            aria-hidden
+            className="absolute inset-3 rounded-full bg-foreground/[0.04]"
+          />
+          <Hashvatar
+            hash={domain}
+            size={88}
+            animated
+            className="relative size-[88px] shadow-lg shadow-black/10"
+          />
+        </div>
+        <div className="max-w-xs space-y-2">
+          <p className="text-xs tracking-wide text-muted-foreground uppercase">
+            Listening
+          </p>
+          <h2 className="text-xl font-medium tracking-tight">
+            Waiting for the first pageview
+          </h2>
+          <p className="text-sm leading-relaxed text-muted-foreground">
+            Traffic from {domain} shows up here once the script is live.
+          </p>
+        </div>
+        {canManage ? (
+          <Button asChild variant="ghost" size="sm">
+            <Link
+              to="/businesses/$slug/sites/$siteId/settings"
+              params={{ slug, siteId }}
+              hash="install"
+            >
+              Get the script
+            </Link>
+          </Button>
+        ) : (
+          <p className="text-sm text-muted-foreground">
+            Ask an owner to reconnect the script in Settings.
+          </p>
+        )}
       </div>
-      <div className="max-w-md space-y-2">
-        <h2 className="text-xl font-medium tracking-tight sm:text-2xl">
-          Waiting for the first pageview
-        </h2>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          Once the tracking script is on your site, traffic shows up here
-          automatically. Need the snippet again? Open install settings to copy
-          or rotate the write key.
-        </p>
-      </div>
-      {canManage ? (
-        <Button asChild variant="outline">
-          <Link
-            to="/businesses/$slug/sites/$siteId/settings"
-            params={{ slug, siteId }}
-            hash="install"
-          >
-            Install instructions
-          </Link>
-        </Button>
-      ) : (
-        <p className="text-sm text-muted-foreground">
-          An owner or admin can reconnect the script from Settings.
-        </p>
-      )}
     </section>
   )
 }
