@@ -3,7 +3,12 @@ const source = `(() => {
   if (!(el instanceof HTMLScriptElement)) return
   const key = el.getAttribute("data-key")
   if (!key) return
-  const endpoint = new URL("/api/v1/collect", el.src)
+  const apiAttr = el.getAttribute("data-api")
+  const apiRoot = new URL(
+    apiAttr ? (apiAttr.endsWith("/") ? apiAttr : apiAttr + "/") : "api/v1/",
+    el.src
+  )
+  const endpoint = new URL("collect", apiRoot)
   const namePattern = /^[a-z0-9_-]{1,32}$/
   const propKeyPattern = /^[a-z0-9_]{1,64}$/
   const uuidPattern =
@@ -247,7 +252,7 @@ const source = `(() => {
       email: email || undefined,
     })
     if (!id) return
-    void fetch(new URL("/api/v1/identify", el.src), {
+    void fetch(new URL("identify", apiRoot), {
       method: "POST",
       headers: { "content-type": "application/json", "x-write-key": key },
       body: JSON.stringify({
@@ -309,7 +314,7 @@ const source = `(() => {
   captureUtms()
   recordLastTouch()
   trackPage()
-  window.zani = { track, identify }
+  window.zani = { track, identify, anonymousId }
 })()
 `
 

@@ -197,7 +197,23 @@ function normalizePropValue(
   return value
 }
 
+// First-party proxies forward the visitor's location; CORS keeps browsers from setting these headers directly.
+const proxyCountryHeader = "x-zani-country"
+const proxyCityHeader = "x-zani-city"
+
+function decodedHeader(request: Request, name: string) {
+  const value = request.headers.get(name)?.trim()
+  if (!value) return ""
+  try {
+    return decodeURIComponent(value)
+  } catch {
+    return ""
+  }
+}
+
 export function countryFromRequest(request: Request): string {
+  const forwarded = decodedHeader(request, proxyCountryHeader)
+  if (forwarded) return normalizeCountry(forwarded)
   const cf = request.cf
   if (!cf || typeof cf !== "object" || !("country" in cf)) return ""
   const country = cf.country
@@ -206,6 +222,8 @@ export function countryFromRequest(request: Request): string {
 }
 
 export function cityFromRequest(request: Request): string {
+  const forwarded = decodedHeader(request, proxyCityHeader)
+  if (forwarded) return normalizeCity(forwarded)
   const cf = request.cf
   if (!cf || typeof cf !== "object" || !("city" in cf)) return ""
   const city = cf.city

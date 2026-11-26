@@ -57,6 +57,7 @@ window.zani?.identify(user.id, { email: user.email })`
     zani?: {
       identify(userId: string, traits?: { email?: string }): void
       track(name: string, props?: Record<string, string | number | boolean>): void
+      anonymousId?: string
     }
   }
 }
