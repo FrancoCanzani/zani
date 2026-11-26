@@ -1,13 +1,6 @@
 import { XIcon } from "lucide-react"
 
 import { Button } from "@components/ui/button"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@components/ui/select"
 
 import type { StatsRange } from "./api"
 import { RangePicker } from "./range-picker"
@@ -20,8 +13,6 @@ import {
   zonedParts,
   type SiteSearch,
 } from "./search"
-
-const quickRanges = ["1d", "7d", "30d", "90d", "12m"] as const
 
 function dateInputValue(iso: string, timeZone: string) {
   const { year, month, day } = zonedParts(Date.parse(iso), timeZone)
@@ -37,7 +28,9 @@ const customDay = new Intl.DateTimeFormat(undefined, {
 function customRangeLabel(from: string, to: string) {
   const day = (value: string) =>
     customDay.format(new Date(`${value.slice(0, 10)}T12:00`))
-  return `${day(from)} – ${day(to)}`
+  const start = day(from)
+  const end = day(to)
+  return start === end ? start : `${start} – ${end}`
 }
 
 function clearFiltersPatch(): Partial<SiteSearch> {
@@ -46,6 +39,13 @@ function clearFiltersPatch(): Partial<SiteSearch> {
     patch[key] = undefined
   }
   return patch
+}
+
+function rangeTriggerLabel(search: SiteSearch) {
+  if (search.range === "custom" && search.from && search.to) {
+    return customRangeLabel(search.from, search.to)
+  }
+  return rangeLabels[search.range]
 }
 
 export function Toolbar({
@@ -63,7 +63,6 @@ export function Toolbar({
 }) {
   const chips = activeFilterChips(search)
   const localTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"
-  const preset = search.range === "custom" ? null : search.range
 
   return (
     <div className="sticky top-14 z-10 -mx-1 flex flex-wrap items-center gap-2 bg-background/85 px-1 py-2 backdrop-blur supports-[backdrop-filter]:bg-background/70">
@@ -87,36 +86,30 @@ export function Toolbar({
         </>
       ) : (
         <>
-          <Select
-            value={preset ?? ""}
-            onValueChange={(next) => {
-              const range = quickRanges.find((option) => option === next)
-              if (range) patchSearch({ range, from: undefined, to: undefined })
-            }}
-          >
-            <SelectTrigger size="xs" aria-label="Range" className="min-w-28">
-              <SelectValue placeholder="Custom" />
-            </SelectTrigger>
-            <SelectContent position="popper" align="start">
-              {quickRanges.map((option) => (
-                <SelectItem key={option} value={option} className="text-xs">
-                  {rangeLabels[option]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <RangePicker
+            range={search.range}
             from={search.from ?? dateInputValue(range.start, timeZone)}
             to={search.to ?? dateInputValue(range.end, timeZone)}
             timeZone={timeZone}
             localTz={localTz}
-            active={search.range === "custom"}
-            label={
-              search.range === "custom" && search.from && search.to
-                ? customRangeLabel(search.from, search.to)
-                : "Custom"
+            label={rangeTriggerLabel(search)}
+            onPreset={(next) =>
+              patchSearch({
+                range: next,
+                from: undefined,
+                to: undefined,
+                live: undefined,
+              })
             }
-            onCustom={(from, to) => patchSearch({ range: "custom", from, to })}
+            onLive={() => patchSearch({ live: true })}
+            onCustom={(from, to) =>
+              patchSearch({
+                range: "custom",
+                from,
+                to,
+                live: undefined,
+              })
+            }
             onTimeZone={(tz) => patchSearch({ tz })}
           />
           {search.range === "custom" ? (

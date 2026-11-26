@@ -1,6 +1,14 @@
 import { z } from "zod"
 
-export const rangePresets = ["1d", "7d", "30d", "90d", "12m", "custom"] as const
+export const rangePresets = [
+  "1d",
+  "yesterday",
+  "7d",
+  "30d",
+  "90d",
+  "12m",
+  "custom",
+] as const
 export const metrics = [
   "visitors",
   "views",
@@ -168,7 +176,10 @@ function grainFor(durationMs: number): Grain {
   return "week"
 }
 
-const presetDays: Record<Exclude<RangePreset, "custom">, number> = {
+const presetDays: Record<
+  Exclude<RangePreset, "custom" | "yesterday">,
+  number
+> = {
   "1d": 1,
   "7d": 7,
   "30d": 30,
@@ -216,6 +227,24 @@ export function rangeFromSearch(search: StatsSearch): {
 
   const now = Date.now()
   const parts = zonedParts(now, timeZone)
+  if (search.range === "yesterday") {
+    const endMs = zonedDateUtcMs(
+      timeZone,
+      parts.year,
+      parts.month,
+      parts.day,
+      0,
+      0,
+      0
+    )
+    const startMs = endMs - dayMs
+    return {
+      start: new Date(startMs).toISOString(),
+      end: new Date(endMs).toISOString(),
+      grain: grainFor(dayMs),
+    }
+  }
+
   const endMs =
     search.range === "1d"
       ? zonedDateUtcMs(
@@ -352,8 +381,9 @@ export const metricLabels: Record<Metric, string> = {
 
 export const rangeLabels: Record<RangePreset, string> = {
   "1d": "Today",
-  "7d": "7 days",
-  "30d": "30 days",
+  yesterday: "Yesterday",
+  "7d": "Last 7 days",
+  "30d": "Last 30 days",
   "90d": "90 days",
   "12m": "12 months",
   custom: "Custom",
