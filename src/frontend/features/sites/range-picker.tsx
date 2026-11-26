@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react"
-import { CalendarIcon, CheckIcon, ChevronDownIcon } from "lucide-react"
+import { CheckIcon, ChevronDownIcon } from "lucide-react"
 import type { DateRange } from "react-day-picker"
 import { cn } from "cn"
 
@@ -197,20 +197,12 @@ export function RangePicker({
                 ))
               : null}
             <div className="my-1 h-px bg-border" />
-            <button
-              type="button"
-              className={cn(
-                "relative flex w-full cursor-default items-center gap-1.5 rounded-md py-1 pr-8 pl-1.5 text-xs outline-none select-none hover:bg-accent hover:text-accent-foreground",
-                range === "custom" && "bg-accent text-accent-foreground"
-              )}
-              onClick={openCustom}
+            <PresetItem
+              active={range === "custom"}
+              onSelect={openCustom}
             >
-              <CalendarIcon className="size-3.5 text-muted-foreground" />
               Custom
-              {range === "custom" ? (
-                <CheckIcon className="pointer-events-none absolute right-2 size-3.5" />
-              ) : null}
-            </button>
+            </PresetItem>
           </>
         ) : (
           <>
